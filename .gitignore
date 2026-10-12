@@ -1,0 +1,48 @@
+# Git 이 추적하지 않을 파일.
+# 설치기가 까는 .claude/commands · .claude/templates · .claude/governance.json ·
+# .claude/settings.json · .mcp.json 은 팀이 공유하므로 추적한다.
+
+# --- 비밀값 · 접속정보 — 저장소에 들어가지 않는다 (헌법 원칙 III) ---
+.env
+.env.*
+# 값 없이 환경변수 이름만 담는 예시 파일은 추적한다 (constitution/reference/security.md)
+!.env.example
+kubeconfig
+*.kubeconfig
+*.pem
+*.key
+# pr 스킬이 Jira 이메일 · API 토큰을 저장하는 파일
+.jira-config
+
+# --- Claude Code 개인 설정 ---
+# settings.local.json 은 개인 설정이라 배포하지 않는다 (../governance/repositories/config/README.md)
+.claude
+.github
+
+
+# --- Python — 스택은 PRD(docs/prd/runtime-manager-prd.md) §2 기술 기준을 따른다 ---
+# uv.lock · .python-version 은 추적한다. verify.yml 의 `uv sync --frozen` 이 잠금 파일을 요구한다.
+__pycache__/
+*.py[cod]
+.venv/
+/build/
+/dist/
+*.egg-info/
+
+# --- 테스트 · 정적 분석 캐시 ---
+.pytest_cache/
+.coverage
+.coverage.*
+htmlcov/
+coverage.xml
+.mypy_cache/
+.ruff_cache/
+
+# --- 편집기 · OS ---
+.DS_Store
+.idea/
+.vscode/
+*.swp
+
+# --- 로컬 실행 로그 — 오류 응답에 섞인 자격 값이 남을 수 있다 ---
+*.log
