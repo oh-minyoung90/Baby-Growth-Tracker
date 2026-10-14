@@ -1,34 +1,34 @@
 # CLAUDE.md
 
-This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+이 파일은 Claude Code(claude.ai/code)가 이 저장소에서 작업할 때 참고하는 안내 문서입니다.
 
-## Project status
+## 프로젝트 현황
 
-Baby Growth Tracker is a personal web app for recording a child's growth (height/weight, milestones, sleep) and meals (food list, weekly meal plan, recipes). The project is in the design phase: no source code exists yet.
+Baby Growth Tracker는 아이의 성장(키·몸무게, 발달, 수면)과 식사(음식 목록, 주간 식단, 레시피)를 기록하는 개인용 웹 앱입니다. 현재 설계 단계이며 소스 코드는 아직 없습니다.
 
-Workflow: PRD → 기능요구사항서 → 기술요구사항서 → task breakdown → implementation (MVP-1 growth records, then MVP-2 meal records) → testing.
+진행 순서: PRD → 기능요구사항서 → 기술요구사항서 → 태스크 분해 → 구현(MVP-1 성장 기록 → MVP-2 식사 기록) → 테스트
 
-## Documents
+## 문서
 
-- `PRD.md` (v1.0, confirmed) is the source of truth for scope, features (F-01–F-24), data model, and decisions. Read section 9 (결정 사항) before proposing behavior; do not reopen decided items without the user.
-- Design documents go under `docs/` (기능요구사항서, 기술요구사항서). When they conflict with `PRD.md`, flag it instead of picking one silently.
-- Uncertain items are marked as "확인 필요" rather than assumed.
+- `PRD.md`(v1.0, 확정)는 범위, 기능(F-01~F-24), 데이터 모델, 결정 사항의 기준 문서입니다. 동작을 제안하기 전에 9장 "결정 사항"을 확인하고, 이미 결정된 항목은 사용자와 협의 없이 다시 바꾸지 않습니다.
+- 설계 문서(기능요구사항서, 기술요구사항서)는 `docs/` 아래에 둡니다. 설계 문서와 `PRD.md`가 서로 다르면 임의로 하나를 고르지 말고 사용자에게 알립니다.
+- 확실하지 않은 내용은 가정하지 말고 "확인 필요"로 표시합니다.
 
-## Tech stack
+## 기술 스택
 
-- Backend: Supabase Free plan (PostgreSQL, Auth, Storage). Access control via RLS on `ownerId`.
-- Frontend framework and web hosting: not decided yet. Confirm with the user before scaffolding.
+- 백엔드: Supabase Free 플랜 (PostgreSQL, Auth, Storage). 접근 제어는 `ownerId` 기준 RLS(행 단위 보안 정책)로 적용합니다.
+- 프론트엔드 프레임워크와 웹 호스팅: 미정. 프로젝트 구조를 만들기 전에 사용자에게 확인합니다.
 
-## Commands
+## 명령어
 
-None yet. Add build, lint, test, and single-test commands once the frontend stack is chosen.
+아직 없습니다. 프론트엔드 스택이 정해지면 빌드, 린트, 테스트, 단일 테스트 실행 명령을 추가합니다.
 
-## Architecture
+## 아키텍처
 
-None yet. Once code exists, document the big-picture structure here (data model, main modules, how data flows between them).
+아직 없습니다. 코드가 생기면 전체 구조(데이터 모델, 주요 모듈, 모듈 간 데이터 흐름)를 여기에 정리합니다.
 
-## Conventions
+## 규칙
 
-- Default response and documentation language is Korean.
-- Never hardcode secrets. Supabase keys and the allowed login email live in environment variables. Only the anon key may be used in the browser; the service role key must never reach frontend code.
-- Child data (including allergy information and photos) is sensitive: do not log it, and use pseudonymous data in tests and examples.
+- 응답과 문서는 한국어로 작성합니다. CLAUDE.md를 포함한 저장소의 모든 문서에 적용합니다.
+- 비밀값은 코드에 하드코딩하지 않습니다. Supabase 키와 로그인 허용 이메일은 환경변수로 관리합니다. 브라우저에는 공개용 anon key만 사용하고, service role key는 절대 프론트엔드 코드에 넣지 않습니다.
+- 아이 정보(알러지 정보, 사진 포함)는 민감 정보입니다. 로그에 남기지 않고, 테스트와 예시에는 가명 데이터를 사용합니다.
