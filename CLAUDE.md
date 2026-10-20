@@ -32,6 +32,7 @@ Baby Growth Tracker는 아이의 성장(키·몸무게, 발달, 수면)과 식�
 - `npm test -- src/App.test.tsx`: 파일 하나만 실행 / `npm test -- -t "테스트 이름"`: 이름으로 하나만 실행
 - `npm run test:watch`: 파일 변경 시 자동 재실행
 - `npm run test:coverage`: 커버리지 측정 (`coverage/`, 커밋 제외)
+- CI(`.github/workflows/ci.yml`)는 PR과 `main` push마다 lint → format:check → typecheck → test → build를 실행합니다. PR을 올리기 전에 같은 명령을 로컬에서 먼저 통과시킵니다.
 
 ## 아키텍처
 
