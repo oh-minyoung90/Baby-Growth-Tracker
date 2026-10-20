@@ -7,6 +7,7 @@
 .env.*
 # 값 없이 환경변수 이름만 담는 예시 파일은 추적한다 (constitution/reference/security.md)
 !.env.example
+!.env.test.example
 kubeconfig
 *.kubeconfig
 *.pem
