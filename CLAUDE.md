@@ -23,7 +23,12 @@ Baby Growth Tracker는 아이의 성장(키·몸무게, 발달, 수면)과 식�
 
 ## 명령어
 
-아직 없습니다. 프론트엔드 스택이 정해지면 빌드, 린트, 테스트, 단일 테스트 실행 명령을 추가합니다.
+- `npm run dev`: 개발 서버
+- `npm run build`: 타입 검사 + 운영용 빌드
+- `npm run lint`: ESLint (`console.log` 사용 금지 규칙 포함)
+- `npm run typecheck`: TypeScript 타입 검사
+- `npm run format` / `npm run format:check`: Prettier 포맷 적용 / 검사
+- 테스트 명령은 T-03에서 추가합니다.
 
 ## 아키텍처
 
