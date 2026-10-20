@@ -46,3 +46,13 @@ coverage.xml
 
 # --- 로컬 실행 로그 — 오류 응답에 섞인 자격 값이 남을 수 있다 ---
 *.log
+
+# --- Node · Vite (T-01 추가) ---
+node_modules/
+dist-ssr/
+*.local
+npm-debug.log*
+
+# --- Supabase CLI 로컬 파일 ---
+supabase/.temp/
+supabase/.branches/
