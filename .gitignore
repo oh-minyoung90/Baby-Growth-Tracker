@@ -58,3 +58,6 @@ npm-debug.log*
 # --- Supabase CLI 로컬 파일 ---
 supabase/.temp/
 supabase/.branches/
+
+# --- 테스트 커버리지 결과 ---
+coverage/

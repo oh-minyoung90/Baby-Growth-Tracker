@@ -28,7 +28,10 @@ Baby Growth Tracker는 아이의 성장(키·몸무게, 발달, 수면)과 식�
 - `npm run lint`: ESLint (`console.log` 사용 금지 규칙 포함)
 - `npm run typecheck`: TypeScript 타입 검사
 - `npm run format` / `npm run format:check`: Prettier 포맷 적용 / 검사
-- 테스트 명령은 T-03에서 추가합니다.
+- `npm test`: 단위·컴포넌트 테스트 전체 실행 (Vitest)
+- `npm test -- src/App.test.tsx`: 파일 하나만 실행 / `npm test -- -t "테스트 이름"`: 이름으로 하나만 실행
+- `npm run test:watch`: 파일 변경 시 자동 재실행
+- `npm run test:coverage`: 커버리지 측정 (`coverage/`, 커밋 제외)
 
 ## 아키텍처
 
