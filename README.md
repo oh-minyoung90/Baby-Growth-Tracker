@@ -20,4 +20,7 @@ cp .env.example .env.local   # 환경변수 파일 만들기 (실제 값은 직�
 npm run dev          # 개발 서버 실행 (http://localhost:5173)
 npm run build        # 운영용 빌드 (dist/)
 npm run preview      # 빌드 결과 미리보기
+npm run lint         # ESLint 검사
+npm run typecheck    # 타입 검사
+npm run format       # Prettier로 코드 정리
 ```

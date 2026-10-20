@@ -17,7 +17,6 @@ kubeconfig
 # --- Claude Code 개인 설정 ---
 # settings.local.json 은 개인 설정이라 배포하지 않는다 (../governance/repositories/config/README.md)
 .claude
-.github
 
 
 # --- Python — 스택은 PRD(docs/prd/runtime-manager-prd.md) §2 기술 기준을 따른다 ---
@@ -41,7 +40,10 @@ coverage.xml
 # --- 편집기 · OS ---
 .DS_Store
 .idea/
-.vscode/
+# 팀 공통 설정(저장 시 포맷, 추천 확장)만 추적한다
+.vscode/*
+!.vscode/settings.json
+!.vscode/extensions.json
 *.swp
 
 # --- 로컬 실행 로그 — 오류 응답에 섞인 자격 값이 남을 수 있다 ---
