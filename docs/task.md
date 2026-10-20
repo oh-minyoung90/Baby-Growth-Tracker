@@ -1,4 +1,4 @@
-# Baby Growth Tracker 태스크 분해 (MVP-1) v1.0
+# Baby Growth Tracker 태스크 분해 (MVP-1) v1.1
 
 Oct 20, 2026 · @오민영 · 상태: 확정
 
@@ -9,13 +9,14 @@ Oct 20, 2026 · @오민영 · 상태: 확정
 | v0.1 | 2026-10-20 | MVP-1 태스크 초안. 디자인 단계 추가 |
 | v0.2 | 2026-10-20 | 파일명 `task.md`로 변경. 시안 방식·디자인 방향(D-01) 결정, PC 레이아웃(DS6) 추가 |
 | v1.0 | 2026-10-20 | K1~K5 확정. 태스크별 GitHub Issue(#3~#42) 생성·연결, 마일스톤 MVP-1 |
+| v1.1 | 2026-10-20 | 식사 기록을 MVP-1에 포함 (PRD v1.2). D-07, T-36~T-51 추가(Issue #44~#60), 설정·E2E 태스크 범위 확장 |
 
 ## 1. 기준
 
 | 항목 | 기준 |
 | --- | --- |
-| 기준 문서 | PRD v1.1, 기능요구사항서 v1.0, 기술요구사항서 v1.0 |
-| 범위 | MVP-1. MVP-2는 MVP-1 완료 후 별도로 분해 |
+| 기준 문서 | PRD v1.2, 기능요구사항서 v1.1, 기술요구사항서 v1.1 |
+| 범위 | MVP-1 (성장 기록 + 식사 기록). 구현은 성장 기록 → 식사 기록 순서 |
 | 태스크 크기 | 반나절~1일. 1일을 넘을 것 같으면 다시 나눈다 |
 | 단위 | 태스크 1개 = 브랜치 1개 = PR 1개 |
 | 브랜치 이름 | `종류/태스크ID-짧은설명` (예: `feat/T-16-body-form`, `design/D-03-home`) |
@@ -32,13 +33,15 @@ Oct 20, 2026 · @오민영 · 상태: 확정
 ```
 [0단계 준비]  T-01 → T-02 → T-03 → T-04
                                     │
-[디자인]      D-01 → D-02 → D-03 → D-04 → D-05 → D-06
+[디자인]      D-01 → D-02 → D-03 → D-04 → D-05 → D-07 → D-06
                                                    │
 [1단계 기반]  T-06 → T-07 → T-08 → T-09 ← T-05(디자인 토큰, D-06 이후)
                                     │
 [2단계 인증]  T-10 → T-11,  T-12 → T-13
                                     │
 [3단계 기록]  T-14 → 키·몸무게(T-15~17) → 발달(T-18~23) → 수면(T-24~27) → 홈(T-28)
+                                    │
+[3B 식사]     음식(T-36~38, T-46) → 식단(T-39~45) → 레시피·사진(T-47~50) → 연동(T-51)
                                     │
 [4단계 설정]  T-29 → T-30 → T-31
                                     │
@@ -68,7 +71,8 @@ Oct 20, 2026 · @오민영 · 상태: 확정
 | D-03 [#8](https://github.com/oh-minyoung90/Baby-Growth-Tracker/issues/8) | 👤 화면 시안 1 | 로그인, 아이 정보 등록, 홈 | 시안 승인 | D-02 | S |
 | D-04 [#9](https://github.com/oh-minyoung90/Baby-Growth-Tracker/issues/9) | 👤 화면 시안 2 | 발달 기록 입력(유사 기록·중복 확인 창 포함), 단어 목록, 발달 타임라인 | 시안 승인 | D-02 | M |
 | D-05 [#10](https://github.com/oh-minyoung90/Baby-Growth-Tracker/issues/10) | 👤 화면 시안 3 | 키·몸무게(입력·차트·목록), 수면(입력·목록), 설정(내보내기·가져오기·전체 삭제) | 시안 승인 | D-02 | M |
-| D-06 [#11](https://github.com/oh-minyoung90/Baby-Growth-Tracker/issues/11) | 디자인 확정 반영 | 확정 시안 링크와 디자인 기준을 `docs/디자인.md`로 정리, 기능요구사항서 와이어프레임과 다른 부분 반영 | 문서 반영, PR 병합 | D-03~D-05 | S |
+| D-07 [#44](https://github.com/oh-minyoung90/Baby-Growth-Tracker/issues/44) | 👤 화면 시안 4 (식사) | 주간 식단(7일 카드: PC 한 줄·모바일 좌우 넘김과 요일 칩, 칸 입력 시트, 경고), 음식 목록·상세·알러지 지정, 레시피 목록·상세·편집 | 시안 승인 | D-02 | M |
+| D-06 [#11](https://github.com/oh-minyoung90/Baby-Growth-Tracker/issues/11) | 디자인 확정 반영 | 확정 시안 링크와 디자인 기준을 `docs/디자인.md`로 정리, 기능요구사항서 와이어프레임과 다른 부분 반영 | 문서 반영, PR 병합 | D-03~D-05, D-07 | S |
 | T-05 [#12](https://github.com/oh-minyoung90/Baby-Growth-Tracker/issues/12) | UI 기반 구성 | Tailwind, shadcn/ui 설치, 디자인 기준(색·글꼴·간격)을 설정 파일에 적용, 공통 컴포넌트 기본형 | 공통 컴포넌트가 시안과 같게 보임 | T-01, D-06 | M |
 
 ### 1단계: Supabase 기반과 앱 골격
@@ -109,20 +113,41 @@ Oct 20, 2026 · @오민영 · 상태: 확정
 | T-27 [#34](https://github.com/oh-minyoung90/Baby-Growth-Tracker/issues/34) | 수면 목록 | FR-SLEEP-09 | 수면일 최신순 목록, 밤잠·낮잠 횟수·총 수면 | 부분 입력 기록은 "계산 불가" 표시 | T-26 | S |
 | T-28 [#35](https://github.com/oh-minyoung90/Baby-Growth-Tracker/issues/35) | 홈 | SCR-03, FR-HOME-01~06 | 아이 정보·생후 일수, 오늘의 발달 기록, 어젯밤 수면, 최근 측정, 빠른 기록 버튼 4개 | 0건일 때 안내, 각 버튼이 해당 입력 화면을 엶 | T-17, T-21, T-27 | M |
 
+### 3B단계: 식사 기록 (v1.1 추가)
+
+| ID | 태스크 | 범위 | 작업 내용 | 완료 기준 | 선행 | 크기 |
+| --- | --- | --- | --- | --- | --- | --- |
+| T-36 [#45](https://github.com/oh-minyoung90/Baby-Growth-Tracker/issues/45) | 음식 DB | F-13, F-14, BR-17~18 | `foods`, `food_status_history` 테이블, 이름 중복 제약, 상태 컬럼 보호(D10), RLS, RLS 테스트, `add_food()`, `seed_default_foods()`(부록 B) | 같은 이름 거부, 화면에서 상태 직접 수정 불가 | T-08 | M |
+| T-37 [#46](https://github.com/oh-minyoung90/Baby-Growth-Tracker/issues/46) | 음식 목록 화면 | SCR-10, FR-FOOD-01~08 | 상태별 탭·개수, 식품군 필터, 이름 검색, 추가("이미 먹어 봤어요" 포함)·수정·삭제, 아이 정보 등록 시 기본 음식 추가 | 탭별 표시 정보가 맞음, 삭제 확인 창 | T-14, T-36 | M |
+| T-38 [#47](https://github.com/oh-minyoung90/Baby-Growth-Tracker/issues/47) | 알러지·주의 관리 | FR-FOOD-11~14, BR-11, BR-13 | `set_food_caution()`, `clear_caution_tag()`, 지정·해제·태그 해제 화면 | 지정·해제·태그 해제마다 이력이 남고 상태가 BR-11과 같음 | T-37 | M |
+| T-39 [#48](https://github.com/oh-minyoung90/Baby-Growth-Tracker/issues/48) | 식단 DB | F-15 | `meal_entries`, `meal_entry_foods`, `meal_entry_recipes` 테이블, 날짜·끼니 unique, 미래 "먹음" 제약, RLS, RLS 테스트 | 같은 날짜·끼니 2건 거부 | T-36 | S |
+| T-40 [#49](https://github.com/oh-minyoung90/Baby-Growth-Tracker/issues/49) | 음식 상태 재계산 | BR-11~13, BR-15, BR-17, D11 | `recalc_food`, `save_meal_entry()`, `set_meal_eaten()`, `delete_meal_entry()`. 통합 테스트(기술요구사항서 9.1.1) | BR-11 전환표 모든 행과 재계산 케이스 통과 | T-39 | M |
+| T-41 [#50](https://github.com/oh-minyoung90/Baby-Growth-Tracker/issues/50) | 칸 이동 함수 | FR-MEAL-10~12 | `move_meal_entry()`(충돌 거부, 미래 이동 시 체크 해제) + 재계산, 통합 테스트 | 충돌·미래 이동·재계산 테스트 통과 | T-40 | S |
+| T-42 [#51](https://github.com/oh-minyoung90/Baby-Growth-Tracker/issues/51) | 주간 식단 화면 | SCR-11, FR-MEAL-01~03, 15 | 주 이동·이번 주, 7일 카드(PC 한 줄·최대 폭 1,280px, 모바일 좌우 넘김·요일 칩), 칸 표시(계획 배지·점선), 빈 주 안내 | 월요일 시작, 화면 폭에 따라 배치 전환, 열면 오늘 카드 표시 | T-14, T-39 | M |
+| T-43 [#52](https://github.com/oh-minyoung90/Baby-Growth-Tracker/issues/52) | 식단 칸 입력 | FR-MEAL-04~07, 13 | 입력 시트, 음식·레시피 검색 선택, 새 음식 바로 추가, 먹은 정도·메모·먹음 체크, 저장·삭제 | 음식·레시피 없이 저장 불가, 미래 날짜 체크 불가 | T-40, T-42 | M |
+| T-44 [#53](https://github.com/oh-minyoung90/Baby-Growth-Tracker/issues/53) | 경고·먹음 체크·첫 시도 알림 | FR-MEAL-08~09, 14 | 주의 음식·재료 경고 배너와 저장 확인 창, 표에서 바로 먹음 체크, "처음 먹었어요" 알림 | 계획 칸에도 경고, 첫 시도 알림 표시 | T-43 | S |
+| T-45 [#54](https://github.com/oh-minyoung90/Baby-Growth-Tracker/issues/54) | 칸 이동 화면 | FR-MEAL-10~12 | PC 드래그, "이동" 메뉴(날짜·끼니 선택), 충돌 안내, 미래 이동 확인 창 | PC 드래그·모바일 메뉴 모두 이동됨 | T-41, T-43 | M |
+| T-46 [#55](https://github.com/oh-minyoung90/Baby-Growth-Tracker/issues/55) | 음식 상세 | FR-FOOD-09~10 | 음식 정보, 반응 선택, 먹은 식단 목록, 알러지·주의 정보, 이력 목록 | 식단·이력이 최신순으로 표시 | T-38, T-40 | S |
+| T-47 [#56](https://github.com/oh-minyoung90/Baby-Growth-Tracker/issues/56) | 레시피 DB | F-17 | `recipes`, `recipe_ingredients`, `photos` 테이블, RLS, RLS 테스트 | 레시피 삭제 시 재료 함께 삭제, 음식 삭제 시 재료 이름 유지 | T-36 | S |
+| T-48 [#57](https://github.com/oh-minyoung90/Baby-Growth-Tracker/issues/57) | 사진 저장소 | F-11, 기술요구사항서 6.3 | 비공개 버킷·Storage 정책(마이그레이션), 리사이즈·압축·업로드·서명 URL·삭제 유틸, 확인 항목 C8(HEIC) | 다른 계정 사진 접근 불가, 1,280px 이하로 저장 | T-07 | M |
+| T-49 [#58](https://github.com/oh-minyoung90/Baby-Growth-Tracker/issues/58) | 레시피 목록·상세 | SCR-12, FR-RCP-01~03 | 목록 카드, 이름 검색, 재료 필터(AND), 상세(번호 붙은 조리 순서, 주의 재료 표시) | 0건·1건에서 깨지지 않음 | T-14, T-47 | M |
+| T-50 [#59](https://github.com/oh-minyoung90/Baby-Growth-Tracker/issues/59) | 레시피 편집 | FR-RCP-04~08 | 재료 행·조리 순서 단계 편집, 사진 첨부·교체·삭제, 레시피 삭제(사진 파일 포함) | 사진 교체 시 이전 파일 삭제 | T-48, T-49 | M |
+| T-51 [#60](https://github.com/oh-minyoung90/Baby-Growth-Tracker/issues/60) | 식사 연동 마무리 | FR-HOME-07~08, FR-TL-06, FR-SET-09 | 홈 "오늘의 식단" 카드·식단 빠른 기록, 타임라인 "처음 먹은 음식", 레시피를 식단 칸에서 선택 가능하게 연결 | 처음 먹은 음식이 타임라인에 표시, 홈 빠른 기록 5개 | T-28, T-44, T-49 | S |
+
 ### 4단계: 설정 (백업·삭제)
 
 | ID | 태스크 | 범위 | 작업 내용 | 완료 기준 | 선행 | 크기 |
 | --- | --- | --- | --- | --- | --- | --- |
-| T-29 [#36](https://github.com/oh-minyoung90/Baby-Growth-Tracker/issues/36) | 설정 화면 + 내보내기 | SCR-09, FR-SET-01~02 | 설정 메뉴, `export_backup()` 함수, JSON 파일 내려받기 | 파일에 스키마 버전·전체 기록 포함 | T-28 | M |
+| T-29 [#36](https://github.com/oh-minyoung90/Baby-Growth-Tracker/issues/36) | 설정 화면 + 내보내기 | SCR-09, FR-SET-01~02 | 설정 메뉴, `export_backup()` 함수(성장·식사 기록 포함, 사진 파일 제외), JSON 파일 내려받기 | 파일에 스키마 버전·전체 기록 포함 | T-28, T-51 | M |
 | T-30 [#37](https://github.com/oh-minyoung90/Baby-Growth-Tracker/issues/37) | 가져오기 | FR-SET-03~05, R23 | `import_backup()` 함수(검사·전체 덮어쓰기·트랜잭션), 확인 창, 실패 이유 표시 | 내보낸 파일로 동일하게 복원, 잘못된 파일은 기존 데이터 유지 | T-29 | M |
-| T-31 [#38](https://github.com/oh-minyoung90/Baby-Growth-Tracker/issues/38) | 데이터 전체 삭제 | F-23, FR-SET-06~07 | `delete_all_data()` 함수, 내보내기 안내, "삭제" 입력 확인, 삭제 후 아이 정보 등록 화면 | 삭제 후 모든 조회 결과가 비어 있음 | T-29 | S |
+| T-31 [#38](https://github.com/oh-minyoung90/Baby-Growth-Tracker/issues/38) | 데이터 전체 삭제 | F-23, FR-SET-06~07 | `delete_all_data()` 함수, Storage 사진 삭제, 내보내기 안내, "삭제" 입력 확인, 삭제 후 아이 정보 등록 화면 | 삭제 후 모든 조회 결과와 사진이 비어 있음 | T-29, T-48 | S |
 
 ### 5단계: 검증과 배포
 
 | ID | 태스크 | 범위 | 작업 내용 | 완료 기준 | 선행 | 크기 |
 | --- | --- | --- | --- | --- | --- | --- |
 | T-32 [#39](https://github.com/oh-minyoung90/Baby-Growth-Tracker/issues/39) | E2E 테스트 기반 | 기술요구사항서 9.3 | Playwright 설정, 테스트 계정 세션 주입, 테스트 데이터 정리 | 로그인 상태로 홈이 열리는 테스트 통과 | T-28 | M |
-| T-33 [#40](https://github.com/oh-minyoung90/Baby-Growth-Tracker/issues/40) | E2E 시나리오 | PRD 8장 MVP-1 | 완료 기준을 시나리오로 작성 (기록 생성·수정·삭제, 잘못된 입력, 0건·1건, 백업 복원, 전체 삭제) | 전체 시나리오 통과 | T-31, T-32 | M |
+| T-33 [#40](https://github.com/oh-minyoung90/Baby-Growth-Tracker/issues/40) | E2E 시나리오 | PRD 8장 MVP-1 | 완료 기준을 시나리오로 작성 (기록 생성·수정·삭제, 잘못된 입력, 0건·1건, 백업 복원, 전체 삭제, 식단 계획→먹음 체크→처음 먹은 음식, 알러지 경고, 레시피 사진) | 전체 시나리오 통과 | T-31, T-32 | M |
 | T-34 [#41](https://github.com/oh-minyoung90/Baby-Growth-Tracker/issues/41) | 보안·PWA 마무리 | 기술요구사항서 10.2 | 보안 헤더(`_headers`), 홈 화면 추가용 manifest·아이콘, 콘솔에 아이 정보 출력 여부 점검 | 점검 목록 통과 | T-28 | S |
 | T-35 [#42](https://github.com/oh-minyoung90/Baby-Growth-Tracker/issues/42) | 👤 운영 배포 | 기술요구사항서 10.1 | prod 프로젝트 생성·마이그레이션 적용·본인 계정 등록, Cloudflare Pages 연결·환경변수·미리보기 배포 끄기. 확인 항목 C4·C5 점검 | 운영 주소에서 로그인·기록 동작, 성능 기준(1초) 확인 | T-33, T-34 | M |
 
@@ -133,13 +158,14 @@ Oct 20, 2026 · @오민영 · 상태: 확정
 | 단계 | 태스크 수 | 사용자 작업 |
 | --- | --- | --- |
 | 0단계 준비 | 4 (T-01~T-04) | - |
-| 디자인 | 7 (D-01~D-06, T-05) | D-01~D-05 결정·승인 |
+| 디자인 | 8 (D-01~D-07, T-05) | D-01~D-05, D-07 결정·승인 |
 | 1단계 기반 | 4 (T-06~T-09) | T-06 계정 준비 |
 | 2단계 인증·아이 | 4 (T-10~T-13) | - |
 | 3단계 기록 | 15 (T-14~T-28) | - |
+| 3B단계 식사 | 16 (T-36~T-51) | - |
 | 4단계 설정 | 3 (T-29~T-31) | - |
 | 5단계 마무리 | 4 (T-32~T-35) | T-35 운영 계정·배포 |
-| **합계** | **41** | |
+| **합계** | **58** | |
 
 ## 5. 디자인 결정 사항
 
