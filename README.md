@@ -23,4 +23,5 @@ npm run preview      # 빌드 결과 미리보기
 npm run lint         # ESLint 검사
 npm run typecheck    # 타입 검사
 npm run format       # Prettier로 코드 정리
+npm test             # 단위·컴포넌트 테스트 (Vitest)
 ```
