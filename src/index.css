@@ -1,0 +1,5 @@
+/* 전역 스타일. 디자인 기준(색·글꼴·간격)은 T-05에서 적용합니다. */
+body {
+  margin: 0;
+  font-family: system-ui, sans-serif;
+}
