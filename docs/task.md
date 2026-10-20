@@ -1,0 +1,179 @@
+# Baby Growth Tracker 태스크 분해 (MVP-1) v1.0
+
+Oct 20, 2026 · @오민영 · 상태: 확정
+
+**변경 이력**
+
+| 버전 | 날짜 | 내용 |
+| --- | --- | --- |
+| v0.1 | 2026-10-20 | MVP-1 태스크 초안. 디자인 단계 추가 |
+| v0.2 | 2026-10-20 | 파일명 `task.md`로 변경. 시안 방식·디자인 방향(D-01) 결정, PC 레이아웃(DS6) 추가 |
+| v1.0 | 2026-10-20 | K1~K5 확정. 태스크별 GitHub Issue(#3~#42) 생성·연결, 마일스톤 MVP-1 |
+
+## 1. 기준
+
+| 항목 | 기준 |
+| --- | --- |
+| 기준 문서 | PRD v1.1, 기능요구사항서 v1.0, 기술요구사항서 v1.0 |
+| 범위 | MVP-1. MVP-2는 MVP-1 완료 후 별도로 분해 |
+| 태스크 크기 | 반나절~1일. 1일을 넘을 것 같으면 다시 나눈다 |
+| 단위 | 태스크 1개 = 브랜치 1개 = PR 1개 |
+| 브랜치 이름 | `종류/태스크ID-짧은설명` (예: `feat/T-16-body-form`, `design/D-03-home`) |
+| 진행 관리 | 태스크마다 GitHub Issue(마일스톤 MVP-1, 단계 라벨). PR 본문에 `Closes #번호`를 적어 병합 시 Issue를 닫는다 |
+| 공통 완료 기준 | CI 통과, 관련 단위 테스트 추가, 새 테이블은 RLS 테스트 추가, dev 환경에서 직접 확인, 설계와 달라진 점은 설계 문서에 반영 |
+
+**표기**
+
+- 👤 사용자 작업이 포함된 태스크 (계정 생성, 시안 승인 등). 진행 전에 단계별로 안내한다.
+- 크기: S = 반나절, M = 1일
+
+## 2. 전체 흐름
+
+```
+[0단계 준비]  T-01 → T-02 → T-03 → T-04
+                                    │
+[디자인]      D-01 → D-02 → D-03 → D-04 → D-05 → D-06
+                                                   │
+[1단계 기반]  T-06 → T-07 → T-08 → T-09 ← T-05(디자인 토큰, D-06 이후)
+                                    │
+[2단계 인증]  T-10 → T-11,  T-12 → T-13
+                                    │
+[3단계 기록]  T-14 → 키·몸무게(T-15~17) → 발달(T-18~23) → 수면(T-24~27) → 홈(T-28)
+                                    │
+[4단계 설정]  T-29 → T-30 → T-31
+                                    │
+[5단계 마무리] T-32 → T-33 → T-34 → T-35
+```
+
+- 0단계·1단계(T-06~T-08)와 디자인 단계는 서로 의존하지 않아 함께 진행할 수 있다.
+- 화면을 만드는 태스크(T-10 이후)는 디자인 확정(D-06)과 UI 기반(T-05) 이후에 시작한다.
+
+## 3. 태스크 목록
+
+### 0단계: 프로젝트 준비
+
+| ID | 태스크 | 작업 내용 | 완료 기준 | 선행 | 크기 |
+| --- | --- | --- | --- | --- | --- |
+| T-01 [#3](https://github.com/oh-minyoung90/Baby-Growth-Tracker/issues/3) | 프로젝트 생성 | Vite + React + TypeScript 생성, 기술요구사항서 4.2 폴더 구조, `.gitignore`(`.env*.local` 포함), `.nvmrc`, `.env.example` | `npm run dev`로 빈 화면이 뜸. `.env.local`이 커밋 대상에서 빠짐 | - | S |
+| T-02 [#4](https://github.com/oh-minyoung90/Baby-Growth-Tracker/issues/4) | 코드 품질 도구 | ESLint, Prettier, TypeScript strict, VS Code 저장 시 포맷 설정 | `npm run lint`, `npm run typecheck` 통과 | T-01 | S |
+| T-03 [#5](https://github.com/oh-minyoung90/Baby-Growth-Tracker/issues/5) | 테스트 도구 | Vitest, Testing Library 설정, 예시 테스트 1개 | `npm test` 통과 | T-01 | S |
+| T-04 [#6](https://github.com/oh-minyoung90/Baby-Growth-Tracker/issues/6) | CI | GitHub Actions: PR마다 린트·타입 검사·테스트·빌드 | PR에서 CI가 자동 실행되고 통과 | T-02, T-03 | S |
+
+### 디자인 단계
+
+| ID | 태스크 | 작업 내용 | 완료 기준 | 선행 | 크기 |
+| --- | --- | --- | --- | --- | --- |
+| D-01 | ✅ 디자인 방향 결정 | 분위기, 글꼴, 아이콘, 다크 모드, 화면 크기 대응 결정 (5.2) | 2026-10-20 완료 | - | S |
+| D-02 [#7](https://github.com/oh-minyoung90/Baby-Growth-Tracker/issues/7) | 👤 공통 요소 시안 | 색 조합 3개 비교·선택(DS2), 글자 크기·간격 기준, 라이트·다크 모드, 버튼, 입력칸, 날짜 선택, 확인 창, 알림, 하단 탭, 빈 상태 화면 | 시안 승인 | D-01 | M |
+| D-03 [#8](https://github.com/oh-minyoung90/Baby-Growth-Tracker/issues/8) | 👤 화면 시안 1 | 로그인, 아이 정보 등록, 홈 | 시안 승인 | D-02 | S |
+| D-04 [#9](https://github.com/oh-minyoung90/Baby-Growth-Tracker/issues/9) | 👤 화면 시안 2 | 발달 기록 입력(유사 기록·중복 확인 창 포함), 단어 목록, 발달 타임라인 | 시안 승인 | D-02 | M |
+| D-05 [#10](https://github.com/oh-minyoung90/Baby-Growth-Tracker/issues/10) | 👤 화면 시안 3 | 키·몸무게(입력·차트·목록), 수면(입력·목록), 설정(내보내기·가져오기·전체 삭제) | 시안 승인 | D-02 | M |
+| D-06 [#11](https://github.com/oh-minyoung90/Baby-Growth-Tracker/issues/11) | 디자인 확정 반영 | 확정 시안 링크와 디자인 기준을 `docs/디자인.md`로 정리, 기능요구사항서 와이어프레임과 다른 부분 반영 | 문서 반영, PR 병합 | D-03~D-05 | S |
+| T-05 [#12](https://github.com/oh-minyoung90/Baby-Growth-Tracker/issues/12) | UI 기반 구성 | Tailwind, shadcn/ui 설치, 디자인 기준(색·글꼴·간격)을 설정 파일에 적용, 공통 컴포넌트 기본형 | 공통 컴포넌트가 시안과 같게 보임 | T-01, D-06 | M |
+
+### 1단계: Supabase 기반과 앱 골격
+
+| ID | 태스크 | 작업 내용 | 완료 기준 | 선행 | 크기 |
+| --- | --- | --- | --- | --- | --- |
+| T-06 [#13](https://github.com/oh-minyoung90/Baby-Growth-Tracker/issues/13) | 👤 Supabase dev 준비 | dev 프로젝트 생성, 회원가입 차단, 계정 3개(본인·테스트 A·B) 등록, 메일 템플릿을 6자리 코드로 변경, `.env.local`·`.env.test.local` 작성. 확인 항목 C1·C2·C3·C6 점검 | 본인 계정으로 코드 메일 수신 확인, 확인 결과를 기술요구사항서에 반영 | - | S |
+| T-07 [#14](https://github.com/oh-minyoung90/Baby-Growth-Tracker/issues/14) | Supabase CLI·마이그레이션 체계 | CLI 개발 의존성 설치, dev 프로젝트 연결, 마이그레이션 폴더, DB 타입 자동 생성 스크립트. 확인 항목 C7 점검 | 빈 마이그레이션이 dev에 적용되고 타입 파일이 생성됨 | T-01, T-06 | S |
+| T-08 [#15](https://github.com/oh-minyoung90/Baby-Growth-Tracker/issues/15) | 공통 DB 기반 + children | `updated_at` 트리거, 미래 날짜 검증 함수(D2), `children` 테이블·RLS. RLS 통합 테스트 기반(계정 A·B) | A의 데이터를 B가 읽거나 쓰지 못하는 테스트 통과 | T-07 | M |
+| T-09 [#16](https://github.com/oh-minyoung90/Baby-Growth-Tracker/issues/16) | 앱 골격 | Supabase 클라이언트, TanStack Query, React Router, 하단 탭 레이아웃(빈 화면 5개), 로그인 여부에 따른 이동(인증 가드) | 탭 이동 동작. 로그인하지 않으면 로그인 화면으로 이동 | T-05, T-07 | M |
+
+### 2단계: 로그인과 아이 정보
+
+| ID | 태스크 | 범위 | 작업 내용 | 완료 기준 | 선행 | 크기 |
+| --- | --- | --- | --- | --- | --- | --- |
+| T-10 [#17](https://github.com/oh-minyoung90/Baby-Growth-Tracker/issues/17) | 로그인 화면 | SCR-01, FR-AUTH-01~04 | 이메일 입력, 코드 요청, 6자리 입력, 오류·만료 문구, 허용되지 않은 이메일도 같은 문구 | 본인 계정 로그인 성공, 등록되지 않은 이메일은 코드 미발송 | T-09 | M |
+| T-11 [#18](https://github.com/oh-minyoung90/Baby-Growth-Tracker/issues/18) | 세션 유지·로그아웃 | FR-AUTH-05~06, FR-SET-08 | 새로고침 후 로그인 유지, 로그아웃 시 로그인 화면으로 | 로그아웃 후 기록 화면 접근 불가 | T-10 | S |
+| T-12 [#19](https://github.com/oh-minyoung90/Baby-Growth-Tracker/issues/19) | 생후 일수 계산 | BR-01, 기능요구사항서 3.2 | `domain/age.ts`, 3.2 예시 표 전체 단위 테스트 | 예시 표 5건과 경계값 테스트 통과 | T-03 | S |
+| T-13 [#20](https://github.com/oh-minyoung90/Baby-Growth-Tracker/issues/20) | 아이 정보 등록·수정 | SCR-02, FR-CHILD-01~04 | 최초 등록 화면(입력 전 다른 화면 이동 차단), 수정 화면, 생년월일 변경 확인 창 | 등록 후 홈으로 이동, 계정당 1건만 저장 | T-08, T-11, T-12 | M |
+
+### 3단계: 기록 화면
+
+| ID | 태스크 | 범위 | 작업 내용 | 완료 기준 | 선행 | 크기 |
+| --- | --- | --- | --- | --- | --- | --- |
+| T-14 [#21](https://github.com/oh-minyoung90/Baby-Growth-Tracker/issues/21) | 공통 입력 요소 | FR-COM-01~31 | 날짜 입력(기본값·범위 제한·요일 표시), 글자 수 제한 입력칸, 저장 알림, 삭제 확인 창, 네트워크 오류 안내, 빈 상태 | 컴포넌트 테스트 통과 | T-05, T-12 | M |
+| T-15 [#22](https://github.com/oh-minyoung90/Baby-Growth-Tracker/issues/22) | 키·몸무게 DB | F-05 | `body_measures` 테이블, 범위·필수 CHECK, RLS, RLS 테스트 | 범위 밖 값이 DB에서 거부됨 | T-08 | S |
+| T-16 [#23](https://github.com/oh-minyoung90/Baby-Growth-Tracker/issues/23) | 키·몸무게 입력·목록 | SCR-04, FR-BODY-01~02, 05~07 | 입력·수정·삭제 폼, 같은 날짜 안내, 측정 목록 | 입력 즉시 목록 반영, 잘못된 값 저장 안 됨 | T-14, T-15 | M |
+| T-17 [#24](https://github.com/oh-minyoung90/Baby-Growth-Tracker/issues/24) | 키·몸무게 차트 | FR-BODY-03~04 | 키·몸무게 차트 2개, 기간 선택, 점 선택 시 상세 | 0건·1건·여러 건에서 깨지지 않음 | T-16 | S |
+| T-18 [#25](https://github.com/oh-minyoung90/Baby-Growth-Tracker/issues/25) | 발달 기록 DB | F-06 | `milestones` 테이블, `title_key` 생성 컬럼, 인덱스, RLS, RLS 테스트 | 유형·글자 수 제약 동작 | T-08 | S |
+| T-19 [#26](https://github.com/oh-minyoung90/Baby-Growth-Tracker/issues/26) | 같은 내용 판단 | BR-03 | `domain/text.ts`(공백·대소문자 정리, 포함 검색), 단위 테스트 | 테스트 통과, DB `title_key`와 같은 결과 | T-03 | S |
+| T-20 [#27](https://github.com/oh-minyoung90/Baby-Growth-Tracker/issues/27) | 발달 기록 입력·수정 | SCR-05, FR-MS-01~04, 07 | 유형 선택, 날짜·생후 일수, 내용·메모, 기본 예시 버튼(부록 A), 수정·삭제 | 4가지 유형 생성·수정·삭제 | T-14, T-18 | M |
+| T-21 [#28](https://github.com/oh-minyoung90/Baby-Growth-Tracker/issues/28) | 유사 기록·중복 안내 | F-07, FR-MS-05~06 | 입력 중 유사 기록 최대 5개, 저장 시 중복 확인 창 | 같은 내용 저장 시 확인 창 표시 | T-19, T-20 | S |
+| T-22 [#29](https://github.com/oh-minyoung90/Baby-Growth-Tracker/issues/29) | 단어 목록 | SCR-06, FR-WORD-01~03 | 단어 수(중복 1개로 계산), 정렬, 추가 버튼 | 단어 수가 중복을 제외하고 표시됨 | T-20 | S |
+| T-23 [#30](https://github.com/oh-minyoung90/Baby-Growth-Tracker/issues/30) | 발달 타임라인 | SCR-07, FR-TL-01~05 | 월별 묶음, 유형·기간 필터, 결과 없음 화면 | 필터 조합별로 올바르게 표시 | T-20 | M |
+| T-24 [#31](https://github.com/oh-minyoung90/Baby-Growth-Tracker/issues/31) | 수면 DB | F-10 | `sleep_logs` 테이블, 수면일 unique, 검증 트리거(FR-SLEEP-07), RLS, RLS 테스트 | 겹치는 낮잠·범위 밖 밤잠이 DB에서 거부됨 | T-08 | M |
+| T-25 [#32](https://github.com/oh-minyoung90/Baby-Growth-Tracker/issues/32) | 수면 계산 | BR-04~07 | `domain/sleep.ts`(시각에 날짜 붙이기, 총 수면, 오류 판정), 경계값 단위 테스트 | 23:59/00:00/11:59/12:00 경계 테스트 통과 | T-03 | S |
+| T-26 [#33](https://github.com/oh-minyoung90/Baby-Growth-Tracker/issues/33) | 수면 입력·수정 | SCR-08, FR-SLEEP-01~08 | 수면일 기본값 어제, 시각 입력과 붙은 날짜 표시, 낮잠 추가·삭제, 실시간 총 수면, 기존 수면일 선택 시 수정 모드 | 낮잠 여러 개 저장, 오류 조건에서 저장 안 됨 | T-14, T-24, T-25 | M |
+| T-27 [#34](https://github.com/oh-minyoung90/Baby-Growth-Tracker/issues/34) | 수면 목록 | FR-SLEEP-09 | 수면일 최신순 목록, 밤잠·낮잠 횟수·총 수면 | 부분 입력 기록은 "계산 불가" 표시 | T-26 | S |
+| T-28 [#35](https://github.com/oh-minyoung90/Baby-Growth-Tracker/issues/35) | 홈 | SCR-03, FR-HOME-01~06 | 아이 정보·생후 일수, 오늘의 발달 기록, 어젯밤 수면, 최근 측정, 빠른 기록 버튼 4개 | 0건일 때 안내, 각 버튼이 해당 입력 화면을 엶 | T-17, T-21, T-27 | M |
+
+### 4단계: 설정 (백업·삭제)
+
+| ID | 태스크 | 범위 | 작업 내용 | 완료 기준 | 선행 | 크기 |
+| --- | --- | --- | --- | --- | --- | --- |
+| T-29 [#36](https://github.com/oh-minyoung90/Baby-Growth-Tracker/issues/36) | 설정 화면 + 내보내기 | SCR-09, FR-SET-01~02 | 설정 메뉴, `export_backup()` 함수, JSON 파일 내려받기 | 파일에 스키마 버전·전체 기록 포함 | T-28 | M |
+| T-30 [#37](https://github.com/oh-minyoung90/Baby-Growth-Tracker/issues/37) | 가져오기 | FR-SET-03~05, R23 | `import_backup()` 함수(검사·전체 덮어쓰기·트랜잭션), 확인 창, 실패 이유 표시 | 내보낸 파일로 동일하게 복원, 잘못된 파일은 기존 데이터 유지 | T-29 | M |
+| T-31 [#38](https://github.com/oh-minyoung90/Baby-Growth-Tracker/issues/38) | 데이터 전체 삭제 | F-23, FR-SET-06~07 | `delete_all_data()` 함수, 내보내기 안내, "삭제" 입력 확인, 삭제 후 아이 정보 등록 화면 | 삭제 후 모든 조회 결과가 비어 있음 | T-29 | S |
+
+### 5단계: 검증과 배포
+
+| ID | 태스크 | 범위 | 작업 내용 | 완료 기준 | 선행 | 크기 |
+| --- | --- | --- | --- | --- | --- | --- |
+| T-32 [#39](https://github.com/oh-minyoung90/Baby-Growth-Tracker/issues/39) | E2E 테스트 기반 | 기술요구사항서 9.3 | Playwright 설정, 테스트 계정 세션 주입, 테스트 데이터 정리 | 로그인 상태로 홈이 열리는 테스트 통과 | T-28 | M |
+| T-33 [#40](https://github.com/oh-minyoung90/Baby-Growth-Tracker/issues/40) | E2E 시나리오 | PRD 8장 MVP-1 | 완료 기준을 시나리오로 작성 (기록 생성·수정·삭제, 잘못된 입력, 0건·1건, 백업 복원, 전체 삭제) | 전체 시나리오 통과 | T-31, T-32 | M |
+| T-34 [#41](https://github.com/oh-minyoung90/Baby-Growth-Tracker/issues/41) | 보안·PWA 마무리 | 기술요구사항서 10.2 | 보안 헤더(`_headers`), 홈 화면 추가용 manifest·아이콘, 콘솔에 아이 정보 출력 여부 점검 | 점검 목록 통과 | T-28 | S |
+| T-35 [#42](https://github.com/oh-minyoung90/Baby-Growth-Tracker/issues/42) | 👤 운영 배포 | 기술요구사항서 10.1 | prod 프로젝트 생성·마이그레이션 적용·본인 계정 등록, Cloudflare Pages 연결·환경변수·미리보기 배포 끄기. 확인 항목 C4·C5 점검 | 운영 주소에서 로그인·기록 동작, 성능 기준(1초) 확인 | T-33, T-34 | M |
+
+**MVP-1 완료**: T-35 이후 PRD 8장 MVP-1 체크리스트를 운영 환경에서 한 번 더 점검한다.
+
+## 4. 요약
+
+| 단계 | 태스크 수 | 사용자 작업 |
+| --- | --- | --- |
+| 0단계 준비 | 4 (T-01~T-04) | - |
+| 디자인 | 7 (D-01~D-06, T-05) | D-01~D-05 결정·승인 |
+| 1단계 기반 | 4 (T-06~T-09) | T-06 계정 준비 |
+| 2단계 인증·아이 | 4 (T-10~T-13) | - |
+| 3단계 기록 | 15 (T-14~T-28) | - |
+| 4단계 설정 | 3 (T-29~T-31) | - |
+| 5단계 마무리 | 4 (T-32~T-35) | T-35 운영 계정·배포 |
+| **합계** | **41** | |
+
+## 5. 디자인 결정 사항
+
+### 5.1 시안 작성 방식 (2026-10-20 결정)
+
+- **HTML 클릭 시안**으로 한다. 실제 구현할 스타일(Tailwind·shadcn/ui 형태)로 화면 시안을 만들어 claude.ai 페이지로 공유한다.
+- 시안 링크는 휴대폰과 PC 브라우저 모두에서 열린다. 시안 안에서 모바일 폭과 PC 폭을 바꿔 볼 수 있게 만든다.
+
+### 5.2 디자인 방향 (D-01, 2026-10-20 결정)
+
+| ID | 항목 | 결정 |
+| --- | --- | --- |
+| DS1 | 분위기 | 밝고 귀여운 색감 + 깔끔한 플랫 디자인 (그림자·그라데이션 최소화, 둥근 모서리, 넉넉한 여백) |
+| DS2 | 기본 색 | C안 라벤더·피치 (2026-10-20 결정). 기본 #6E54D6(다크 #A996FF), 보조 피치·민트·옐로. 놀이 유형 글자색은 명도 대비 4.5:1을 지키는 범위에서 연하게 조정(#8A6800). 삭제·오류 색은 A안의 기본 색인 코랄 #D2493A(다크 #FF8E7C), 오류 안내 배경 #FFE4DD. 선택 상태는 모두 보라색(연보라 배경 + 보라 테두리)으로 통일하고, 유형별 색은 배지·카드의 구분 용도로만 사용 |
+| DS3 | 글꼴 | Pretendard |
+| DS4 | 아이콘 | Lucide |
+| DS5 | 다크 모드 | 지원. 기기 설정을 따르고, 설정 화면에서 직접 바꿀 수도 있음 |
+| DS6 | 화면 크기 대응 | 모바일 우선 반응형 (아래 표) |
+
+**DS6 화면 크기별 레이아웃**
+
+| 화면 폭 | 레이아웃 |
+| --- | --- |
+| 모바일 (768px 미만) | 하단 탭 메뉴, 한 줄 배치 |
+| 태블릿·PC (768px 이상) | 왼쪽 세로 메뉴, 본문 최대 폭 960px. 차트와 목록을 나란히 두는 등 넓은 화면 활용 |
+
+- PRD의 "모바일 우선"은 모바일에서 가장 편하게 쓰도록 설계한다는 뜻이며, PC에서도 같은 기능을 모두 쓸 수 있다.
+
+## 6. 결정 사항 (2026-10-20 확정)
+
+| ID | 항목 | 결정 |
+| --- | --- | --- |
+| K1 | 태스크 크기 | 반나절~1일, 총 41개 |
+| K2 | 디자인 단계 위치 | 0단계·1단계와 함께 진행, 화면 구현(T-10) 전에 확정 |
+| K3 | 시안 작성 방식 | HTML 클릭 시안 (5.1) |
+| K4 | 진행 관리 | 태스크마다 GitHub Issue 생성 완료 (#3~#42), PR에서 `Closes #번호`로 연결 |
+| K5 | 3단계 순서 | 키·몸무게 → 발달 → 수면 → 홈. 단순한 화면부터 만들어 공통 요소를 안정시킨 뒤 복잡한 화면으로 진행 |
