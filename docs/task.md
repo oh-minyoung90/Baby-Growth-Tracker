@@ -67,11 +67,11 @@ Oct 20, 2026 · @오민영 · 상태: 확정
 | ID | 태스크 | 작업 내용 | 완료 기준 | 선행 | 크기 |
 | --- | --- | --- | --- | --- | --- |
 | D-01 | ✅ 디자인 방향 결정 | 분위기, 글꼴, 아이콘, 다크 모드, 화면 크기 대응 결정 (5.2) | 2026-10-20 완료 | - | S |
-| D-02 [#7](https://github.com/oh-minyoung90/Baby-Growth-Tracker/issues/7) | 👤 공통 요소 시안 | 색 조합 3개 비교·선택(DS2), 글자 크기·간격 기준, 라이트·다크 모드, 버튼, 입력칸, 날짜 선택, 확인 창, 알림, 하단 탭, 빈 상태 화면 | 시안 승인 | D-01 | M |
-| D-03 [#8](https://github.com/oh-minyoung90/Baby-Growth-Tracker/issues/8) | 👤 화면 시안 1 | 로그인, 아이 정보 등록, 홈 | 시안 승인 | D-02 | S |
-| D-04 [#9](https://github.com/oh-minyoung90/Baby-Growth-Tracker/issues/9) | 👤 화면 시안 2 | 발달 기록 입력(유사 기록·중복 확인 창 포함), 단어 목록, 발달 타임라인 | 시안 승인 | D-02 | M |
-| D-05 [#10](https://github.com/oh-minyoung90/Baby-Growth-Tracker/issues/10) | 👤 화면 시안 3 | 키·몸무게(입력·차트·목록), 수면(입력·목록), 설정(내보내기·가져오기·전체 삭제) | 시안 승인 | D-02 | M |
-| D-07 [#44](https://github.com/oh-minyoung90/Baby-Growth-Tracker/issues/44) | 👤 화면 시안 4 (식사) | 주간 식단(7일 카드: PC 한 줄·모바일 좌우 넘김과 요일 칩, 칸 입력 시트, 경고), 음식 목록·상세·알러지 지정, 레시피 목록·상세·편집 | 시안 승인 | D-02 | M |
+| D-02 ✅ [#7](https://github.com/oh-minyoung90/Baby-Growth-Tracker/issues/7) | 👤 공통 요소 시안 | 색 조합 3개 비교·선택(DS2), 글자 크기·간격 기준, 라이트·다크 모드, 버튼, 입력칸, 날짜 선택, 확인 창, 알림, 하단 탭, 빈 상태 화면 | 시안 승인 | D-01 | M |
+| D-03 ✅ [#8](https://github.com/oh-minyoung90/Baby-Growth-Tracker/issues/8) | 👤 화면 시안 1 | 로그인, 아이 정보 등록, 홈 | 시안 승인 | D-02 | S |
+| D-04 ✅ [#9](https://github.com/oh-minyoung90/Baby-Growth-Tracker/issues/9) | 👤 화면 시안 2 | 발달 기록 입력(유사 기록·중복 확인 창 포함), 단어 목록, 발달 타임라인 | 시안 승인 | D-02 | M |
+| D-05 ✅ [#10](https://github.com/oh-minyoung90/Baby-Growth-Tracker/issues/10) | 👤 화면 시안 3 | 키·몸무게(입력·차트·목록), 수면(입력·목록), 설정(내보내기·가져오기·전체 삭제) | 시안 승인 | D-02 | M |
+| D-07 ✅ [#44](https://github.com/oh-minyoung90/Baby-Growth-Tracker/issues/44) | 👤 화면 시안 4 (식사) | 주간 식단(7일 카드: PC 한 줄·모바일 좌우 넘김과 요일 칩, 칸 입력 시트, 경고), 음식 목록·상세·알러지 지정, 레시피 목록·상세·편집 | 시안 승인 | D-02 | M |
 | D-06 [#11](https://github.com/oh-minyoung90/Baby-Growth-Tracker/issues/11) | 디자인 확정 반영 | 확정 시안 링크와 디자인 기준을 `docs/디자인.md`로 정리, 기능요구사항서 와이어프레임과 다른 부분 반영 | 문서 반영, PR 병합 | D-03~D-05, D-07 | S |
 | T-05 [#12](https://github.com/oh-minyoung90/Baby-Growth-Tracker/issues/12) | UI 기반 구성 | Tailwind, shadcn/ui 설치, 디자인 기준(색·글꼴·간격)을 설정 파일에 적용, 공통 컴포넌트 기본형 | 공통 컴포넌트가 시안과 같게 보임 | T-01, D-06 | M |
 
