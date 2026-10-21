@@ -32,6 +32,10 @@ Baby Growth Tracker는 아이의 성장(키·몸무게, 발달, 수면)과 식�
 - `npm test -- src/App.test.tsx`: 파일 하나만 실행 / `npm test -- -t "테스트 이름"`: 이름으로 하나만 실행
 - `npm run test:watch`: 파일 변경 시 자동 재실행
 - `npm run test:coverage`: 커버리지 측정 (`coverage/`, 커밋 제외)
+- `npm run db:new -- <이름>`: 새 마이그레이션 파일 생성 (`supabase/migrations/`)
+- `npm run db:push`: 마이그레이션을 연결된 Supabase 프로젝트(dev)에 적용. DB 비밀번호를 묻는다
+- `npm run db:types`: DB 구조에서 TypeScript 타입 생성 (`src/lib/database.types.ts`)
+- DB 구조는 대시보드에서 직접 바꾸지 않고 마이그레이션 파일로만 바꾼다. `supabase config push`는 원격 인증 설정을 덮어쓰므로 사용하지 않는다. `supabase db diff` 등 Docker가 필요한 명령은 쓰지 않는다
 - CI(`.github/workflows/ci.yml`)는 PR과 `main` push마다 lint → format:check → typecheck → test → build를 실행합니다. PR을 올리기 전에 같은 명령을 로컬에서 먼저 통과시킵니다.
 
 ## 아키텍처
