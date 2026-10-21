@@ -41,3 +41,18 @@ export function utcDate(days: number): string {
   d.setUTCDate(d.getUTCDate() + days)
   return d.toISOString().slice(0, 10)
 }
+
+/** 테스트 계정의 아이 정보를 준비한다 (생년월일 이전 날짜 검증용). 이미 있으면 생년월일만 맞춘다. */
+export async function ensureChild(
+  client: SupabaseClient<Database>,
+  userId: string,
+  birthDate = '2026-01-08',
+): Promise<void> {
+  const { error } = await client
+    .from('children')
+    .upsert(
+      { owner_id: userId, nickname: '테스트아기', birth_date: birthDate },
+      { onConflict: 'owner_id' },
+    )
+  if (error) throw error
+}

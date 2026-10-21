@@ -14,6 +14,39 @@ export type Database = {
   }
   public: {
     Tables: {
+      body_measures: {
+        Row: {
+          created_at: string
+          date: string
+          height_cm: number | null
+          id: string
+          memo: string | null
+          owner_id: string
+          updated_at: string
+          weight_kg: number | null
+        }
+        Insert: {
+          created_at?: string
+          date: string
+          height_cm?: number | null
+          id?: string
+          memo?: string | null
+          owner_id?: string
+          updated_at?: string
+          weight_kg?: number | null
+        }
+        Update: {
+          created_at?: string
+          date?: string
+          height_cm?: number | null
+          id?: string
+          memo?: string | null
+          owner_id?: string
+          updated_at?: string
+          weight_kg?: number | null
+        }
+        Relationships: []
+      }
       children: {
         Row: {
           birth_date: string
@@ -38,6 +71,78 @@ export type Database = {
           nickname?: string
           owner_id?: string
           updated_at?: string
+        }
+        Relationships: []
+      }
+      milestones: {
+        Row: {
+          created_at: string
+          date: string
+          id: string
+          memo: string | null
+          owner_id: string
+          title: string
+          title_key: string | null
+          type: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          date: string
+          id?: string
+          memo?: string | null
+          owner_id?: string
+          title: string
+          title_key?: string | null
+          type: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          date?: string
+          id?: string
+          memo?: string | null
+          owner_id?: string
+          title?: string
+          title_key?: string | null
+          type?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      sleep_logs: {
+        Row: {
+          bed_time: string | null
+          created_at: string
+          date: string
+          id: string
+          memo: string | null
+          naps: Json
+          owner_id: string
+          updated_at: string
+          wake_time: string | null
+        }
+        Insert: {
+          bed_time?: string | null
+          created_at?: string
+          date: string
+          id?: string
+          memo?: string | null
+          naps?: Json
+          owner_id?: string
+          updated_at?: string
+          wake_time?: string | null
+        }
+        Update: {
+          bed_time?: string | null
+          created_at?: string
+          date?: string
+          id?: string
+          memo?: string | null
+          naps?: Json
+          owner_id?: string
+          updated_at?: string
+          wake_time?: string | null
         }
         Relationships: []
       }
