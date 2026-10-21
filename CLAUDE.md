@@ -32,6 +32,7 @@ Baby Growth Tracker는 아이의 성장(키·몸무게, 발달, 수면)과 식�
 - `npm test -- src/App.test.tsx`: 파일 하나만 실행 / `npm test -- -t "테스트 이름"`: 이름으로 하나만 실행
 - `npm run test:watch`: 파일 변경 시 자동 재실행
 - `npm run test:coverage`: 커버리지 측정 (`coverage/`, 커밋 제외)
+- `npm run test:integration`: dev Supabase에 테스트 계정 A·B로 접속해 RLS·DB 제약을 검사 (`tests/integration/`). `.env.local`과 `.env.test.local`이 필요해 로컬에서만 실행하고 CI에서는 실행하지 않는다. 새 테이블을 추가하는 PR에는 이 테스트를 함께 추가한다
 - `npm run db:new -- <이름>`: 새 마이그레이션 파일 생성 (`supabase/migrations/`)
 - `npm run db:push`: 마이그레이션을 연결된 Supabase 프로젝트(dev)에 적용. DB 비밀번호를 묻는다
 - `npm run db:types`: DB 구조에서 TypeScript 타입 생성 (`src/lib/database.types.ts`)

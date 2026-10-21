@@ -19,9 +19,11 @@
     "test:coverage": "vitest run --coverage",
     "db:new": "supabase migration new",
     "db:push": "supabase db push",
-    "db:types": "supabase gen types typescript --linked --schema public > src/lib/database.types.ts"
+    "db:types": "supabase gen types typescript --linked --schema public > src/lib/database.types.ts",
+    "test:integration": "vitest run --config vitest.integration.config.ts"
   },
   "dependencies": {
+    "@supabase/supabase-js": "^2.118.0",
     "react": "^19.3.1",
     "react-dom": "^19.3.1"
   },
