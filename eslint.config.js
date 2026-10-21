@@ -7,7 +7,8 @@ import globals from 'globals'
 import tseslint from 'typescript-eslint'
 
 export default defineConfig([
-  globalIgnores(['dist', 'coverage']),
+  // database.types.ts는 `npm run db:types`로 자동 생성되는 파일이라 검사하지 않는다
+  globalIgnores(['dist', 'coverage', 'src/lib/database.types.ts']),
   {
     files: ['**/*.{ts,tsx}'],
     extends: [
