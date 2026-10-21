@@ -1,5 +1,180 @@
-/* 전역 스타일. 디자인 기준(색·글꼴·간격)은 T-05에서 적용합니다. */
-body {
-  margin: 0;
-  font-family: system-ui, sans-serif;
+@import 'tailwindcss';
+@import 'tw-animate-css';
+@import './styles/shadcn.css';
+/* Pretendard: 쓰는 글자만 나눠 받는 dynamic subset (OFL-1.1) */
+@import 'pretendard/dist/web/variable/pretendardvariable-dynamic-subset.css';
+
+/*
+ * 디자인 기준: docs/디자인.md
+ * 색 값을 바꿀 때는 docs/디자인.md 2장을 먼저 고치고 이 파일을 맞춘다.
+ * 다크 모드는 <html class="dark">로 켠다 (src/lib/theme.ts).
+ */
+@custom-variant dark (&:is(.dark *));
+
+@theme inline {
+  --font-sans:
+    'Pretendard Variable', Pretendard, -apple-system, BlinkMacSystemFont, system-ui,
+    'Apple SD Gothic Neo', 'Noto Sans KR', sans-serif;
+  --font-heading: var(--font-sans);
+
+  /* shadcn/ui가 쓰는 이름 → 디자인 토큰 */
+  --color-background: var(--bg);
+  --color-foreground: var(--text);
+  --color-card: var(--surface);
+  --color-card-foreground: var(--text);
+  --color-popover: var(--surface);
+  --color-popover-foreground: var(--text);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--on-primary);
+  --color-secondary: var(--soft);
+  --color-secondary-foreground: var(--soft-text);
+  --color-muted: var(--subtle);
+  --color-muted-foreground: var(--muted);
+  --color-accent: var(--soft);
+  --color-accent-foreground: var(--soft-text);
+  --color-destructive: var(--danger);
+  --color-destructive-foreground: var(--on-danger);
+  --color-border: var(--line);
+  --color-input: var(--line);
+  --color-ring: var(--primary);
+
+  /* 디자인 토큰 그대로 쓰는 이름 (bg-soft, text-soft-text, bg-danger-soft …) */
+  --color-surface: var(--surface);
+  --color-soft: var(--soft);
+  --color-soft-text: var(--soft-text);
+  --color-line: var(--line);
+  --color-danger: var(--danger);
+  --color-on-danger: var(--on-danger);
+  --color-danger-soft: var(--danger-soft);
+  --color-danger-text: var(--danger-text);
+  --color-toast: var(--toast-bg);
+  --color-toast-text: var(--toast-text);
+  --color-disabled: var(--disabled-bg);
+  --color-disabled-text: var(--disabled-text);
+  --color-scrim: var(--scrim);
+
+  /* 유형 색: 기록 종류 구분 전용 (docs/디자인.md 2.3) */
+  --color-type-word: var(--type-word);
+  --color-type-word-text: var(--type-word-text);
+  --color-type-behavior: var(--type-behavior);
+  --color-type-behavior-text: var(--type-behavior-text);
+  --color-type-expression: var(--type-expression);
+  --color-type-expression-text: var(--type-expression-text);
+  --color-type-play: var(--type-play);
+  --color-type-play-text: var(--type-play-text);
+  --color-type-food: var(--type-food);
+  --color-type-food-text: var(--type-food-text);
+  --color-type-measure: var(--type-measure);
+  --color-type-measure-text: var(--type-measure-text);
+  --color-tried: var(--tried);
+  --color-tried-text: var(--tried-text);
+
+  /* 모서리 (docs/디자인.md 4장): rounded-input, rounded-button, rounded-card, rounded-sheet */
+  --radius-input: 12px;
+  --radius-button: 14px;
+  --radius-card: 20px;
+  --radius-sheet: 24px;
+  /* shadcn 기본 단계 */
+  --radius-sm: 8px;
+  --radius-md: 10px;
+  --radius-lg: 12px;
+  --radius-xl: 16px;
+  --radius-2xl: 20px;
+}
+
+:root {
+  --primary: #6e54d6;
+  --on-primary: #ffffff;
+  --soft: #ece7ff;
+  --soft-text: #4a35a6;
+  --bg: #faf8ff;
+  --surface: #ffffff;
+  --subtle: #f3f1f8;
+  --line: #e9e4f5;
+  --text: #29263a;
+  --muted: #686479;
+  --scrim: rgb(41 38 58 / 0.4);
+  --disabled-bg: #eeecf1;
+  --disabled-text: #8a8592;
+
+  --danger: #d2493a;
+  --on-danger: #ffffff;
+  --danger-soft: #ffe4dd;
+  --danger-text: #9a2f22;
+  --toast-bg: #2b2730;
+  --toast-text: #ffffff;
+
+  --type-word: #ece7ff;
+  --type-word-text: #4a35a6;
+  --type-behavior: #ffe6d6;
+  --type-behavior-text: #9a4515;
+  --type-expression: #ddf4ec;
+  --type-expression-text: #1d6b59;
+  --type-play: #fff0c2;
+  --type-play-text: #8a6800;
+  --type-food: #f1eff6;
+  --type-food-text: #4f4b5c;
+  --type-measure: #e3eeff;
+  --type-measure-text: #1c5797;
+  --tried: #ddf4ec;
+  --tried-text: #1d6b59;
+
+  color-scheme: light;
+}
+
+.dark {
+  --primary: #a996ff;
+  --on-primary: #1b1433;
+  --soft: #2e2747;
+  --soft-text: #cbbbff;
+  --bg: #16141d;
+  --surface: #211e2a;
+  --subtle: #2a2733;
+  --line: #343041;
+  --text: #f3f1f9;
+  --muted: #aba7ba;
+  --scrim: rgb(0 0 0 / 0.55);
+  --disabled-bg: #2c2933;
+  --disabled-text: #7d7886;
+
+  --danger: #ff8e7c;
+  --on-danger: #2a1512;
+  --danger-soft: #4a2621;
+  --danger-text: #ffc6bc;
+  --toast-bg: #f4f1f6;
+  --toast-text: #17151a;
+
+  --type-word: #2e2747;
+  --type-word-text: #cbbbff;
+  --type-behavior: #45291c;
+  --type-behavior-text: #ffc4a3;
+  --type-expression: #1e3d35;
+  --type-expression-text: #9be8d3;
+  --type-play: #3b331c;
+  --type-play-text: #ffe08a;
+  --type-food: #2a2733;
+  --type-food-text: #d6d2e0;
+  --type-measure: #1d3350;
+  --type-measure-text: #b9d6ff;
+  --tried: #1e3d35;
+  --tried-text: #9be8d3;
+
+  color-scheme: dark;
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  html {
+    @apply font-sans;
+    -webkit-text-size-adjust: 100%;
+  }
+  body {
+    @apply bg-background text-foreground antialiased;
+  }
+  button:not(:disabled),
+  [role='button']:not(:disabled) {
+    cursor: pointer;
+  }
 }
