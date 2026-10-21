@@ -149,7 +149,7 @@ Oct 20, 2026 · @오민영 · 상태: 확정
 | T-32 [#39](https://github.com/oh-minyoung90/Baby-Growth-Tracker/issues/39) | E2E 테스트 기반 | 기술요구사항서 9.3 | Playwright 설정, 테스트 계정 세션 주입, 테스트 데이터 정리 | 로그인 상태로 홈이 열리는 테스트 통과 | T-28 | M |
 | T-33 [#40](https://github.com/oh-minyoung90/Baby-Growth-Tracker/issues/40) | E2E 시나리오 | PRD 8장 MVP-1 | 완료 기준을 시나리오로 작성 (기록 생성·수정·삭제, 잘못된 입력, 0건·1건, 백업 복원, 전체 삭제, 식단 계획→먹음 체크→처음 먹은 음식, 알러지 경고, 레시피 사진) | 전체 시나리오 통과 | T-31, T-32 | M |
 | T-34 [#41](https://github.com/oh-minyoung90/Baby-Growth-Tracker/issues/41) | 보안·PWA 마무리 | 기술요구사항서 10.2 | 보안 헤더(`_headers`), 홈 화면 추가용 manifest·아이콘, 콘솔에 아이 정보 출력 여부 점검 | 점검 목록 통과 | T-28 | S |
-| T-35 [#42](https://github.com/oh-minyoung90/Baby-Growth-Tracker/issues/42) | 👤 운영 배포 | 기술요구사항서 10.1 | prod 프로젝트 생성·마이그레이션 적용·본인 계정 등록, Cloudflare Pages 연결·환경변수·미리보기 배포 끄기. 확인 항목 C4·C5 점검 | 운영 주소에서 로그인·기록 동작, 성능 기준(1초) 확인 | T-33, T-34 | M |
+| T-35 [#42](https://github.com/oh-minyoung90/Baby-Growth-Tracker/issues/42) | 👤 운영 배포 | 기술요구사항서 10.1 | prod 프로젝트 생성·마이그레이션 적용·본인 계정 등록, 인증 설정을 dev와 동일하게(회원가입 차단, 코드 6자리·유효 10분, Gmail SMTP, 메일 템플릿), Cloudflare Pages 연결·환경변수·미리보기 배포 끄기. 확인 항목 C4·C5 점검 | 운영 주소에서 로그인·기록 동작, 성능 기준(1초) 확인 | T-33, T-34 | M |
 
 **MVP-1 완료**: T-35 이후 PRD 8장 MVP-1 체크리스트를 운영 환경에서 한 번 더 점검한다.
 
