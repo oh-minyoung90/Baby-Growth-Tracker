@@ -17,16 +17,10 @@ import { Checkbox } from '@/components/ui/checkbox'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
-import { setThemeMode, useThemeMode, type ThemeMode } from '@/lib/theme'
+import { ThemeModeSelector } from '@/features/settings/ThemeModeSelector'
 
-// T-05 확인용 임시 화면: 디자인 기준(docs/디자인.md)이 코드에 맞게 적용됐는지 본다.
-// T-09에서 실제 앱 화면(라우터, 하단 탭)으로 바뀐다.
-
-const MODES: { value: ThemeMode; label: string }[] = [
-  { value: 'system', label: '기기 설정' },
-  { value: 'light', label: '라이트' },
-  { value: 'dark', label: '다크' },
-]
+// 공통 컴포넌트 확인 화면 (개발 서버 전용, /dev/ui). 운영 빌드에는 포함되지 않는다.
+// 디자인 기준(docs/디자인.md)이 컴포넌트에 맞게 적용됐는지 볼 때 쓴다.
 
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
   return (
@@ -37,37 +31,16 @@ function Section({ title, children }: { title: string; children: React.ReactNode
   )
 }
 
-function App() {
-  const mode = useThemeMode()
-
+export default function UiPreview() {
   return (
     <main className="mx-auto flex max-w-240 flex-col gap-6 px-5 py-8">
       <header className="flex flex-col gap-1">
         <h1 className="text-2xl font-bold tracking-tight">Baby Growth Tracker</h1>
-        <p className="text-sm text-muted-foreground">
-          UI 기반 확인 화면 (T-05). 디자인 기준이 코드에 적용됐는지 확인합니다.
-        </p>
+        <p className="text-sm text-muted-foreground">공통 컴포넌트 확인 화면 (개발 서버 전용)</p>
       </header>
 
       <Section title="화면 모드 (FR-SET-10)">
-        <div
-          role="radiogroup"
-          aria-label="화면 모드"
-          className="grid grid-cols-3 rounded-button bg-soft p-1"
-        >
-          {MODES.map((m) => (
-            <button
-              key={m.value}
-              type="button"
-              role="radio"
-              aria-checked={mode === m.value}
-              onClick={() => setThemeMode(m.value)}
-              className="h-10 rounded-md text-sm font-medium text-soft-text aria-checked:bg-surface aria-checked:font-bold aria-checked:text-primary"
-            >
-              {m.label}
-            </button>
-          ))}
-        </div>
+        <ThemeModeSelector />
       </Section>
 
       <div className="grid gap-6 md:grid-cols-2">
@@ -172,5 +145,3 @@ function App() {
     </main>
   )
 }
-
-export default App
