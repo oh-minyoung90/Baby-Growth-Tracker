@@ -1,5 +1,6 @@
 import { Page } from '@/components/Page'
 import { Placeholder } from '@/components/Placeholder'
+import { AccountSection } from './AccountSection'
 import { ThemeModeSelector } from './ThemeModeSelector'
 
 export function SettingsPage() {
@@ -11,7 +12,8 @@ export function SettingsPage() {
         </h2>
         <ThemeModeSelector />
       </section>
-      <Placeholder task="T-11, T-29~T-31" description="아이 정보, 데이터 백업·삭제, 로그아웃" />
+      <Placeholder task="T-13, T-29~T-31" description="아이 정보, 데이터 백업·삭제" />
+      <AccountSection />
     </Page>
   )
 }
