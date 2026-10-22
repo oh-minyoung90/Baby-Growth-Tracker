@@ -1,11 +1,11 @@
 import { AuthApiError, AuthRetryableFetchError } from '@supabase/supabase-js'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { supabase } from '@/lib/supabase'
-import { sendLoginCode, verifyLoginCode } from './authApi'
+import { sendLoginCode, signOut, verifyLoginCode } from './authApi'
 
 // Supabase 응답 → 화면 결과 변환 (FR-AUTH-02, 04)
 vi.mock('@/lib/supabase', () => ({
-  supabase: { auth: { signInWithOtp: vi.fn(), verifyOtp: vi.fn() } },
+  supabase: { auth: { signInWithOtp: vi.fn(), verifyOtp: vi.fn(), signOut: vi.fn() } },
 }))
 const signIn = vi.mocked(supabase.auth.signInWithOtp)
 const verifyOtp = vi.mocked(supabase.auth.verifyOtp)
@@ -68,5 +68,14 @@ describe('verifyLoginCode', () => {
       ok: false,
       reason: 'invalid',
     })
+  })
+})
+
+describe('signOut', () => {
+  it('이 기기에서만 로그아웃한다 (다른 기기 로그인은 유지)', async () => {
+    const supabaseSignOut = vi.mocked(supabase.auth.signOut)
+    supabaseSignOut.mockResolvedValue({ error: null })
+    expect(await signOut()).toEqual({ ok: true })
+    expect(supabaseSignOut).toHaveBeenCalledWith({ scope: 'local' })
   })
 })
