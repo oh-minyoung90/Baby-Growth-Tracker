@@ -20,10 +20,17 @@ export function RequireAuth() {
   return <Outlet />
 }
 
-/** 로그인 화면 등: 이미 로그인했으면 홈으로 보낸다 */
+/** 로그인 화면 등: 이미 로그인했으면 원래 가려던 화면(없으면 홈)으로 보낸다 */
 export function RedirectIfSignedIn() {
   const auth = useAuth()
+  const location = useLocation()
   if (auth.status === 'loading') return <FullScreenLoading />
-  if (auth.status === 'signedIn') return <Navigate to="/" replace />
+  if (auth.status === 'signedIn') {
+    const from = (location.state as { from?: unknown } | null)?.from
+    // 앱 안의 주소만 허용한다 (외부 주소로 보내는 것을 막음)
+    const target =
+      typeof from === 'string' && from.startsWith('/') && !from.startsWith('//') ? from : '/'
+    return <Navigate to={target} replace />
+  }
   return <Outlet />
 }

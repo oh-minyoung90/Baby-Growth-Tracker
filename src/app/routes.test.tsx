@@ -24,7 +24,7 @@ function renderAt(path: string, auth: AuthState = signedIn) {
 describe('로그인 여부에 따른 이동', () => {
   it('로그인하지 않으면 로그인 화면으로 보낸다', async () => {
     const router = renderAt('/growth/sleep', signedOut)
-    expect(await screen.findByText('로그인 화면은 T-10에서 만들어요')).toBeInTheDocument()
+    expect(await screen.findByRole('button', { name: '인증 코드 받기' })).toBeInTheDocument()
     expect(router.state.location.pathname).toBe('/login')
   })
 
@@ -36,6 +36,32 @@ describe('로그인 여부에 따른 이동', () => {
   it('이미 로그인했으면 로그인 화면 대신 홈으로 보낸다', async () => {
     const router = renderAt('/login')
     expect(await screen.findByRole('heading', { level: 1, name: '홈' })).toBeInTheDocument()
+    expect(router.state.location.pathname).toBe('/')
+  })
+})
+
+describe('로그인 후 원래 가려던 화면으로 이동', () => {
+  function renderLoginWithFrom(from: string) {
+    const router = createMemoryRouter(routes, {
+      initialEntries: [{ pathname: '/login', state: { from } }],
+    })
+    render(
+      <AuthContext value={signedIn}>
+        <RouterProvider router={router} />
+      </AuthContext>,
+    )
+    return router
+  }
+
+  it('앱 안의 주소면 그 화면으로 보낸다', async () => {
+    const router = renderLoginWithFrom('/growth/sleep')
+    await screen.findByRole('heading', { level: 1, name: '성장' })
+    expect(router.state.location.pathname).toBe('/growth/sleep')
+  })
+
+  it('외부 주소는 무시하고 홈으로 보낸다', async () => {
+    const router = renderLoginWithFrom('//evil.example.com')
+    await screen.findByRole('heading', { level: 1, name: '홈' })
     expect(router.state.location.pathname).toBe('/')
   })
 })
