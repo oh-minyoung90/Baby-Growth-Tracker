@@ -10,5 +10,10 @@
     {
       "path": "./tsconfig.test.json"
     }
-  ]
+  ],
+  "compilerOptions": {
+    "paths": {
+      "@/*": ["./src/*"]
+    }
+  }
 }
