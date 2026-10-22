@@ -1,13 +1,6 @@
 import { Navigate, Outlet, useLocation } from 'react-router'
-import { useAuth } from './AuthContext'
-
-function FullScreenLoading() {
-  return (
-    <div role="status" className="flex min-h-dvh items-center justify-center text-muted-foreground">
-      불러오는 중…
-    </div>
-  )
-}
+import { FullScreenLoading } from '@/components/FullScreenLoading'
+import { useAuth } from '@/lib/auth'
 
 /** 로그인해야 볼 수 있는 화면. 로그인하지 않았으면 로그인 화면으로 보낸다 (FR-AUTH-06) */
 export function RequireAuth() {

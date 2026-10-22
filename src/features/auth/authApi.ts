@@ -50,16 +50,3 @@ export async function verifyLoginCode(email: string, code: string): Promise<Veri
     return { ok: false, reason: isNetworkError(error) ? 'network' : 'invalid' }
   }
 }
-
-/**
- * 이 기기에서 로그아웃한다 (FR-SET-08). 다른 기기의 로그인은 유지한다.
- * 성공하면 AuthProvider가 로그아웃 상태로 바뀌고 데이터 캐시를 비운다.
- */
-export async function signOut(): Promise<{ ok: boolean }> {
-  try {
-    const { error } = await supabase.auth.signOut({ scope: 'local' })
-    return { ok: !error }
-  } catch {
-    return { ok: false }
-  }
-}

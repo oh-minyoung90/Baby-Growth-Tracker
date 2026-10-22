@@ -2,6 +2,9 @@ import { Navigate, type RouteObject } from 'react-router'
 import { LoginPage } from '@/features/auth/LoginPage'
 import { RedirectIfSignedIn, RequireAuth } from '@/features/auth/RouteGuards'
 import { BodyPage } from '@/features/body/BodyPage'
+import { ChildEditPage } from '@/features/child/ChildEditPage'
+import { ChildSetupPage } from '@/features/child/ChildSetupPage'
+import { RequireChild } from '@/features/child/RequireChild'
 import { FoodsPage } from '@/features/food/FoodsPage'
 import { GrowthLayout } from '@/features/growth/GrowthLayout'
 import { HomePage } from '@/features/home/HomePage'
@@ -22,7 +25,8 @@ import { RouteError } from './RouteError'
  * /growth/body|words|sleep   성장 (SCR-04, 06, 08)
  * /timeline                  타임라인 (SCR-07)
  * /meals/week|foods|recipes  식사 (SCR-10~12)
- * /settings                  설정 (SCR-09)
+ * /setup                     아이 정보 첫 등록 (SCR-02)
+ * /settings                  설정 (SCR-09), /settings/child 아이 정보 수정
  */
 export const routes: RouteObject[] = [
   {
@@ -35,32 +39,41 @@ export const routes: RouteObject[] = [
       {
         element: <RequireAuth />,
         children: [
+          // 아이 정보 첫 등록 (SCR-02): 메뉴 없이 전체 화면
+          { path: '/setup', element: <ChildSetupPage /> },
           {
-            element: <AppLayout />,
+            // 아이 정보가 없으면 /setup으로 보낸다 (FR-CHILD-01)
+            element: <RequireChild />,
             children: [
-              { index: true, element: <HomePage /> },
               {
-                path: 'growth',
-                element: <GrowthLayout />,
+                element: <AppLayout />,
                 children: [
-                  { index: true, element: <Navigate to="body" replace /> },
-                  { path: 'body', element: <BodyPage /> },
-                  { path: 'words', element: <WordsPage /> },
-                  { path: 'sleep', element: <SleepPage /> },
+                  { index: true, element: <HomePage /> },
+                  {
+                    path: 'growth',
+                    element: <GrowthLayout />,
+                    children: [
+                      { index: true, element: <Navigate to="body" replace /> },
+                      { path: 'body', element: <BodyPage /> },
+                      { path: 'words', element: <WordsPage /> },
+                      { path: 'sleep', element: <SleepPage /> },
+                    ],
+                  },
+                  { path: 'timeline', element: <TimelinePage /> },
+                  {
+                    path: 'meals',
+                    element: <MealsLayout />,
+                    children: [
+                      { index: true, element: <Navigate to="week" replace /> },
+                      { path: 'week', element: <MealWeekPage /> },
+                      { path: 'foods', element: <FoodsPage /> },
+                      { path: 'recipes', element: <RecipesPage /> },
+                    ],
+                  },
+                  { path: 'settings', element: <SettingsPage /> },
+                  { path: 'settings/child', element: <ChildEditPage /> },
                 ],
               },
-              { path: 'timeline', element: <TimelinePage /> },
-              {
-                path: 'meals',
-                element: <MealsLayout />,
-                children: [
-                  { index: true, element: <Navigate to="week" replace /> },
-                  { path: 'week', element: <MealWeekPage /> },
-                  { path: 'foods', element: <FoodsPage /> },
-                  { path: 'recipes', element: <RecipesPage /> },
-                ],
-              },
-              { path: 'settings', element: <SettingsPage /> },
             ],
           },
         ],

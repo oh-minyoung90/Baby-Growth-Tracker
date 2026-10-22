@@ -11,7 +11,7 @@ Baby Growth Tracker는 아이의 성장(키·몸무게, 발달, 수면)과 식�
 ## 문서
 
 - `PRD.md`(v1.3, 확정)는 범위, 기능(F-01~F-24), 데이터 모델, 결정 사항의 기준 문서입니다. 동작을 제안하기 전에 9장 "결정 사항"을 확인하고, 이미 결정된 항목은 사용자와 협의 없이 다시 바꾸지 않습니다.
-- 설계 문서는 `docs/` 아래에 둡니다. `docs/기능요구사항서.md`(v1.3)는 화면별 요구사항(FR)과 비즈니스 규칙(BR)의 기준이며, `docs/기술요구사항서.md`(v1.6)는 시스템 구성, DB 스키마, RLS, 인증, 테스트, 배포 방식의 기준입니다. 구현 중 설계가 바뀌면 해당 문서를 함께 고칩니다. `docs/디자인.md`(v1.0)는 색·글자·간격·레이아웃·컴포넌트의 기준이며, 화면을 만들 때 디자인 시안보다 우선합니다. `docs/task.md`(v1.1)는 MVP-1(성장 기록 + 식사 기록) 태스크 목록이며, 태스크마다 GitHub Issue가 연결되어 있습니다. 설계 문서와 `PRD.md`가 서로 다르면 임의로 하나를 고르지 말고 사용자에게 알립니다.
+- 설계 문서는 `docs/` 아래에 둡니다. `docs/기능요구사항서.md`(v1.3)는 화면별 요구사항(FR)과 비즈니스 규칙(BR)의 기준이며, `docs/기술요구사항서.md`(v1.7)는 시스템 구성, DB 스키마, RLS, 인증, 테스트, 배포 방식의 기준입니다. 구현 중 설계가 바뀌면 해당 문서를 함께 고칩니다. `docs/디자인.md`(v1.0)는 색·글자·간격·레이아웃·컴포넌트의 기준이며, 화면을 만들 때 디자인 시안보다 우선합니다. `docs/task.md`(v1.1)는 MVP-1(성장 기록 + 식사 기록) 태스크 목록이며, 태스크마다 GitHub Issue가 연결되어 있습니다. 설계 문서와 `PRD.md`가 서로 다르면 임의로 하나를 고르지 말고 사용자에게 알립니다.
 - 확실하지 않은 내용은 가정하지 말고 "확인 필요"로 표시합니다.
 
 ## 기술 스택
@@ -45,12 +45,14 @@ Baby Growth Tracker는 아이의 성장(키·몸무게, 발달, 수면)과 식�
 
 - `src/main.tsx`: 진입점. 화면 모드 적용 → `QueryClientProvider` → `AuthProvider` → `RouterProvider`
 - `src/app/`: 앱 골격. `routes.tsx`(화면 주소와 로그인 가드), `AppLayout.tsx`(모바일 하단 탭 / PC 왼쪽 메뉴), `queryClient.ts`, `dev/`(개발 서버 전용 화면)
-- `src/features/<기능>/`: 화면 단위 코드 (auth, home, growth, body, milestone, sleep, timeline, meal, food, recipe, settings). 다른 기능 폴더를 직접 가져다 쓰지 않고, 공통 로직은 `src/domain/`이나 `src/lib/`로 옮깁니다
+- `src/features/<기능>/`: 화면 단위 코드 (auth, child, home, growth, body, milestone, sleep, timeline, meal, food, recipe, settings). 다른 기능 폴더를 직접 가져다 쓰지 않고, 공통 로직은 `src/domain/`이나 `src/lib/`로 옮깁니다
 - `src/domain/`: 화면과 무관한 계산 규칙(생후 일수, 같은 내용 판단, 수면 계산). 순수 함수와 단위 테스트
-- `src/lib/`: Supabase 클라이언트(`supabase.ts`), DB 타입(`database.types.ts`, 자동 생성), 화면 모드(`theme.ts`), 공통 유틸
-- `src/components/`: 화면 틀(`Page`, `SubTabs`)과 공통 UI(`ui/`)
+- `src/lib/`: Supabase 클라이언트(`supabase.ts`), DB 타입(`database.types.ts`, 자동 생성), 화면 모드(`theme.ts`), 여러 화면이 함께 쓰는 로그인 상태·로그아웃(`auth.ts`)과 아이 정보(`childApi.ts`, `useChild.ts`), 공통 유틸
+- `src/components/`: 화면 틀(`Page`, `SubTabs`, `FullScreenLoading`)과 공통 UI(`ui/`)
+- `src/test/`: 테스트 공통 설정(`setup.ts`)과 앱 전체 화면 이동 테스트용 `renderApp()` (로그인 상태를 직접 넣고, `*Api.ts`는 `vi.mock`으로 바꿔 끼움)
 - `supabase/migrations/`: DB 구조(테이블, 제약, 트리거, RLS). 화면 규칙과 같은 검증을 DB에도 둡니다
-- 로그인 상태는 `useAuth()`(AuthContext), 서버 데이터는 TanStack Query로 다룹니다. 로그아웃하면 Query 캐시를 비웁니다
+- 로그인 상태는 `useAuth()`(`src/lib/auth.ts`), 서버 데이터는 TanStack Query로 다룹니다. 로그아웃하면 Query 캐시를 비웁니다
+- 로그인 후 아이 정보가 없으면 `RequireChild`가 등록 화면(`/setup`)으로 보냅니다. 등록 전에는 다른 화면으로 갈 수 없습니다
 
 ## UI 구성
 
