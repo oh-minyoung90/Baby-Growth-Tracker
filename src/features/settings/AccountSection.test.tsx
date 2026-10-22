@@ -4,12 +4,14 @@ import type { Session } from '@supabase/supabase-js'
 import { createMemoryRouter, RouterProvider } from 'react-router'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { Toaster } from '@/components/ui/sonner'
-import { AuthContext, type AuthState } from '@/features/auth/AuthContext'
-import { signOut } from '@/features/auth/authApi'
+import { AuthContext, signOut, type AuthState } from '@/lib/auth'
 import { AccountSection } from './AccountSection'
 
 // 설정 > 계정: 로그아웃 (T-11, FR-SET-08)
-vi.mock('@/features/auth/authApi', () => ({ signOut: vi.fn() }))
+vi.mock('@/lib/auth', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@/lib/auth')>()),
+  signOut: vi.fn(),
+}))
 const mockedSignOut = vi.mocked(signOut)
 
 const auth: AuthState = {

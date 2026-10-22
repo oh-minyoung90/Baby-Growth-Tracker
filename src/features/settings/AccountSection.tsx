@@ -2,8 +2,7 @@ import { useState } from 'react'
 import { useNavigate } from 'react-router'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
-import { useAuth } from '@/features/auth/AuthContext'
-import { signOut } from '@/features/auth/authApi'
+import { signOut, useAuth } from '@/lib/auth'
 
 /** 설정 > 계정: 로그인한 이메일과 로그아웃 (FR-SET-08) */
 export function AccountSection() {

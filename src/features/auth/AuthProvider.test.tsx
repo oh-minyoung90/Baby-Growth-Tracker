@@ -3,7 +3,7 @@ import type { AuthChangeEvent, Session } from '@supabase/supabase-js'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { supabase } from '@/lib/supabase'
-import { useAuth } from './AuthContext'
+import { useAuth } from '@/lib/auth'
 import { AuthProvider } from './AuthProvider'
 
 // 로그인 유지(FR-AUTH-05)와 로그아웃 시 캐시 비우기 (T-11)

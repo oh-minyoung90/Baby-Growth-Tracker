@@ -1,7 +1,7 @@
 import { useEffect, useState, type ReactNode } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
 import { supabase } from '@/lib/supabase'
-import { AuthContext, type AuthState } from './AuthContext'
+import { AuthContext, type AuthState } from '@/lib/auth'
 
 /** Supabase 로그인 상태를 앱 전체에 알려 준다 */
 export function AuthProvider({ children }: { children: ReactNode }) {

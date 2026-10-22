@@ -1,4 +1,5 @@
-import { isValid } from 'date-fns'
+import { format, isValid } from 'date-fns'
+import { ko } from 'date-fns/locale'
 
 const DATE_PATTERN = /^(\d{4})-(\d{2})-(\d{2})$/
 
@@ -23,4 +24,14 @@ export function parseDate(value: string): Date {
     throw new RangeError(`존재하지 않는 날짜입니다: ${value}`)
   }
   return date
+}
+
+/** 기기 시간대 기준 오늘 'YYYY-MM-DD' (PRD 결정 사항: 시간대는 기기의 현재 시각 기준) */
+export function todayString(now: Date = new Date()): string {
+  return format(now, 'yyyy-MM-dd')
+}
+
+/** 'YYYY-MM-DD' → '2026. 1. 8. (목)' (기능요구사항서 FR-COM-05) */
+export function formatDateLabel(value: string): string {
+  return format(parseDate(value), 'yyyy. M. d. (EEE)', { locale: ko })
 }

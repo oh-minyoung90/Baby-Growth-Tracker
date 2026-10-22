@@ -1,24 +1,30 @@
-import { render, screen, within } from '@testing-library/react'
+import { screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import type { Session } from '@supabase/supabase-js'
-import { createMemoryRouter, RouterProvider } from 'react-router'
-import { describe, expect, it } from 'vitest'
-import { AuthContext, type AuthState } from '@/features/auth/AuthContext'
-import { routes } from './routes'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
+import type { AuthState } from '@/lib/auth'
+import { fetchMyChild } from '@/lib/childApi'
+import { renderApp } from '@/test/renderApp'
 
 // 화면 이동과 로그인 여부에 따른 이동 (T-09, FR-AUTH-06)
 
 const signedIn: AuthState = { status: 'signedIn', session: { user: { id: 'test' } } as Session }
 const signedOut: AuthState = { status: 'signedOut', session: null }
 
+vi.mock('@/lib/childApi', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@/lib/childApi')>()),
+  fetchMyChild: vi.fn(),
+  saveChild: vi.fn(),
+}))
+const mockedFetchChild = vi.mocked(fetchMyChild)
+
+beforeEach(() => {
+  mockedFetchChild.mockReset()
+  mockedFetchChild.mockResolvedValue({ id: 'c1', nickname: '하늘이', birthDate: '2026-01-08' })
+})
+
 function renderAt(path: string, auth: AuthState = signedIn) {
-  const router = createMemoryRouter(routes, { initialEntries: [path] })
-  render(
-    <AuthContext value={auth}>
-      <RouterProvider router={router} />
-    </AuthContext>,
-  )
-  return router
+  return renderApp(path, auth).router
 }
 
 describe('로그인 여부에 따른 이동', () => {
@@ -42,15 +48,7 @@ describe('로그인 여부에 따른 이동', () => {
 
 describe('로그인 후 원래 가려던 화면으로 이동', () => {
   function renderLoginWithFrom(from: string) {
-    const router = createMemoryRouter(routes, {
-      initialEntries: [{ pathname: '/login', state: { from } }],
-    })
-    render(
-      <AuthContext value={signedIn}>
-        <RouterProvider router={router} />
-      </AuthContext>,
-    )
-    return router
+    return renderApp({ pathname: '/login', state: { from } }, signedIn).router
   }
 
   it('앱 안의 주소면 그 화면으로 보낸다', async () => {
@@ -132,5 +130,29 @@ describe('브라우저 탭 제목', () => {
     renderAt('/settings')
     await screen.findByRole('heading', { level: 1, name: '설정' })
     expect(document.title).toBe('설정 · Baby Growth Tracker')
+  })
+})
+
+describe('아이 정보 등록 여부에 따른 이동 (FR-CHILD-01)', () => {
+  it('아이 정보가 없으면 어느 화면을 열어도 등록 화면으로 보낸다', async () => {
+    mockedFetchChild.mockResolvedValue(null)
+    const router = renderAt('/timeline')
+    expect(await screen.findByRole('heading', { name: /아이 정보를/ })).toBeInTheDocument()
+    expect(router.state.location.pathname).toBe('/setup')
+    // 등록 화면에는 메뉴가 없어 다른 화면으로 갈 수 없다
+    expect(screen.queryByRole('navigation', { name: '주 메뉴' })).not.toBeInTheDocument()
+  })
+
+  it('이미 등록했으면 등록 화면 대신 홈으로 보낸다', async () => {
+    const router = renderAt('/setup')
+    expect(await screen.findByRole('heading', { level: 1, name: '홈' })).toBeInTheDocument()
+    expect(router.state.location.pathname).toBe('/')
+  })
+
+  it('아이 정보를 불러오지 못하면 다시 시도할 수 있다', async () => {
+    mockedFetchChild.mockRejectedValue(new Error('network'))
+    renderAt('/')
+    expect(await screen.findByRole('alert')).toHaveTextContent('정보를 불러오지 못했어요')
+    expect(screen.getByRole('button', { name: '다시 시도' })).toBeInTheDocument()
   })
 })
