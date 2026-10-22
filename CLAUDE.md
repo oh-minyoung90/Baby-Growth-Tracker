@@ -4,7 +4,7 @@
 
 ## 프로젝트 현황
 
-Baby Growth Tracker는 아이의 성장(키·몸무게, 발달, 수면)과 식사(음식 목록, 주간 식단, 레시피)를 기록하는 개인용 웹 앱입니다. 현재 설계 단계이며 소스 코드는 아직 없습니다.
+Baby Growth Tracker는 아이의 성장(키·몸무게, 발달, 수면)과 식사(음식 목록, 주간 식단, 레시피)를 기록하는 개인용 웹 앱입니다. 설계는 확정되었고, 구현을 `docs/task.md` 순서대로 진행하고 있습니다.
 
 진행 순서: PRD → 기능요구사항서 → 기술요구사항서 → 태스크 분해 → 구현(MVP-1: 성장 기록 → 식사 기록) → 테스트
 
@@ -41,7 +41,16 @@ Baby Growth Tracker는 아이의 성장(키·몸무게, 발달, 수면)과 식�
 
 ## 아키텍처
 
-아직 없습니다. 코드가 생기면 전체 구조(데이터 모델, 주요 모듈, 모듈 간 데이터 흐름)를 여기에 정리합니다.
+별도 백엔드 서버 없이 브라우저(React SPA)가 Supabase에 직접 요청하고, 데이터 보호는 DB의 RLS가 맡습니다 (기술요구사항서 2장).
+
+- `src/main.tsx`: 진입점. 화면 모드 적용 → `QueryClientProvider` → `AuthProvider` → `RouterProvider`
+- `src/app/`: 앱 골격. `routes.tsx`(화면 주소와 로그인 가드), `AppLayout.tsx`(모바일 하단 탭 / PC 왼쪽 메뉴), `queryClient.ts`, `dev/`(개발 서버 전용 화면)
+- `src/features/<기능>/`: 화면 단위 코드 (auth, home, growth, body, milestone, sleep, timeline, meal, food, recipe, settings). 다른 기능 폴더를 직접 가져다 쓰지 않고, 공통 로직은 `src/domain/`이나 `src/lib/`로 옮깁니다
+- `src/domain/`: 화면과 무관한 계산 규칙(생후 일수, 같은 내용 판단, 수면 계산). 순수 함수와 단위 테스트
+- `src/lib/`: Supabase 클라이언트(`supabase.ts`), DB 타입(`database.types.ts`, 자동 생성), 화면 모드(`theme.ts`), 공통 유틸
+- `src/components/`: 화면 틀(`Page`, `SubTabs`)과 공통 UI(`ui/`)
+- `supabase/migrations/`: DB 구조(테이블, 제약, 트리거, RLS). 화면 규칙과 같은 검증을 DB에도 둡니다
+- 로그인 상태는 `useAuth()`(AuthContext), 서버 데이터는 TanStack Query로 다룹니다. 로그아웃하면 Query 캐시를 비웁니다
 
 ## UI 구성
 
