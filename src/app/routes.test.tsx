@@ -99,19 +99,20 @@ describe('주 메뉴', () => {
 })
 
 describe('화면 안 상단 탭', () => {
+  // /growth → /growth/body로 바뀐 뒤 화면이 다시 그려질 때까지 기다린다 (느린 CI에서 실패했음)
   it('성장 메뉴는 키·몸무게 탭으로 연다', async () => {
     const router = renderAt('/growth')
     const tabs = await screen.findByRole('navigation', { name: '성장 기록 종류' })
+    expect(
+      await within(tabs).findByRole('link', { name: '키·몸무게', current: 'page' }),
+    ).toBeInTheDocument()
     expect(router.state.location.pathname).toBe('/growth/body')
-    expect(within(tabs).getByRole('link', { name: '키·몸무게' })).toHaveAttribute(
-      'aria-current',
-      'page',
-    )
   })
 
   it('식사 메뉴는 주간 식단 탭으로 열고, 탭을 바꿀 수 있다', async () => {
     const router = renderAt('/meals')
     const tabs = await screen.findByRole('navigation', { name: '식사 화면' })
+    await within(tabs).findByRole('link', { name: '주간 식단', current: 'page' })
     expect(router.state.location.pathname).toBe('/meals/week')
     await userEvent.click(within(tabs).getByRole('link', { name: '레시피' }))
     expect(router.state.location.pathname).toBe('/meals/recipes')
