@@ -47,8 +47,8 @@ Baby Growth Tracker는 아이의 성장(키·몸무게, 발달, 수면)과 식�
 - `src/app/`: 앱 골격. `routes.tsx`(화면 주소와 로그인 가드), `AppLayout.tsx`(모바일 하단 탭 / PC 왼쪽 메뉴), `queryClient.ts`, `dev/`(개발 서버 전용 화면)
 - `src/features/<기능>/`: 화면 단위 코드 (auth, child, home, growth, body, milestone, sleep, timeline, meal, food, recipe, settings). 다른 기능 폴더를 직접 가져다 쓰지 않고, 공통 로직은 `src/domain/`이나 `src/lib/`로 옮깁니다
 - `src/domain/`: 화면과 무관한 계산 규칙(생후 일수, 같은 내용 판단, 수면 계산). 순수 함수와 단위 테스트
-- `src/lib/`: Supabase 클라이언트(`supabase.ts`), DB 타입(`database.types.ts`, 자동 생성), 화면 모드(`theme.ts`), 여러 화면이 함께 쓰는 로그인 상태·로그아웃(`auth.ts`)과 아이 정보(`childApi.ts`, `useChild.ts`), 공통 유틸
-- `src/components/`: 화면 틀(`Page`, `SubTabs`, `FullScreenLoading`)과 공통 UI(`ui/`)
+- `src/lib/`: Supabase 클라이언트(`supabase.ts`), DB 타입(`database.types.ts`, 자동 생성), 화면 모드(`theme.ts`), 여러 화면이 함께 쓰는 로그인 상태·로그아웃(`auth.ts`)과 아이 정보(`childApi.ts`, `useChild.ts`), 입력 검증 규칙(`validation.ts`), 저장 알림(`notify.ts`), 공통 안내 문구(`messages.ts`), 공통 유틸
+- `src/components/`: 화면 틀(`Page`, `SubTabs`, `FullScreenLoading`), 공통 입력·안내(`form/`, `ConfirmDialog`, `DeleteRecordButton`, `ErrorBanner`, `EmptyState`, `ListLoading`), 기본 UI(`ui/`)
 - `src/test/`: 테스트 공통 설정(`setup.ts`)과 앱 전체 화면 이동 테스트용 `renderApp()` (로그인 상태를 직접 넣고, `*Api.ts`는 `vi.mock`으로 바꿔 끼움)
 - `supabase/migrations/`: DB 구조(테이블, 제약, 트리거, RLS). 화면 규칙과 같은 검증을 DB에도 둡니다
 - 로그인 상태는 `useAuth()`(`src/lib/auth.ts`), 서버 데이터는 TanStack Query로 다룹니다. 로그아웃하면 Query 캐시를 비웁니다
@@ -59,7 +59,11 @@ Baby Growth Tracker는 아이의 성장(키·몸무게, 발달, 수면)과 식�
 - 디자인 값은 `src/index.css`의 CSS 변수와 Tailwind 테마로 관리합니다 (`docs/디자인.md`와 일치). 색을 코드에 직접 쓰지 말고 `bg-primary`, `bg-soft`, `text-danger`, `bg-type-word` 같은 토큰 클래스를 씁니다.
 - 공통 컴포넌트는 `src/components/ui/`(shadcn/ui 기반, 디자인 기준으로 수정함)를 씁니다. 새 컴포넌트는 `npx shadcn@latest add <이름>`으로 받은 뒤 디자인 기준(높이 48px, 모서리 토큰, 16px 글자, `@/lib/utils`의 `cn`)에 맞게 고칩니다. shadcn CLI 패키지는 의존성에 넣지 않습니다(개발 도구 취약점 때문에 `src/styles/shadcn.css`로 필요한 CSS만 복사해 둠).
 - 화면 모드(라이트/다크)는 `src/lib/theme.ts`로 다룹니다. `<html class="dark">`가 다크 모드입니다.
-- 아이콘은 `lucide-react`, 저장 알림은 `sonner`의 `toast`를 씁니다.
+- 아이콘은 `lucide-react`를 씁니다.
+- 기록 입력 화면은 공통 요소를 조합합니다 (기능요구사항서 3장, T-14). 화면 확인은 개발 서버의 `/dev/ui`에서 합니다.
+  - 입력칸: `TextField`(글자 수 제한·표시), `DateField`(요일 표시, 기본값 오늘은 폼의 `defaultValues`에서). React Hook Form의 `control`과 `name`을 넘깁니다.
+  - 검증: `src/lib/validation.ts`의 `requiredText`, `optionalText`, `recordDate`로 Zod 스키마를 만듭니다. 서버 검증 실패도 같은 입력칸에 같은 문구로 표시합니다 (`setError`).
+  - 저장 성공은 `notifySaved()`, 삭제는 `DeleteRecordButton`(확인 창 포함), 그 밖의 확인은 `ConfirmDialog`, 네트워크 오류는 화면 상단 `ErrorBanner`(입력값 유지 + 다시 시도), 0건은 `EmptyState`, 목록 로딩은 `ListLoading`을 씁니다.
 
 ## 규칙
 

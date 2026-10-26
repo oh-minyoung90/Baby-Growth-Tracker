@@ -1,7 +1,7 @@
 import { ChevronLeft } from 'lucide-react'
 import { Link, useNavigate } from 'react-router'
-import { toast } from 'sonner'
 import { Page } from '@/components/Page'
+import { notifySaved } from '@/lib/notify'
 import { ChildForm } from './ChildForm'
 import { useChild } from '@/lib/useChild'
 
@@ -24,7 +24,7 @@ export function ChildEditPage() {
           mode="edit"
           initial={child}
           onSaved={() => {
-            toast.success('저장했어요')
+            notifySaved()
             navigate('/settings')
           }}
         />

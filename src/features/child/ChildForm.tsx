@@ -1,66 +1,36 @@
 import { useState } from 'react'
 import { zodResolver } from '@hookform/resolvers/zod'
-import { CircleAlert, Sprout } from 'lucide-react'
+import { Sprout } from 'lucide-react'
 import { useForm, useWatch } from 'react-hook-form'
 import { z } from 'zod'
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from '@/components/ui/alert-dialog'
+import { ConfirmDialog } from '@/components/ConfirmDialog'
+import { ErrorBanner } from '@/components/ErrorBanner'
+import { DateField } from '@/components/form/DateField'
+import { TextField } from '@/components/form/TextField'
 import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
 import { calculateAge, formatAge } from '@/domain/age'
-import { parseDate, todayString } from '@/domain/date'
+import { isValidDateString, todayString } from '@/domain/date'
 import { withTopicParticle } from '@/domain/josa'
-import { cn } from '@/lib/utils'
 import { ChildSaveError, type Child, type ChildInput } from '@/lib/childApi'
 import { useSaveChild } from '@/lib/useChild'
+import { cn } from '@/lib/utils'
+import { DATE_MESSAGES, recordDate, requiredText } from '@/lib/validation'
 
 /** 아이 정보 입력 폼: 첫 등록(SCR-02)과 설정에서 수정할 때 함께 쓴다 (FR-CHILD-02~03) */
 
 const NAME_MAX = 20
 
-function isValidDate(value: string) {
-  try {
-    parseDate(value)
-    return true
-  } catch {
-    return false
-  }
-}
-
 const schema = z.object({
-  nickname: z
-    .string()
-    .trim()
-    .min(1, '이름 또는 별명을 입력해 주세요')
-    .max(NAME_MAX, `${NAME_MAX}자까지 입력할 수 있어요`),
-  birthDate: z
-    .string()
-    .min(1, '생년월일을 입력해 주세요')
-    .refine(isValidDate, '날짜를 다시 확인해 주세요')
-    .refine((v) => v <= todayString(), '오늘 이후 날짜는 고를 수 없어요'),
+  nickname: requiredText(NAME_MAX, '이름 또는 별명을 입력해 주세요'),
+  birthDate: recordDate(),
 })
 
 type FormValues = z.input<typeof schema>
 
-const SAVE_ERROR: Record<ChildSaveError['reason'], string> = {
-  futureDate: '오늘 이후 날짜는 고를 수 없어요',
-  invalid: '이름은 1~20자로 입력해 주세요',
-  network: '저장하지 못했어요. 인터넷 연결을 확인해 주세요',
-}
-
 /** 오늘 기준 생후 일수 미리보기 문구. 날짜가 올바르지 않으면 null */
 function agePreview(nickname: string, birthDate: string): string | null {
   const today = todayString()
-  if (!isValidDate(birthDate) || birthDate > today) return null
+  if (!isValidDateString(birthDate) || birthDate > today) return null
   const name = nickname.trim() || '우리 아이'
   return `${withTopicParticle(name)} 오늘 ${formatAge(calculateAge(birthDate, today))}이에요`
 }
@@ -76,27 +46,28 @@ export function ChildForm({
 }) {
   const save = useSaveChild()
   const [confirmInput, setConfirmInput] = useState<ChildInput | null>(null)
-  const [saveError, setSaveError] = useState<string | null>(null)
-  const today = todayString()
+  const [networkError, setNetworkError] = useState(false)
 
-  const {
-    register,
-    control,
-    handleSubmit,
-    formState: { errors },
-  } = useForm<FormValues, unknown, z.output<typeof schema>>({
-    resolver: zodResolver(schema),
-    defaultValues: { nickname: initial?.nickname ?? '', birthDate: initial?.birthDate ?? '' },
-  })
+  const { control, handleSubmit, setError } = useForm<FormValues, unknown, z.output<typeof schema>>(
+    {
+      resolver: zodResolver(schema),
+      defaultValues: { nickname: initial?.nickname ?? '', birthDate: initial?.birthDate ?? '' },
+    },
+  )
   const [nickname, birthDate] = useWatch({ control, name: ['nickname', 'birthDate'] })
   const preview = agePreview(nickname, birthDate)
 
   const submit = async (input: ChildInput) => {
-    setSaveError(null)
+    setNetworkError(false)
     try {
       onSaved(await save.mutateAsync(input))
     } catch (error) {
-      setSaveError(SAVE_ERROR[error instanceof ChildSaveError ? error.reason : 'network'])
+      // 서버(DB) 검증에 걸리면 화면 검증과 같은 자리에 같은 문구로 알린다 (FR-COM-13)
+      const reason = error instanceof ChildSaveError ? error.reason : 'network'
+      if (reason === 'futureDate') setError('birthDate', { message: DATE_MESSAGES.future })
+      else if (reason === 'invalid')
+        setError('nickname', { message: '이름은 1~20자로 입력해 주세요' })
+      else setNetworkError(true)
     }
   }
 
@@ -111,41 +82,24 @@ export function ChildForm({
 
   return (
     <form onSubmit={onSubmit} noValidate className="flex flex-1 flex-col gap-5">
-      <div className="flex flex-col gap-1.5">
-        <div className="flex items-baseline justify-between">
-          <Label htmlFor="child-nickname">이름 또는 별명</Label>
-          <span className="text-[13px] text-muted-foreground" aria-hidden>
-            {nickname.length} / {NAME_MAX}
-          </span>
-        </div>
-        <Input
-          id="child-nickname"
-          placeholder="예: 하늘이"
-          maxLength={NAME_MAX}
-          autoComplete="off"
-          aria-invalid={errors.nickname ? true : undefined}
-          aria-describedby={errors.nickname ? 'child-nickname-error' : undefined}
-          {...register('nickname')}
-        />
-        {errors.nickname?.message && (
-          <FieldError id="child-nickname-error">{errors.nickname.message}</FieldError>
-        )}
-      </div>
+      {/* 네트워크 오류: 입력값은 그대로 두고 다시 시도할 수 있게 한다 (기능요구사항서 3.4) */}
+      {networkError && <ErrorBanner onRetry={() => void onSubmit()} retrying={save.isPending} />}
 
-      <div className="flex flex-col gap-1.5">
-        <Label htmlFor="child-birth">생년월일</Label>
-        <Input
-          id="child-birth"
-          type="date"
-          max={today}
-          aria-invalid={errors.birthDate ? true : undefined}
-          aria-describedby={errors.birthDate ? 'child-birth-error' : undefined}
-          {...register('birthDate')}
-        />
-        {errors.birthDate?.message && (
-          <FieldError id="child-birth-error">{errors.birthDate.message}</FieldError>
-        )}
-      </div>
+      <TextField
+        control={control}
+        name="nickname"
+        id="child-nickname"
+        label="이름 또는 별명"
+        placeholder="예: 하늘이"
+        maxLength={NAME_MAX}
+      />
+      <DateField
+        control={control}
+        name="birthDate"
+        id="child-birth"
+        label="생년월일"
+        max={todayString()}
+      />
 
       {preview && (
         <p
@@ -156,8 +110,6 @@ export function ChildForm({
           {preview}
         </p>
       )}
-
-      {saveError && <FieldError id="child-save-error">{saveError}</FieldError>}
 
       <div className={cn('flex flex-col gap-2.5', mode === 'create' && 'mt-auto pt-4')}>
         <Button type="submit" size="lg" disabled={save.isPending}>
@@ -170,36 +122,16 @@ export function ChildForm({
         )}
       </div>
 
-      <AlertDialog
+      <ConfirmDialog
         open={confirmInput !== null}
         onOpenChange={(open) => !open && setConfirmInput(null)}
-      >
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>생년월일을 바꿀까요?</AlertDialogTitle>
-            <AlertDialogDescription>모든 기록의 생후 일수 표시가 바뀌어요</AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>취소</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={() => {
-                if (confirmInput) void submit(confirmInput)
-              }}
-            >
-              바꾸기
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+        title="생년월일을 바꿀까요?"
+        description="모든 기록의 생후 일수 표시가 바뀌어요"
+        confirmLabel="바꾸기"
+        onConfirm={() => {
+          if (confirmInput) void submit(confirmInput)
+        }}
+      />
     </form>
-  )
-}
-
-function FieldError({ id, children }: { id: string; children: string }) {
-  return (
-    <p id={id} role="alert" className="flex items-center gap-1.5 text-sm text-danger">
-      <CircleAlert className="size-4 shrink-0" aria-hidden />
-      {children}
-    </p>
   )
 }

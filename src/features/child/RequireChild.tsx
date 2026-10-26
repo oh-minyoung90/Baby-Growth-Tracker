@@ -1,6 +1,7 @@
 import { Navigate, Outlet } from 'react-router'
-import { Button } from '@/components/ui/button'
+import { ErrorBanner } from '@/components/ErrorBanner'
 import { FullScreenLoading } from '@/components/FullScreenLoading'
+import { NETWORK_ERROR_MESSAGES } from '@/lib/messages'
 import { useChild } from '@/lib/useChild'
 
 /**
@@ -12,14 +13,8 @@ export function RequireChild() {
   if (isPending) return <FullScreenLoading />
   if (isError) {
     return (
-      <div
-        role="alert"
-        className="flex min-h-dvh flex-col items-center justify-center gap-3 px-6 text-center"
-      >
-        <p className="text-[15px]">정보를 불러오지 못했어요. 인터넷 연결을 확인해 주세요</p>
-        <Button variant="outline" onClick={() => refetch()}>
-          다시 시도
-        </Button>
+      <div className="mx-auto flex min-h-dvh max-w-100 flex-col justify-center px-6">
+        <ErrorBanner message={NETWORK_ERROR_MESSAGES.load} onRetry={() => void refetch()} />
       </div>
     )
   }
