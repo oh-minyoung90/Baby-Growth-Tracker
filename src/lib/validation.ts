@@ -34,15 +34,22 @@ export function optionalText(max: number) {
 /**
  * 기록 날짜 (FR-COM-02~04): 오늘 이후(주간 식단은 허용)와 생년월일 이전은 고를 수 없다.
  * "오늘"은 검증하는 순간 기기의 날짜다 (FR-COM-01).
+ * 문구는 하나만 낸다. 검사를 중단(abort)하지 않으므로 폼 전체 규칙(예: 키·몸무게 중 하나 이상)도 함께 검사된다.
  */
 export function recordDate({
   birthDate,
   allowFuture = false,
 }: { birthDate?: string; allowFuture?: boolean } = {}) {
-  return z
-    .string()
-    .min(1, DATE_MESSAGES.required)
-    .refine(isValidDateString, { message: DATE_MESSAGES.invalid, abort: true })
-    .refine((value) => allowFuture || value <= todayString(), DATE_MESSAGES.future)
-    .refine((value) => !birthDate || value >= birthDate, DATE_MESSAGES.beforeBirth)
+  return z.string().superRefine((value, ctx) => {
+    const message = dateProblem(value, birthDate, allowFuture)
+    if (message) ctx.addIssue({ code: 'custom', message })
+  })
+}
+
+function dateProblem(value: string, birthDate: string | undefined, allowFuture: boolean) {
+  if (value === '') return DATE_MESSAGES.required
+  if (!isValidDateString(value)) return DATE_MESSAGES.invalid
+  if (!allowFuture && value > todayString()) return DATE_MESSAGES.future
+  if (birthDate && value < birthDate) return DATE_MESSAGES.beforeBirth
+  return null
 }

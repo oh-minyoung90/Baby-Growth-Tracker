@@ -23,6 +23,7 @@ import { RouteError } from './RouteError'
  * /login                     로그인 (SCR-01)
  * /                          홈 (SCR-03)
  * /growth/body|words|sleep   성장 (SCR-04, 06, 08)
+ *   ?record=new|<id>         입력·수정 바텀 시트 열기 (키·몸무게, lib/useSheetParam)
  * /timeline                  타임라인 (SCR-07)
  * /meals/week|foods|recipes  식사 (SCR-10~12)
  * /setup                     아이 정보 첫 등록 (SCR-02)
