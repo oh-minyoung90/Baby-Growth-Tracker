@@ -13,6 +13,7 @@ import { Button } from '@/components/ui/button'
 import { Checkbox } from '@/components/ui/checkbox'
 import { Label } from '@/components/ui/label'
 import { todayString } from '@/domain/date'
+import { BodyCharts } from '@/features/body/BodyChart'
 import { ThemeModeSelector } from '@/features/settings/ThemeModeSelector'
 import { notifySaved } from '@/lib/notify'
 import { optionalText, recordDate, requiredText } from '@/lib/validation'
@@ -53,6 +54,25 @@ function DemoForm() {
     </form>
   )
 }
+
+/** 키·몸무게 차트 확인용 가명 예시 데이터 (목록 순서: 최신순) */
+const DEMO_MEASURES = [
+  ['2026-09-30', 72.1, 8.9],
+  ['2026-08-31', 70.2, 8.4],
+  ['2026-07-10', 67.9, 8.0],
+  ['2026-06-12', 66.0, 7.6],
+  ['2026-05-11', 63.8, 7.1],
+  ['2026-04-10', 61.2, 6.5],
+  ['2026-03-12', 58.0, 5.6],
+  ['2026-02-10', 54.5, 4.5],
+  ['2026-01-08', 50.0, 3.2],
+].map(([date, heightCm, weightKg]) => ({
+  id: String(date),
+  date: String(date),
+  heightCm: Number(heightCm),
+  weightKg: Number(weightKg),
+  memo: null,
+}))
 
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
   return (
@@ -138,6 +158,10 @@ export default function UiPreview() {
           <ListLoading rows={2} />
         </Section>
       </div>
+
+      <Section title="키·몸무게 차트 (가명 예시 데이터)">
+        <BodyCharts measures={DEMO_MEASURES} birthDate={DEMO_BIRTH} />
+      </Section>
     </main>
   )
 }
