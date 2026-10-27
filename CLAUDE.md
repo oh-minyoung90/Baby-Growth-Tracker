@@ -47,8 +47,8 @@ Baby Growth Tracker는 아이의 성장(키·몸무게, 발달, 수면)과 식�
 - `src/app/`: 앱 골격. `routes.tsx`(화면 주소와 로그인 가드), `AppLayout.tsx`(모바일 하단 탭 / PC 왼쪽 메뉴), `queryClient.ts`, `dev/`(개발 서버 전용 화면)
 - `src/features/<기능>/`: 화면 단위 코드 (auth, child, home, growth, body, milestone, sleep, timeline, meal, food, recipe, settings). 다른 기능 폴더를 직접 가져다 쓰지 않고, 공통 로직은 `src/domain/`이나 `src/lib/`로 옮깁니다
 - `src/domain/`: 화면과 무관한 계산 규칙(생후 일수, 같은 내용 판단, 수면 계산). 순수 함수와 단위 테스트
-- `src/lib/`: Supabase 클라이언트(`supabase.ts`), DB 타입(`database.types.ts`, 자동 생성), 화면 모드(`theme.ts`), 여러 화면이 함께 쓰는 로그인 상태·로그아웃(`auth.ts`)과 아이 정보(`childApi.ts`, `useChild.ts`), 입력 검증 규칙(`validation.ts`), 저장 알림(`notify.ts`), 공통 안내 문구(`messages.ts`), 바텀 시트 열림 상태(`useSheetParam.ts`), 공통 유틸
-- `src/components/`: 화면 틀(`Page`, `SubTabs`, `FullScreenLoading`), 공통 입력·안내(`form/`, `ConfirmDialog`, `DeleteRecordButton`, `ErrorBanner`, `EmptyState`, `ListLoading`, `AddRecordButton`, `ChoiceChips`), 기본 UI(`ui/`)
+- `src/lib/`: Supabase 클라이언트(`supabase.ts`), DB 타입(`database.types.ts`, 자동 생성), 화면 모드(`theme.ts`), 여러 화면이 함께 쓰는 로그인 상태·로그아웃(`auth.ts`)과 아이 정보(`childApi.ts`, `useChild.ts`), 발달 기록 유형·예시(`milestoneTypes.ts`), 입력 검증 규칙(`validation.ts`), DB 검증 실패 분류(`dbErrors.ts`), 저장 알림(`notify.ts`), 공통 안내 문구(`messages.ts`), 바텀 시트 열림 상태(`useSheetParam.ts`), 진입했던 화면으로 돌아가기(`useGoBack.ts`), 공통 유틸
+- `src/components/`: 화면 틀(`Page`, `SubTabs`, `FullScreenLoading`, 입력 화면용 `FormPage`·`FormActions`), 공통 입력·안내(`form/`, `ConfirmDialog`, `DeleteRecordButton`, `ErrorBanner`, `EmptyState`, `ListLoading`, `AddRecordButton`, `ChoiceChips`), 기본 UI(`ui/`)
 - `src/test/`: 테스트 공통 설정(`setup.ts`)과 앱 전체 화면 이동 테스트용 `renderApp()` (로그인 상태를 직접 넣고, `*Api.ts`는 `vi.mock`으로 바꿔 끼움)
 - `supabase/migrations/`: DB 구조(테이블, 제약, 트리거, RLS). 화면 규칙과 같은 검증을 DB에도 둡니다
 - 로그인 상태는 `useAuth()`(`src/lib/auth.ts`), 서버 데이터는 TanStack Query로 다룹니다. 로그아웃하면 Query 캐시를 비웁니다
@@ -67,6 +67,7 @@ Baby Growth Tracker는 아이의 성장(키·몸무게, 발달, 수면)과 식�
   - 목록 화면의 추가 버튼은 `AddRecordButton`(모바일은 오른쪽 아래 떠 있는 버튼, PC는 제자리 버튼)을 씁니다.
   - 하나만 고르는 칩(차트 기간, 정렬 등)은 `ChoiceChips`를 씁니다. 선택 상태는 디자인.md 2.4(연보라 배경 + 보라 테두리)를 따릅니다.
 - 차트는 Recharts를 씁니다. 라이브러리가 커서 차트 컴포넌트는 `lazy()`로 불러와 해당 화면을 열 때만 내려받게 합니다 (예: `features/body/BodyPage.tsx`). 색은 `var(--color-primary)`처럼 CSS 변수로 넘겨 다크 모드를 따르게 합니다.
+  - 화면 전환으로 입력하는 화면(발달 기록, 수면, 레시피 편집)은 `FormPage`(위쪽 뒤로 가기 + 제목)와 `FormActions`(모바일은 아래 고정 취소·저장)로 만들고, 라우트에 `handle: { hideBottomNav: true }`를 붙여 모바일 하단 탭을 숨깁니다. 저장·취소 후에는 `useGoBack(fallback)`으로 진입했던 화면으로 돌아갑니다 (기능요구사항서 2.3).
   - 시트로 입력하는 화면(키·몸무게, 식단 칸, 알러지 지정)은 `ui/sheet`의 바텀 시트를 쓰고, 열림 상태는 `useSheetParam()`으로 주소(`?record=new` 또는 `?record=<id>`)에 둡니다. 뒤로 가기로 닫히고, 다른 화면에서 이 주소로 바로 열 수 있습니다.
 
 ## 규칙

@@ -1,21 +1,35 @@
-import { NavLink, Outlet } from 'react-router'
+import { NavLink, Outlet, useMatches } from 'react-router'
 import { Sprout } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { NAV_ITEMS } from './navItems'
 
+/** 라우트에 붙이는 표시 (routes.tsx의 handle) */
+export interface AppRouteHandle {
+  /** 모바일에서 아래쪽 탭 메뉴를 숨긴다: 화면 전환으로 여는 입력 화면 (components/FormPage) */
+  hideBottomNav?: boolean
+}
+
 /**
  * 로그인 후 화면의 틀 (docs/디자인.md 5장)
- * - 768px 미만: 아래쪽 탭 메뉴
+ * - 768px 미만: 아래쪽 탭 메뉴 (입력 화면에서는 숨김)
  * - 768px 이상: 왼쪽 세로 메뉴 (폭 240px)
  */
 export function AppLayout() {
+  const hideBottomNav = useMatches().some(
+    (match) => (match.handle as AppRouteHandle | undefined)?.hideBottomNav,
+  )
   return (
     <div className="min-h-dvh md:flex">
       <SideNav />
-      <main className="min-w-0 flex-1 pb-[calc(76px+env(safe-area-inset-bottom))] md:pb-0">
+      <main
+        className={cn(
+          'min-w-0 flex-1 md:pb-0',
+          !hideBottomNav && 'pb-[calc(76px+env(safe-area-inset-bottom))]',
+        )}
+      >
         <Outlet />
       </main>
-      <BottomNav />
+      {!hideBottomNav && <BottomNav />}
     </div>
   )
 }
