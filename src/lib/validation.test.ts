@@ -1,4 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { z } from 'zod'
 import { DATE_MESSAGES, optionalText, recordDate, requiredText } from './validation'
 
 // 입력 검증 규칙 (기능요구사항서 FR-COM-02~04, 10~12)
@@ -58,6 +59,17 @@ describe('recordDate', () => {
   it('비어 있거나 형식이 틀리면 안내한다', () => {
     expect(firstError(recordDate().safeParse(''))).toBe(DATE_MESSAGES.required)
     expect(firstError(recordDate().safeParse('2026-02-30'))).toBe(DATE_MESSAGES.invalid)
+  })
+
+  it('문구는 하나만 내고, 폼 전체 규칙이 이어서 검사되게 한다', () => {
+    const schema = z
+      .object({ date: recordDate(), note: z.string() })
+      .refine((value) => value.note !== '', { message: '메모 필요', path: ['note'] })
+    const result = schema.safeParse({ date: '', note: '' })
+    expect(result.error?.issues.map((issue) => issue.message)).toEqual([
+      DATE_MESSAGES.required,
+      '메모 필요',
+    ])
   })
 
   it('오늘 이후 날짜는 받지 않는다 (FR-COM-03)', () => {

@@ -1,0 +1,117 @@
+import type { PostgrestError } from '@supabase/supabase-js'
+import { todayString } from '@/domain/date'
+import type { Tables } from '@/lib/database.types'
+import { supabase } from '@/lib/supabase'
+
+/** 키·몸무게 측정 (F-05) */
+export interface BodyMeasure {
+  id: string
+  /** 측정 날짜 'YYYY-MM-DD' */
+  date: string
+  heightCm: number | null
+  weightKg: number | null
+  memo: string | null
+}
+
+export type BodyMeasureInput = Omit<BodyMeasure, 'id'>
+
+/** 저장 실패 이유. 화면은 이 값으로 안내 문구와 표시할 입력칸을 고른다 */
+export type BodySaveErrorReason =
+  | 'futureDate'
+  | 'beforeBirth'
+  | 'heightRange'
+  | 'weightRange'
+  | 'heightOrWeight'
+  | 'memoLength'
+  | 'network'
+
+export class BodySaveError extends Error {
+  readonly reason: BodySaveErrorReason
+
+  constructor(reason: BodySaveErrorReason) {
+    super(reason)
+    this.reason = reason
+  }
+}
+
+const COLUMNS = 'id, date, height_cm, weight_kg, memo'
+
+type Row = Pick<Tables<'body_measures'>, 'id' | 'date' | 'height_cm' | 'weight_kg' | 'memo'>
+
+function toMeasure(row: Row): BodyMeasure {
+  return {
+    id: row.id,
+    date: row.date,
+    heightCm: row.height_cm,
+    weightKg: row.weight_kg,
+    memo: row.memo,
+  }
+}
+
+function toRow(input: BodyMeasureInput) {
+  return {
+    date: input.date,
+    height_cm: input.heightCm,
+    weight_kg: input.weightKg,
+    memo: input.memo,
+  }
+}
+
+/** CHECK 제약 이름 → 실패 이유 (T-15 마이그레이션) */
+const CHECK_REASONS: Record<string, BodySaveErrorReason> = {
+  body_measures_height_range: 'heightRange',
+  body_measures_weight_range: 'weightRange',
+  body_measures_height_or_weight: 'heightOrWeight',
+  body_measures_memo_length: 'memoLength',
+}
+
+function toSaveError(error: PostgrestError, input: BodyMeasureInput): BodySaveError {
+  // 22007: 날짜 검증 트리거. 오늘 이후와 생년월일 이전이 같은 코드라 날짜를 보고 나눈다
+  if (error.code === '22007') {
+    return new BodySaveError(input.date > todayString() ? 'futureDate' : 'beforeBirth')
+  }
+  // 23514: CHECK 제약 위반. 오류 문구에 제약 이름이 들어 있다
+  if (error.code === '23514') {
+    const name = Object.keys(CHECK_REASONS).find((key) => error.message.includes(key))
+    if (name) return new BodySaveError(CHECK_REASONS[name])
+  }
+  return new BodySaveError('network')
+}
+
+/** 측정 기록 전체, 측정 날짜 최신순 (FR-BODY-05). RLS로 본인 것만 조회된다 */
+export async function fetchBodyMeasures(): Promise<BodyMeasure[]> {
+  const { data, error } = await supabase
+    .from('body_measures')
+    .select(COLUMNS)
+    .order('date', { ascending: false })
+    .order('created_at', { ascending: false })
+  if (error) throw error
+  return data.map(toMeasure)
+}
+
+/** 새 측정 기록. owner_id는 DB 기본값(로그인한 사용자)으로 채워진다 */
+export async function createBodyMeasure(input: BodyMeasureInput): Promise<BodyMeasure> {
+  const { data, error } = await supabase
+    .from('body_measures')
+    .insert(toRow(input))
+    .select(COLUMNS)
+    .single()
+  if (error) throw toSaveError(error, input)
+  return toMeasure(data)
+}
+
+export async function updateBodyMeasure(id: string, input: BodyMeasureInput): Promise<BodyMeasure> {
+  const { data, error } = await supabase
+    .from('body_measures')
+    .update(toRow(input))
+    .eq('id', id)
+    .select(COLUMNS)
+    .single()
+  if (error) throw toSaveError(error, input)
+  return toMeasure(data)
+}
+
+export async function deleteBodyMeasure(id: string): Promise<void> {
+  const { error } = await supabase.from('body_measures').delete().eq('id', id)
+  if (error) throw error
+}

@@ -2,4 +2,5 @@
 export const NETWORK_ERROR_MESSAGES = {
   save: '저장하지 못했어요. 인터넷 연결을 확인해 주세요',
   load: '정보를 불러오지 못했어요. 인터넷 연결을 확인해 주세요',
+  delete: '삭제하지 못했어요. 인터넷 연결을 확인해 주세요',
 } as const
