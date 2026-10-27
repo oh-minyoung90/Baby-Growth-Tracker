@@ -10,6 +10,7 @@ export const BODY_MESSAGES = {
   height: '키는 30~150cm 사이로 입력해 주세요',
   weight: '몸무게는 1~50kg 사이로 입력해 주세요',
   heightOrWeight: '키와 몸무게 중 하나 이상 입력해 주세요',
+  duplicateDate: '같은 날짜에 측정 기록이 있어요',
 } as const
 
 /** 소수점 첫째 자리까지의 숫자: '72', '72.', '72.5' */
@@ -66,6 +67,8 @@ export function serverFieldError(
       return { field: 'date', message: DATE_MESSAGES.future }
     case 'beforeBirth':
       return { field: 'date', message: DATE_MESSAGES.beforeBirth }
+    case 'duplicateDate':
+      return { field: 'date', message: BODY_MESSAGES.duplicateDate }
     case 'heightRange':
       return { field: 'heightCm', message: BODY_MESSAGES.height }
     case 'weightRange':

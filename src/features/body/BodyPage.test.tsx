@@ -1,4 +1,4 @@
-import { screen, waitFor, within } from '@testing-library/react'
+import { fireEvent, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import type { Session } from '@supabase/supabase-js'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
@@ -213,12 +213,15 @@ describe('새 기록 (FR-BODY-01~02, 07)', () => {
   })
 })
 
-describe('같은 날짜 기록 (FR-BODY-06)', () => {
+describe('같은 날짜 기록: 날짜마다 1건 (FR-BODY-06)', () => {
   beforeEach(() => {
-    store = [measure({ id: 'a', date: '2026-10-22', heightCm: 72 })]
+    store = [
+      measure({ id: 'a', date: '2026-10-22', heightCm: 72 }),
+      measure({ id: 'b', date: '2026-09-30', heightCm: 71 }),
+    ]
   })
 
-  it('같은 날짜에 기록이 있으면 묻고, 취소하면 저장하지 않는다', async () => {
+  it('같은 날짜에 기록이 있으면 저장하지 않고 안내하며, 취소하면 입력 시트에 남는다', async () => {
     await renderBody()
     await openNewSheet()
     await userEvent.type(heightInput(), '73')
@@ -226,20 +229,63 @@ describe('같은 날짜 기록 (FR-BODY-06)', () => {
     const dialog = await screen.findByRole('alertdialog', {
       name: '같은 날짜에 측정 기록이 있어요',
     })
+    expect(dialog).toHaveTextContent('측정 기록은 하루에 하나만 남길 수 있어요')
     await userEvent.click(within(dialog).getByRole('button', { name: '취소' }))
     expect(createBodyMeasure).not.toHaveBeenCalled()
     expect(screen.getByRole('dialog', { name: '키·몸무게 기록' })).toBeInTheDocument()
+    expect(heightInput()).toHaveValue('73')
   })
 
-  it('그래도 저장하면 저장한다', async () => {
-    await renderBody()
+  it('기존 기록 수정을 누르면 그날 기록의 수정 시트로 바뀌고, 닫으면 목록으로 돌아간다', async () => {
+    const { router } = await renderBody()
     await openNewSheet()
     await userEvent.type(heightInput(), '73')
     await userEvent.click(screen.getByRole('button', { name: '저장' }))
     const dialog = await screen.findByRole('alertdialog')
-    await userEvent.click(within(dialog).getByRole('button', { name: '그래도 저장' }))
+    await userEvent.click(within(dialog).getByRole('button', { name: '기존 기록 수정' }))
+
+    expect(await screen.findByRole('dialog', { name: '키·몸무게 수정' })).toBeInTheDocument()
+    expect(heightInput()).toHaveValue('72.0')
+    expect(router.state.location.search).toBe('?record=a')
+    expect(createBodyMeasure).not.toHaveBeenCalled()
+
+    await userEvent.click(screen.getByRole('button', { name: '취소' }))
+    await waitForSheetClosed()
+    expect(router.state.location.pathname).toBe('/growth/body')
+    expect(router.state.location.search).toBe('')
+  })
+
+  it('수정할 때 다른 기록의 날짜로 바꾸면 같은 안내를 한다', async () => {
+    await renderBody()
+    await userEvent.click(await screen.findByRole('button', { name: /2026\. 9\. 30\./ }))
+    await screen.findByRole('dialog', { name: '키·몸무게 수정' })
+    fireEvent.change(screen.getByLabelText('측정 날짜'), { target: { value: '2026-10-22' } })
+    await userEvent.click(screen.getByRole('button', { name: '저장' }))
+    expect(
+      await screen.findByRole('alertdialog', { name: '같은 날짜에 측정 기록이 있어요' }),
+    ).toBeInTheDocument()
+    expect(updateBodyMeasure).not.toHaveBeenCalled()
+  })
+
+  it('날짜를 그대로 두고 수정하면 안내 없이 저장한다', async () => {
+    await renderBody()
+    await userEvent.click(await screen.findByRole('button', { name: /2026\. 10\. 22\./ }))
+    await screen.findByRole('dialog', { name: '키·몸무게 수정' })
+    await userEvent.type(weightInput(), '9')
+    await userEvent.click(screen.getByRole('button', { name: '저장' }))
     expect(await screen.findByText('저장했어요')).toBeInTheDocument()
-    expect(createBodyMeasure).toHaveBeenCalledTimes(1)
+    expect(updateBodyMeasure).toHaveBeenCalledWith('a', expect.objectContaining({ weightKg: 9 }))
+  })
+
+  it('서버에서 같은 날짜로 거부되면 측정 날짜 칸에 안내한다 (FR-COM-13)', async () => {
+    store = []
+    vi.mocked(createBodyMeasure).mockRejectedValueOnce(new BodySaveError('duplicateDate'))
+    await renderBody()
+    await openNewSheet()
+    await userEvent.type(heightInput(), '73')
+    await userEvent.click(screen.getByRole('button', { name: '저장' }))
+    expect(await screen.findByText('같은 날짜에 측정 기록이 있어요')).toBeInTheDocument()
+    expect(screen.getByLabelText('측정 날짜')).toHaveAttribute('aria-invalid', 'true')
   })
 })
 

@@ -14,10 +14,11 @@ export function useSheetParam(name = 'record') {
   return {
     /** 'new', 기록 id, 또는 닫혀 있으면 null */
     value: params.get(name),
-    open(value: string) {
+    /** replace: 열려 있는 시트를 다른 기록으로 바꿀 때 (닫으면 시트를 열기 전 화면으로 돌아가게) */
+    open(value: string, { replace = false }: { replace?: boolean } = {}) {
       const next = new URLSearchParams(params)
       next.set(name, value)
-      setParams(next)
+      setParams(next, { replace })
     },
     close() {
       // 앱 안에서 이동해 왔으면 뒤로 가고, 이 주소로 바로 들어왔으면(돌아갈 곳 없음) 검색 조건만 지운다

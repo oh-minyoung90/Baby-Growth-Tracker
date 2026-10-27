@@ -19,6 +19,7 @@ export type BodyMeasureInput = Omit<BodyMeasure, 'id'>
 export type BodySaveErrorReason =
   | 'futureDate'
   | 'beforeBirth'
+  | 'duplicateDate'
   | 'heightRange'
   | 'weightRange'
   | 'heightOrWeight'
@@ -70,6 +71,8 @@ function toSaveError(error: PostgrestError, input: BodyMeasureInput): BodySaveEr
   if (error.code === '22007') {
     return new BodySaveError(input.date > todayString() ? 'futureDate' : 'beforeBirth')
   }
+  // 23505: 같은 날짜에 이미 기록이 있음 (측정 날짜당 1건, FR-BODY-06)
+  if (error.code === '23505') return new BodySaveError('duplicateDate')
   // 23514: CHECK 제약 위반. 오류 문구에 제약 이름이 들어 있다
   if (error.code === '23514') {
     const name = Object.keys(CHECK_REASONS).find((key) => error.message.includes(key))

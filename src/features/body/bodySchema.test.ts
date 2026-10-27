@@ -113,6 +113,10 @@ describe('서버 검증 실패 (FR-COM-13)', () => {
       message: '오늘 이후 날짜는 고를 수 없어요',
     })
     expect(serverFieldError('beforeBirth')?.message).toBe('생년월일 이전 날짜는 고를 수 없어요')
+    expect(serverFieldError('duplicateDate')).toEqual({
+      field: 'date',
+      message: '같은 날짜에 측정 기록이 있어요',
+    })
     expect(serverFieldError('heightRange')).toEqual({
       field: 'heightCm',
       message: BODY_MESSAGES.height,

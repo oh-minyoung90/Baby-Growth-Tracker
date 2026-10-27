@@ -67,6 +67,8 @@ export function BodyPage() {
           birthDate={child.birthDate}
           measures={measures.data ?? []}
           onClose={sheet.close}
+          // 같은 날짜 기록으로 바꿔 열 때는 주소를 바꿔 끼워, 닫으면 시트를 열기 전 화면으로 돌아가게 한다
+          onEditExisting={(id) => sheet.open(id, { replace: true })}
         />
       )}
     </div>
@@ -133,12 +135,14 @@ function BodySheet({
   birthDate,
   measures,
   onClose,
+  onEditExisting,
 }: {
   open: boolean
   initial: BodyMeasure | undefined
   birthDate: string
   measures: BodyMeasure[]
   onClose: () => void
+  onEditExisting: (id: string) => void
 }) {
   // 닫히는 동안(애니메이션)에도 열려 있던 내용을 유지한다. 수정 시트가 닫히며 빈 입력 화면으로 바뀌어 보이지 않게
   const [shown, setShown] = useState(initial)
@@ -155,6 +159,7 @@ function BodySheet({
           birthDate={birthDate}
           measures={measures}
           onDone={onClose}
+          onEditExisting={onEditExisting}
         />
       </SheetContent>
     </Sheet>

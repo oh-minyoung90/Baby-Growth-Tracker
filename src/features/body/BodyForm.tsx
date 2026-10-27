@@ -12,7 +12,13 @@ import { todayString } from '@/domain/date'
 import { NETWORK_ERROR_MESSAGES } from '@/lib/messages'
 import { notifySaved } from '@/lib/notify'
 import { BodySaveError, type BodyMeasure, type BodyMeasureInput } from './bodyApi'
-import { MEMO_MAX, bodyMeasureSchema, serverFieldError, type BodyFormValues } from './bodySchema'
+import {
+  BODY_MESSAGES,
+  MEMO_MAX,
+  bodyMeasureSchema,
+  serverFieldError,
+  type BodyFormValues,
+} from './bodySchema'
 import { MeasureField } from './MeasureField'
 import { useDeleteBodyMeasure, useSaveBodyMeasure } from './useBodyMeasures'
 
@@ -22,6 +28,7 @@ export function BodyForm({
   birthDate,
   measures,
   onDone,
+  onEditExisting,
 }: {
   /** 수정할 기록. 없으면 새 기록 */
   initial?: BodyMeasure
@@ -30,10 +37,12 @@ export function BodyForm({
   measures: BodyMeasure[]
   /** 저장·삭제·취소 후 시트를 닫는다 */
   onDone: () => void
+  /** 같은 날짜의 기존 기록을 수정 시트로 연다 */
+  onEditExisting: (id: string) => void
 }) {
   const save = useSaveBodyMeasure()
   const remove = useDeleteBodyMeasure()
-  const [sameDateInput, setSameDateInput] = useState<BodyMeasureInput | null>(null)
+  const [sameDateRecord, setSameDateRecord] = useState<BodyMeasure | null>(null)
   const [failed, setFailed] = useState<'save' | 'delete' | null>(null)
 
   const {
@@ -67,12 +76,12 @@ export function BodyForm({
   }
 
   const onSubmit = handleSubmit((input) => {
-    // 같은 날짜에 다른 측정 기록이 있으면 한 번 더 묻는다 (FR-BODY-06). 수정할 때는 날짜를 바꾼 경우만
-    const sameDate =
-      input.date !== initial?.date &&
-      measures.some((measure) => measure.id !== initial?.id && measure.date === input.date)
+    // 측정 기록은 날짜마다 1건이다 (FR-BODY-06). 그날 기록이 있으면 저장하지 않고 기존 기록 수정을 권한다
+    const sameDate = measures.find(
+      (measure) => measure.id !== initial?.id && measure.date === input.date,
+    )
     if (sameDate) {
-      setSameDateInput(input)
+      setSameDateRecord(sameDate)
       return
     }
     void submit(input)
@@ -164,13 +173,13 @@ export function BodyForm({
       )}
 
       <ConfirmDialog
-        open={sameDateInput !== null}
-        onOpenChange={(open) => !open && setSameDateInput(null)}
-        title="같은 날짜에 측정 기록이 있어요"
-        description="그래도 저장할까요?"
-        confirmLabel="그래도 저장"
+        open={sameDateRecord !== null}
+        onOpenChange={(open) => !open && setSameDateRecord(null)}
+        title={BODY_MESSAGES.duplicateDate}
+        description="측정 기록은 하루에 하나만 남길 수 있어요. 그날 기록을 수정할까요?"
+        confirmLabel="기존 기록 수정"
         onConfirm={() => {
-          if (sameDateInput) void submit(sameDateInput)
+          if (sameDateRecord) onEditExisting(sameDateRecord.id)
         }}
       />
     </form>

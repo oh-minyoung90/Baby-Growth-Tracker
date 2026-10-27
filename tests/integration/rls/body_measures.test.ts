@@ -3,7 +3,7 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 import type { Database } from '../../../src/lib/database.types'
 import { createAnonClient, createUserClient, ensureChild, utcDate } from '../supabase'
 
-// body_measures 접근 제어와 제약 조건 (T-15, FR-BODY-01~02, BR-02)
+// body_measures 접근 제어와 제약 조건 (T-15, FR-BODY-01~02, 06, BR-02)
 
 type Client = SupabaseClient<Database>
 let a: { client: Client; userId: string }
@@ -59,8 +59,8 @@ describe('body_measures: 본인 데이터와 접근 차단', () => {
 
 describe('body_measures: 입력값 검증', () => {
   it('키 또는 몸무게 하나만 있어도 저장된다', async () => {
-    expect((await insert(a.client, { date: '2026-08-31', height_cm: 70.2 })).error).toBeNull()
-    expect((await insert(a.client, { date: '2026-08-31', weight_kg: 8.4 })).error).toBeNull()
+    expect((await insert(a.client, { date: '2026-08-01', height_cm: 70.2 })).error).toBeNull()
+    expect((await insert(a.client, { date: '2026-08-02', weight_kg: 8.4 })).error).toBeNull()
   })
 
   it('키와 몸무게가 모두 없으면 거부된다', async () => {
@@ -78,7 +78,7 @@ describe('body_measures: 입력값 검증', () => {
 
   it('범위 경계값은 허용된다', async () => {
     expect(
-      (await insert(a.client, { date: '2026-08-31', height_cm: 30, weight_kg: 50 })).error,
+      (await insert(a.client, { date: '2026-08-03', height_cm: 30, weight_kg: 50 })).error,
     ).toBeNull()
   })
 
@@ -94,5 +94,26 @@ describe('body_measures: 입력값 검증', () => {
       memo: '가'.repeat(501),
     })
     expect(error?.code).toBe('23514')
+  })
+})
+
+describe('body_measures: 측정 날짜당 1건 (FR-BODY-06)', () => {
+  it('같은 날짜에 두 번째 기록을 넣으면 거부된다', async () => {
+    const { error } = await insert(a.client, { date: '2026-09-30', weight_kg: 9 })
+    expect(error?.code).toBe('23505')
+  })
+
+  it('다른 기록의 날짜로 바꾸면 거부된다', async () => {
+    const { data, error } = await insert(a.client, { date: '2026-09-01', weight_kg: 8.6 })
+    if (error) throw error
+    const result = await a.client
+      .from('body_measures')
+      .update({ date: '2026-09-30' })
+      .eq('id', data.id)
+    expect(result.error?.code).toBe('23505')
+  })
+
+  it('다른 계정은 같은 날짜에 기록할 수 있다', async () => {
+    expect((await insert(b.client, { date: '2026-09-30', weight_kg: 9 })).error).toBeNull()
   })
 })
