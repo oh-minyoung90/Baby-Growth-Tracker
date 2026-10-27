@@ -11,6 +11,7 @@ import {
   type DotItemDotProps,
 } from 'recharts'
 import { ChoiceChips } from '@/components/ChoiceChips'
+import { ageLabel } from '@/domain/age'
 import { formatDateLabel, todayString } from '@/domain/date'
 import type { BodyMeasure } from './bodyApi'
 import {
@@ -23,7 +24,7 @@ import {
   type ChartPeriod,
   type ChartPoint,
 } from './bodyChartData'
-import { ageLabel, formatMeasureValue } from './bodyFormat'
+import { formatMeasureValue } from './bodyFormat'
 
 const AXIS_TICK = { fill: 'var(--color-muted-foreground)', fontSize: 11 }
 

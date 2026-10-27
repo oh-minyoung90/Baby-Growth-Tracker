@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { calculateAge, formatAge } from './age'
+import { ageLabel, calculateAge, formatAge } from './age'
 import { parseDate } from './date'
 
 describe('calculateAge: 기능요구사항서 3.2 예시 표', () => {
@@ -59,5 +59,17 @@ describe('parseDate', () => {
   it('기기 시간대의 그날 0시로 만든다 (UTC로 해석하지 않는다)', () => {
     const d = parseDate('2026-01-08')
     expect([d.getFullYear(), d.getMonth(), d.getDate(), d.getHours()]).toEqual([2026, 0, 8, 0])
+  })
+})
+
+describe('ageLabel', () => {
+  it('기록 날짜의 생후 일수 문구', () => {
+    expect(ageLabel('2026-01-08', '2026-10-22')).toBe('생후 9개월 14일')
+    expect(ageLabel('2026-01-08', '2026-01-08')).toBe('생후 0일')
+  })
+
+  it('생년월일이 없거나 기록 날짜가 더 이르면 null', () => {
+    expect(ageLabel(undefined, '2026-10-22')).toBeNull()
+    expect(ageLabel('2026-01-08', '2026-01-07')).toBeNull()
   })
 })

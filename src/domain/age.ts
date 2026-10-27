@@ -37,3 +37,9 @@ export function calculateAge(birthDate: string, recordDate: string): Age {
 export function formatAge({ months, days }: Age): string {
   return months === 0 ? `생후 ${days}일` : `생후 ${months}개월 ${days}일`
 }
+
+/** 기록 날짜의 생후 일수 문구. 생년월일을 나중에 바꿔 기록 날짜가 더 이르면 표시하지 않는다(null) */
+export function ageLabel(birthDate: string | undefined, date: string): string | null {
+  if (!birthDate || date < birthDate) return null
+  return formatAge(calculateAge(birthDate, date))
+}
