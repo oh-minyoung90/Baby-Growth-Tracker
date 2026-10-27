@@ -1,6 +1,6 @@
 import type { PostgrestError } from '@supabase/supabase-js'
-import { todayString } from '@/domain/date'
 import type { Tables } from '@/lib/database.types'
+import { dateErrorReason, violatedCheck } from '@/lib/dbErrors'
 import { supabase } from '@/lib/supabase'
 
 /** 키·몸무게 측정 (F-05) */
@@ -59,26 +59,20 @@ function toRow(input: BodyMeasureInput) {
 }
 
 /** CHECK 제약 이름 → 실패 이유 (T-15 마이그레이션) */
-const CHECK_REASONS: Record<string, BodySaveErrorReason> = {
+const CHECK_REASONS = {
   body_measures_height_range: 'heightRange',
   body_measures_weight_range: 'weightRange',
   body_measures_height_or_weight: 'heightOrWeight',
   body_measures_memo_length: 'memoLength',
-}
+} as const satisfies Record<string, BodySaveErrorReason>
 
 function toSaveError(error: PostgrestError, input: BodyMeasureInput): BodySaveError {
-  // 22007: 날짜 검증 트리거. 오늘 이후와 생년월일 이전이 같은 코드라 날짜를 보고 나눈다
-  if (error.code === '22007') {
-    return new BodySaveError(input.date > todayString() ? 'futureDate' : 'beforeBirth')
-  }
+  const dateReason = dateErrorReason(error, input.date)
+  if (dateReason) return new BodySaveError(dateReason)
   // 23505: 같은 날짜에 이미 기록이 있음 (측정 날짜당 1건, FR-BODY-06)
   if (error.code === '23505') return new BodySaveError('duplicateDate')
-  // 23514: CHECK 제약 위반. 오류 문구에 제약 이름이 들어 있다
-  if (error.code === '23514') {
-    const name = Object.keys(CHECK_REASONS).find((key) => error.message.includes(key))
-    if (name) return new BodySaveError(CHECK_REASONS[name])
-  }
-  return new BodySaveError('network')
+  const check = violatedCheck(error, Object.keys(CHECK_REASONS) as (keyof typeof CHECK_REASONS)[])
+  return new BodySaveError(check ? CHECK_REASONS[check] : 'network')
 }
 
 /** 측정 기록 전체, 측정 날짜 최신순 (FR-BODY-05). RLS로 본인 것만 조회된다 */
