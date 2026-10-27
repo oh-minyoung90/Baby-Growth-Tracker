@@ -51,7 +51,9 @@ describe('첫 등록 (SCR-02)', () => {
     await renderSetup()
     await userEvent.click(screen.getByRole('button', { name: '시작하기' }))
     expect(await screen.findByText('이름 또는 별명을 입력해 주세요')).toBeInTheDocument()
-    expect(screen.getByText('생년월일을 입력해 주세요')).toBeInTheDocument()
+    expect(
+      screen.getByText('날짜를 선택해 주세요', { selector: '[role=alert]' }),
+    ).toBeInTheDocument()
     expect(mockedSaveChild).not.toHaveBeenCalled()
   })
 
@@ -115,6 +117,27 @@ describe('첫 등록 (SCR-02)', () => {
     expect(await screen.findByText(message)).toBeInTheDocument()
     expect(nameInput()).toHaveValue('하늘이')
     expect(router.state.location.pathname).toBe('/setup')
+  })
+})
+
+describe('네트워크 오류 (기능요구사항서 3.4)', () => {
+  it('상단에 안내하고, 입력값을 유지한 채 다시 시도할 수 있다', async () => {
+    mockedFetchChild.mockResolvedValue(null)
+    mockedSaveChild.mockRejectedValueOnce(new ChildSaveError('network'))
+    const { router } = renderApp('/setup', auth)
+    await screen.findByRole('heading', { name: /아이 정보를/ })
+    await userEvent.type(nameInput(), '하늘이')
+    setBirth('2026-01-08')
+    await userEvent.click(screen.getByRole('button', { name: '시작하기' }))
+
+    const banner = await screen.findByRole('alert')
+    expect(banner).toHaveTextContent('저장하지 못했어요. 인터넷 연결을 확인해 주세요')
+    expect(nameInput()).toHaveValue('하늘이')
+
+    await userEvent.click(within(banner).getByRole('button', { name: '다시 시도' }))
+    expect(await screen.findByRole('heading', { level: 1, name: '홈' })).toBeInTheDocument()
+    expect(mockedSaveChild).toHaveBeenCalledTimes(2)
+    expect(router.state.location.pathname).toBe('/')
   })
 })
 

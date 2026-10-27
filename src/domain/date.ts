@@ -26,6 +26,16 @@ export function parseDate(value: string): Date {
   return date
 }
 
+/** 'YYYY-MM-DD' 형식이고 실제로 있는 날짜인지 */
+export function isValidDateString(value: string): boolean {
+  try {
+    parseDate(value)
+    return true
+  } catch {
+    return false
+  }
+}
+
 /** 기기 시간대 기준 오늘 'YYYY-MM-DD' (PRD 결정 사항: 시간대는 기기의 현재 시각 기준) */
 export function todayString(now: Date = new Date()): string {
   return format(now, 'yyyy-MM-dd')

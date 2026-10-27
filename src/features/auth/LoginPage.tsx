@@ -1,8 +1,9 @@
 import { useState } from 'react'
 import { zodResolver } from '@hookform/resolvers/zod'
-import { CircleAlert, Mail, Sprout } from 'lucide-react'
+import { Mail, Sprout } from 'lucide-react'
 import { Controller, useForm } from 'react-hook-form'
 import { z } from 'zod'
+import { FieldError } from '@/components/form/Field'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -220,14 +221,5 @@ function CodeStep({ email, onChangeEmail }: { email: string; onChangeEmail: () =
         </Button>
       </div>
     </form>
-  )
-}
-
-function FieldError({ id, children }: { id: string; children: string }) {
-  return (
-    <p id={id} role="alert" className="flex items-center gap-1.5 text-sm text-danger">
-      <CircleAlert className="size-4 shrink-0" aria-hidden />
-      {children}
-    </p>
   )
 }
