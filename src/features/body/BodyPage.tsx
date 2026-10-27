@@ -1,21 +1,27 @@
-import { useState } from 'react'
+import { lazy, Suspense, useState } from 'react'
 import { Ruler } from 'lucide-react'
 import { AddRecordButton } from '@/components/AddRecordButton'
 import { EmptyState } from '@/components/EmptyState'
 import { ErrorBanner } from '@/components/ErrorBanner'
 import { ListLoading } from '@/components/ListLoading'
 import { Sheet, SheetContent, SheetTitle } from '@/components/ui/sheet'
-import { calculateAge, formatAge } from '@/domain/age'
 import { formatDateLabel } from '@/domain/date'
 import { NETWORK_ERROR_MESSAGES } from '@/lib/messages'
 import { useChild } from '@/lib/useChild'
 import { useSheetParam } from '@/lib/useSheetParam'
 import type { BodyMeasure } from './bodyApi'
 import { BodyForm } from './BodyForm'
+import { ageLabel, formatMeasureValue } from './bodyFormat'
 import { useBodyMeasures } from './useBodyMeasures'
 
+// 차트 라이브러리(Recharts)가 커서, 키·몸무게 화면을 열 때 따로 내려받는다 (첫 화면 로딩을 가볍게)
+const BodyCharts = lazy(() =>
+  import('./BodyChart').then((module) => ({ default: module.BodyCharts })),
+)
+
 /**
- * 성장 > 키·몸무게 (SCR-04): 측정 목록과 입력 시트 (T-16). 차트는 T-17에서 목록 위에 둔다.
+ * 성장 > 키·몸무게 (SCR-04): 기간 선택 + 키·몸무게 차트(T-17), 측정 목록과 입력 시트(T-16).
+ * 기록이 없으면 차트 없이 빈 상태 안내만 보여 준다 (FR-COM-20).
  * 입력·수정 시트는 주소로 연다: ?record=new, ?record=<id> (useSheetParam)
  */
 export function BodyPage() {
@@ -32,7 +38,13 @@ export function BodyPage() {
   return (
     // 모바일에서 떠 있는 추가 버튼이 마지막 기록을 가리지 않게 아래를 비운다
     <div className="flex flex-col gap-3 pb-20 md:pb-0">
-      <div className="flex min-h-12 items-center justify-between gap-3">
+      {measures.data && measures.data.length > 0 && (
+        <Suspense fallback={<div aria-hidden className="h-125 rounded-card bg-muted md:h-80" />}>
+          <BodyCharts measures={measures.data} birthDate={child?.birthDate} />
+        </Suspense>
+      )}
+
+      <div className="flex min-h-12 items-center justify-between gap-3 md:mt-2">
         <h2 className="text-base font-bold">측정 기록</h2>
         <AddRecordButton label="측정 기록 추가" onClick={() => sheet.open('new')} />
       </div>
@@ -75,16 +87,6 @@ export function BodyPage() {
   )
 }
 
-function formatValue(value: number | null, unit: string): string {
-  return value === null ? '-' : `${value.toFixed(1)}${unit}`
-}
-
-/** 생후 일수. 생년월일을 나중에 바꿔 기록 날짜가 더 이르면 표시하지 않는다 */
-function ageLabel(birthDate: string | undefined, date: string): string | null {
-  if (!birthDate || date < birthDate) return null
-  return formatAge(calculateAge(birthDate, date))
-}
-
 /** 측정 목록, 최신순. 키나 몸무게 한쪽만 있으면 빈 값은 "-" (FR-BODY-05). 누르면 수정 (FR-COM-30) */
 function MeasureList({
   measures,
@@ -115,10 +117,10 @@ function MeasureList({
                 )}
               </span>
               <span className="w-16 text-right text-[15px] font-bold tabular-nums md:w-24">
-                {formatValue(measure.heightCm, 'cm')}
+                {formatMeasureValue(measure.heightCm, 'cm')}
               </span>
               <span className="w-14 text-right text-[15px] font-bold tabular-nums md:w-24">
-                {formatValue(measure.weightKg, 'kg')}
+                {formatMeasureValue(measure.weightKg, 'kg')}
               </span>
             </button>
           </li>
