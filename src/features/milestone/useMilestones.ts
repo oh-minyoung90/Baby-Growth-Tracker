@@ -1,8 +1,9 @@
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { queryOptions, useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import {
   createMilestone,
   deleteMilestone,
   fetchMilestone,
+  fetchMilestones,
   updateMilestone,
   type MilestoneInput,
 } from './milestoneApi'
@@ -12,6 +13,22 @@ export const MILESTONES_QUERY_KEY = ['milestones'] as const
 
 function detailKey(id: string | undefined) {
   return [...MILESTONES_QUERY_KEY, 'detail', id] as const
+}
+
+const milestonesQuery = queryOptions({
+  queryKey: [...MILESTONES_QUERY_KEY, 'list'],
+  queryFn: fetchMilestones,
+})
+
+/** 발달 기록 전체 (날짜 최신순) */
+export function useMilestones() {
+  return useQuery(milestonesQuery)
+}
+
+/** 저장 직전 중복 확인용. 목록을 아직 불러오지 못했으면 불러온 뒤 돌려준다 */
+export function useEnsureMilestones() {
+  const queryClient = useQueryClient()
+  return () => queryClient.ensureQueryData(milestonesQuery)
 }
 
 /** 수정할 기록 하나 */

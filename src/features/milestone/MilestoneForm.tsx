@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useController, useForm, useWatch, type Control } from 'react-hook-form'
+import { ConfirmDialog } from '@/components/ConfirmDialog'
 import { DeleteRecordButton } from '@/components/DeleteRecordButton'
 import { ErrorBanner } from '@/components/ErrorBanner'
 import { DateField } from '@/components/form/DateField'
@@ -9,23 +10,30 @@ import { TextField } from '@/components/form/TextField'
 import { FormActions } from '@/components/FormPage'
 import { Button } from '@/components/ui/button'
 import { calculateAge, formatAge } from '@/domain/age'
-import { isValidDateString, todayString } from '@/domain/date'
+import { formatDateLabel, isValidDateString, todayString } from '@/domain/date'
 import { NETWORK_ERROR_MESSAGES } from '@/lib/messages'
 import { MILESTONE_TYPES, milestoneTypeInfo, type MilestoneType } from '@/lib/milestoneTypes'
 import { notifySaved } from '@/lib/notify'
 import { MilestoneSaveError, type Milestone, type MilestoneInput } from './milestoneApi'
+import { duplicateKey, findDuplicate, similarMilestones } from './milestoneMatch'
 import {
   MEMO_MAX,
+  MILESTONE_MESSAGES,
   TITLE_MAX,
   milestoneSchema,
   serverFieldError,
   type MilestoneFormValues,
 } from './milestoneSchema'
-import { useDeleteMilestone, useSaveMilestone } from './useMilestones'
+import {
+  useDeleteMilestone,
+  useEnsureMilestones,
+  useMilestones,
+  useSaveMilestone,
+} from './useMilestones'
 
 type FormControl = Control<MilestoneFormValues, unknown, MilestoneInput>
 
-/** 발달 기록 입력·수정 폼 (SCR-05, FR-MS-01~04, 07, FR-COM-30~31) */
+/** 발달 기록 입력·수정 폼 (SCR-05, FR-MS-01~07, FR-COM-30~31) */
 export function MilestoneForm({
   initial,
   defaultType,
@@ -42,14 +50,23 @@ export function MilestoneForm({
 }) {
   const save = useSaveMilestone()
   const remove = useDeleteMilestone()
+  const milestones = useMilestones()
+  const ensureMilestones = useEnsureMilestones()
   const [failed, setFailed] = useState<'save' | 'delete' | null>(null)
+  // 같은 내용이 있는 걸 알고도 저장하기로 한 유형·내용. 수정할 때는 원래 유형·내용을 다시 묻지 않는다
+  const [allowedKey, setAllowedKey] = useState(initial ? duplicateKey(initial) : null)
+  const [duplicate, setDuplicate] = useState<{ record: Milestone; input: MilestoneInput } | null>(
+    null,
+  )
+  // 닫히는 동안에도 문구가 남아 있도록 열림 상태를 따로 둔다
+  const [duplicateOpen, setDuplicateOpen] = useState(false)
 
   const {
     control,
     handleSubmit,
     setError,
     setValue,
-    formState: { isSubmitted },
+    formState: { isSubmitted, isSubmitting },
   } = useForm<MilestoneFormValues, unknown, MilestoneInput>({
     resolver: zodResolver(milestoneSchema(birthDate)),
     defaultValues: {
@@ -59,16 +76,16 @@ export function MilestoneForm({
       memo: initial?.memo ?? '',
     },
   })
-  const [type, date] = useWatch({ control, name: ['type', 'date'] })
+  const [type, date, title] = useWatch({ control, name: ['type', 'date', 'title'] })
   const typeInfo = type ? milestoneTypeInfo(type) : undefined
   // 날짜를 바꾸면 바로 다시 계산한다 (FR-MS-03)
   const age =
     isValidDateString(date) && date >= birthDate && date <= todayString()
       ? formatAge(calculateAge(birthDate, date))
       : null
+  const similar = similarMilestones(milestones.data ?? [], { type, title }, initial?.id)
 
-  const onSubmit = handleSubmit(async (input) => {
-    setFailed(null)
+  const persist = async (input: MilestoneInput) => {
     try {
       await save.mutateAsync({ id: initial?.id, input })
       notifySaved()
@@ -81,7 +98,35 @@ export function MilestoneForm({
       if (fieldError) setError(fieldError.field, { message: fieldError.message })
       else setFailed('save')
     }
+  }
+
+  const onSubmit = handleSubmit(async (input) => {
+    setFailed(null)
+    // 같은 유형에 같은 내용이 있으면 확인 창을 띄운다 (FR-MS-06)
+    if (duplicateKey(input) !== allowedKey) {
+      let records: Milestone[]
+      try {
+        records = await ensureMilestones()
+      } catch {
+        setFailed('save')
+        return
+      }
+      const record = findDuplicate(records, input, initial?.id)
+      if (record) {
+        setDuplicate({ record, input })
+        setDuplicateOpen(true)
+        return
+      }
+    }
+    await persist(input)
   })
+
+  const saveDuplicate = () => {
+    if (!duplicate) return
+    // 저장이 실패해 다시 시도할 때는 다시 묻지 않는다
+    setAllowedKey(duplicateKey(duplicate.input))
+    void persist(duplicate.input)
+  }
 
   const onDelete = async () => {
     if (!initial) return
@@ -126,14 +171,17 @@ export function MilestoneForm({
         )}
       </div>
 
-      <TextField
-        control={control}
-        name="title"
-        id="ms-title"
-        label="내용"
-        placeholder={typeInfo?.placeholder ?? '유형을 먼저 골라 주세요'}
-        maxLength={TITLE_MAX}
-      />
+      <div className="flex flex-col gap-1.5">
+        <TextField
+          control={control}
+          name="title"
+          id="ms-title"
+          label="내용"
+          placeholder={typeInfo?.placeholder ?? '유형을 먼저 골라 주세요'}
+          maxLength={TITLE_MAX}
+        />
+        {similar.length > 0 && <SimilarList records={similar} />}
+      </div>
 
       {/* 행동·표정·놀이는 기본 예시를 누르면 내용 칸에 채운다. 단어는 예시 없음 (FR-MS-04) */}
       {typeInfo && typeInfo.examples.length > 0 && (
@@ -172,14 +220,57 @@ export function MilestoneForm({
         <Button type="button" variant="soft" size="lg" onClick={onDone}>
           취소
         </Button>
-        <Button type="submit" size="lg" disabled={save.isPending}>
+        <Button type="submit" size="lg" disabled={isSubmitting || save.isPending}>
           {save.isPending ? '저장하는 중…' : '저장'}
         </Button>
       </FormActions>
       {initial && (
         <DeleteRecordButton onConfirm={() => void onDelete()} pending={remove.isPending} />
       )}
+
+      <ConfirmDialog
+        open={duplicateOpen}
+        onOpenChange={setDuplicateOpen}
+        title={MILESTONE_MESSAGES.duplicate}
+        description={
+          duplicate
+            ? `"${duplicate.record.title}" · ${formatDateLabel(duplicate.record.date)}에 기록했어요`
+            : undefined
+        }
+        confirmLabel="그래도 저장"
+        onConfirm={saveDuplicate}
+      />
     </form>
+  )
+}
+
+/** 입력 중인 내용과 비슷한 이전 기록. 보여 주기만 한다 (FR-MS-05) */
+function SimilarList({ records }: { records: Milestone[] }) {
+  return (
+    <section
+      aria-labelledby="ms-similar-label"
+      className="overflow-hidden rounded-input border border-line bg-surface"
+    >
+      <p
+        id="ms-similar-label"
+        className="bg-background px-3.5 py-2 text-xs font-bold text-muted-foreground"
+      >
+        이전에 기록한 비슷한 내용
+      </p>
+      <ul>
+        {records.map((record) => (
+          <li
+            key={record.id}
+            className="flex min-h-11 items-center justify-between gap-3 border-t border-line px-3.5 py-2 text-[15px]"
+          >
+            <span className="min-w-0 break-words">{record.title}</span>
+            <span className="shrink-0 text-[13px] text-muted-foreground tabular-nums">
+              {formatDateLabel(record.date)}
+            </span>
+          </li>
+        ))}
+      </ul>
+    </section>
   )
 }
 

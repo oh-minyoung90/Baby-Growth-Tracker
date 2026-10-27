@@ -10,11 +10,12 @@ import {
   createMilestone,
   deleteMilestone,
   fetchMilestone,
+  fetchMilestones,
   updateMilestone,
   type Milestone,
 } from './milestoneApi'
 
-// 발달 기록 입력·수정 (T-20, SCR-05, FR-MS-01~04, 07). 테스트 데이터는 가명이다.
+// 발달 기록 입력·수정 (T-20·T-21, SCR-05, FR-MS-01~07). 테스트 데이터는 가명이다.
 
 vi.mock('@/lib/childApi', async (importOriginal) => ({
   ...(await importOriginal<typeof import('@/lib/childApi')>()),
@@ -23,6 +24,7 @@ vi.mock('@/lib/childApi', async (importOriginal) => ({
 vi.mock('./milestoneApi', async (importOriginal) => ({
   ...(await importOriginal<typeof import('./milestoneApi')>()),
   fetchMilestone: vi.fn(),
+  fetchMilestones: vi.fn(),
   createMilestone: vi.fn(),
   updateMilestone: vi.fn(),
   deleteMilestone: vi.fn(),
@@ -48,6 +50,7 @@ beforeEach(() => {
     birthDate: '2026-01-08',
   })
   vi.mocked(fetchMilestone).mockResolvedValue(saved)
+  vi.mocked(fetchMilestones).mockResolvedValue([])
   vi.mocked(createMilestone).mockImplementation(async (input) => ({ id: 'new', ...input }))
   vi.mocked(updateMilestone).mockImplementation(async (id, input) => ({ id, ...input }))
   vi.mocked(deleteMilestone).mockResolvedValue()
@@ -207,5 +210,134 @@ describe('저장 실패', () => {
     await userEvent.click(screen.getByRole('button', { name: '저장' }))
     expect(await screen.findByText('오늘 이후 날짜는 고를 수 없어요')).toBeInTheDocument()
     expect(screen.getByLabelText('날짜')).toHaveAttribute('aria-invalid', 'true')
+  })
+})
+
+describe('비슷한 기록·중복 안내 (F-07, FR-MS-05~06)', () => {
+  // 날짜 최신순
+  const previous: Milestone[] = [
+    { id: 'w2', type: 'word', date: '2026-10-03', title: '엄마', memo: null },
+    saved,
+    { id: 'e2', type: 'expression', date: '2026-09-20', title: '소리 내어 웃기', memo: null },
+    { id: 'e1', type: 'expression', date: '2026-09-18', title: '엄마 보고 웃기', memo: null },
+    { id: 'w1', type: 'word', date: '2026-09-14', title: '맘마', memo: null },
+  ]
+
+  beforeEach(() => {
+    vi.mocked(fetchMilestones).mockResolvedValue(previous)
+  })
+
+  function similarTitles() {
+    const list = screen.queryByRole('region', { name: '이전에 기록한 비슷한 내용' })
+    return list
+      ? within(list)
+          .getAllByRole('listitem')
+          .map((item) => item.textContent)
+      : []
+  }
+
+  it('입력하는 동안 같은 유형에서 입력한 글자를 포함하는 기록을 보여 준다', async () => {
+    await openFrom('/', '/milestones/new?type=word')
+    await userEvent.type(titleInput(), '마')
+    await waitFor(() =>
+      expect(similarTitles()).toEqual(['엄마2026. 10. 3. (토)', '맘마2026. 9. 14. (월)']),
+    )
+    await userEvent.clear(titleInput())
+    expect(similarTitles()).toEqual([])
+  })
+
+  it('유형을 바꾸면 그 유형의 기록에서 다시 찾는다', async () => {
+    await openFrom('/', '/milestones/new?type=word')
+    await userEvent.type(titleInput(), '엄마')
+    await waitFor(() => expect(similarTitles()).toEqual(['엄마2026. 10. 3. (토)']))
+    await userEvent.click(typeRadio('표정'))
+    expect(similarTitles()).toEqual(['엄마 보고 웃기2026. 9. 18. (금)'])
+  })
+
+  it('같은 내용을 저장하면 확인 창을 띄우고, 취소하면 저장하지 않는다', async () => {
+    const { router } = await openFrom('/', '/milestones/new?type=word')
+    await userEvent.type(titleInput(), ' 맘마 ')
+    await userEvent.click(screen.getByRole('button', { name: '저장' }))
+
+    const dialog = await screen.findByRole('alertdialog', { name: '이미 기록된 내용입니다' })
+    expect(dialog).toHaveTextContent('"맘마" · 2026. 9. 14. (월)에 기록했어요')
+    await userEvent.click(within(dialog).getByRole('button', { name: '취소' }))
+    await waitFor(() => expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument())
+    expect(createMilestone).not.toHaveBeenCalled()
+    expect(router.state.location.pathname).toBe('/milestones/new')
+    expect(titleInput()).toHaveValue(' 맘마 ')
+  })
+
+  it('"그래도 저장"을 누르면 저장하고 진입했던 화면으로 돌아간다', async () => {
+    const { router } = await openFrom('/', '/milestones/new?type=word')
+    await userEvent.type(titleInput(), '맘마')
+    await userEvent.click(screen.getByRole('button', { name: '저장' }))
+    const dialog = await screen.findByRole('alertdialog', { name: '이미 기록된 내용입니다' })
+    await userEvent.click(within(dialog).getByRole('button', { name: '그래도 저장' }))
+
+    expect(await screen.findByText('저장했어요')).toBeInTheDocument()
+    expect(createMilestone).toHaveBeenCalledWith(
+      expect.objectContaining({ type: 'word', title: '맘마' }),
+    )
+    await waitFor(() => expect(router.state.location.pathname).toBe('/'))
+  })
+
+  it('비슷하기만 하거나 유형이 다르면 묻지 않고 저장한다', async () => {
+    await openFrom('/timeline', '/milestones/new')
+    await userEvent.click(typeRadio('행동'))
+    await userEvent.type(titleInput(), '엄마 보고 웃기')
+    await userEvent.click(screen.getByRole('button', { name: '저장' }))
+    expect(await screen.findByText('저장했어요')).toBeInTheDocument()
+    expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument()
+  })
+
+  it('수정할 때는 자신을 빼고 찾고, 유형·내용을 바꾸지 않았으면 묻지 않는다', async () => {
+    await openFrom('/timeline', '/milestones/m1')
+    await screen.findByRole('heading', { name: '발달 기록 수정' })
+    // 같은 내용(e2)이 이미 있지만, 원래 내용 그대로 메모만 고쳤다
+    await waitFor(() => expect(similarTitles()).toEqual(['소리 내어 웃기2026. 9. 20. (일)']))
+    await userEvent.type(screen.getByLabelText('메모'), '!')
+    await userEvent.click(screen.getByRole('button', { name: '저장' }))
+    expect(await screen.findByText('저장했어요')).toBeInTheDocument()
+    expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument()
+    expect(updateMilestone).toHaveBeenCalledWith(
+      'm1',
+      expect.objectContaining({ memo: '목욕할 때!' }),
+    )
+  })
+
+  it('수정하면서 다른 기록과 같은 내용으로 바꾸면 묻는다', async () => {
+    await openFrom('/timeline', '/milestones/m1')
+    await screen.findByRole('heading', { name: '발달 기록 수정' })
+    await userEvent.clear(titleInput())
+    await userEvent.type(titleInput(), '엄마 보고 웃기')
+    await userEvent.click(screen.getByRole('button', { name: '저장' }))
+    const dialog = await screen.findByRole('alertdialog', { name: '이미 기록된 내용입니다' })
+    expect(dialog).toHaveTextContent('2026. 9. 18. (금)')
+    expect(updateMilestone).not.toHaveBeenCalled()
+  })
+
+  it('"그래도 저장" 후 저장에 실패해 다시 시도하면 다시 묻지 않는다', async () => {
+    vi.mocked(createMilestone).mockRejectedValueOnce(new MilestoneSaveError('network'))
+    await openFrom('/', '/milestones/new?type=word')
+    await userEvent.type(titleInput(), '맘마')
+    await userEvent.click(screen.getByRole('button', { name: '저장' }))
+    const dialog = await screen.findByRole('alertdialog', { name: '이미 기록된 내용입니다' })
+    await userEvent.click(within(dialog).getByRole('button', { name: '그래도 저장' }))
+
+    const banner = await screen.findByRole('alert')
+    await userEvent.click(within(banner).getByRole('button', { name: '다시 시도' }))
+    expect(await screen.findByText('저장했어요')).toBeInTheDocument()
+    expect(createMilestone).toHaveBeenCalledTimes(2)
+    expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument()
+  })
+
+  it('기록 목록을 불러오지 못하면 저장하지 않고 상단에 안내한다', async () => {
+    vi.mocked(fetchMilestones).mockRejectedValue(new Error('offline'))
+    await openFrom('/', '/milestones/new?type=word')
+    await userEvent.type(titleInput(), '맘마')
+    await userEvent.click(screen.getByRole('button', { name: '저장' }))
+    expect(await screen.findByRole('alert')).toHaveTextContent('저장하지 못했어요')
+    expect(createMilestone).not.toHaveBeenCalled()
   })
 })

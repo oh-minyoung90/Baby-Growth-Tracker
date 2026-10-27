@@ -17,6 +17,7 @@ export const MEMO_MAX = 500
 export const MILESTONE_MESSAGES = {
   type: '유형을 골라 주세요',
   title: '내용을 입력해 주세요',
+  duplicate: '이미 기록된 내용입니다',
 } as const
 
 export function milestoneSchema(birthDate: string) {

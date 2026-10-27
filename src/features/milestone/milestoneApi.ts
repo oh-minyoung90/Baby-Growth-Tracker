@@ -53,6 +53,17 @@ function toSaveError(error: PostgrestError, input: MilestoneInput): MilestoneSav
   return new MilestoneSaveError(check ? CHECK_REASONS[check] : 'network')
 }
 
+/** 내 발달 기록 전체. 날짜 최신순, 같은 날짜는 나중에 저장한 기록이 먼저 */
+export async function fetchMilestones(): Promise<Milestone[]> {
+  const { data, error } = await supabase
+    .from('milestones')
+    .select(COLUMNS)
+    .order('date', { ascending: false })
+    .order('created_at', { ascending: false })
+  if (error) throw error
+  return data.map(toMilestone)
+}
+
 /** 기록 하나. 없거나 다른 사람의 기록이면(RLS) null */
 export async function fetchMilestone(id: string): Promise<Milestone | null> {
   const { data, error } = await supabase
