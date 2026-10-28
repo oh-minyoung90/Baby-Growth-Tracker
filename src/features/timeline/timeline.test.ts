@@ -4,24 +4,28 @@ import type { Milestone } from '@/lib/milestoneApi'
 import {
   DEFAULT_FILTER,
   buildTimeline,
+  countMilestones,
   filterTimeline,
   filterToParams,
   groupByMonth,
   isInvalidRange,
   measureSummary,
+  newMilestonePath,
   parseFilter,
   periodRange,
+  selectedCountType,
+  toggleCountType,
   type TimelineFilter,
 } from './timeline'
 
-// 타임라인 (FR-TL-01~05, 07). 기록은 가명 예시, 오늘은 2026-10-22
+// 타임라인 (FR-TL-01~05, 07~10). 기록은 가명 예시, 오늘은 2026-10-22
 
 const TODAY = '2026-10-22'
 
 const milestones: Milestone[] = [
   { id: 'w2', type: 'word', date: '2026-10-19', title: '네', memo: null },
   { id: 'e1', type: 'expression', date: '2026-10-03', title: '소리 내어 웃기', memo: '까꿍놀이' },
-  { id: 'p1', type: 'play', date: '2026-09-30', title: '책 읽기', memo: null },
+  { id: 'bh1', type: 'behavior', date: '2026-09-30', title: '까꿍놀이', memo: null },
   { id: 'w1', type: 'word', date: '2026-09-02', title: '엄마', memo: null },
 ]
 const measures: BodyMeasure[] = [
@@ -37,7 +41,7 @@ describe('buildTimeline', () => {
     expect(keys(buildTimeline(milestones, measures))).toEqual([
       'milestone-w2',
       'milestone-e1',
-      'milestone-p1',
+      'milestone-bh1',
       'measure-b2',
       'milestone-w1',
       'measure-b1',
@@ -85,7 +89,7 @@ describe('filterTimeline', () => {
       'milestone-e1',
     ])
     expect(keys(filterTimeline(items, filter({ period: 'last' }), TODAY))).toEqual([
-      'milestone-p1',
+      'milestone-bh1',
       'measure-b2',
       'milestone-w1',
     ])
@@ -95,7 +99,7 @@ describe('filterTimeline', () => {
     const custom = (from: string, to: string) =>
       keys(filterTimeline(items, filter({ period: 'custom', from, to }), TODAY))
     expect(custom('2026-09-02', '2026-09-30')).toEqual([
-      'milestone-p1',
+      'milestone-bh1',
       'measure-b2',
       'milestone-w1',
     ])
@@ -126,6 +130,42 @@ describe('periodRange', () => {
       false,
     )
     expect(isInvalidRange(filter({ period: 'custom', from: '2026-10-02', to: '' }))).toBe(false)
+  })
+})
+
+describe('유형별 개수 (FR-TL-08~10)', () => {
+  it('단어·행동·표정 개수를 세고, 같은 내용은 1개로 센다 (R28)', () => {
+    expect(countMilestones(milestones)).toEqual({ word: 2, behavior: 1, expression: 1 })
+    // 놀이를 행동으로 합치기 전에 저장한 같은 내용 (R42)
+    const merged = [...milestones, { ...milestones[2], id: 'bh2', title: ' 까꿍놀이 ' }]
+    expect(countMilestones(merged).behavior).toBe(1)
+    expect(countMilestones([])).toEqual({ word: 0, behavior: 0, expression: 0 })
+  })
+
+  it('개수를 누르면 그 유형만 전체 기간으로 보고, 다시 누르면 초기화한다', () => {
+    const custom = filter({ period: 'custom', from: '2026-10-01', to: '2026-10-22' })
+    const wordOnly = toggleCountType(custom, 'word')
+    expect(wordOnly).toEqual(filter({ types: ['word'] }))
+    expect(selectedCountType(wordOnly)).toBe('word')
+    expect(toggleCountType(wordOnly, 'word')).toEqual(DEFAULT_FILTER)
+    expect(toggleCountType(wordOnly, 'expression')).toEqual(filter({ types: ['expression'] }))
+  })
+
+  it('한 유형만 보고 있어도 기간을 골랐거나 키·몸무게면 선택 표시하지 않는다', () => {
+    expect(selectedCountType(DEFAULT_FILTER)).toBeNull()
+    expect(selectedCountType(filter({ types: ['word'], period: 'this' }))).toBeNull()
+    expect(selectedCountType(filter({ types: ['measure'] }))).toBeNull()
+    expect(selectedCountType(filter({ types: ['word', 'measure'] }))).toBeNull()
+  })
+
+  it('추가 버튼은 발달 유형이 하나만 켜져 있으면 그 유형을 고른 채 연다', () => {
+    expect(newMilestonePath(DEFAULT_FILTER)).toBe('/milestones/new')
+    expect(newMilestonePath(filter({ types: ['behavior'] }))).toBe('/milestones/new?type=behavior')
+    expect(newMilestonePath(filter({ types: ['word', 'measure'], period: 'last' }))).toBe(
+      '/milestones/new?type=word',
+    )
+    expect(newMilestonePath(filter({ types: ['word', 'expression'] }))).toBe('/milestones/new')
+    expect(newMilestonePath(filter({ types: [] }))).toBe('/milestones/new')
   })
 })
 

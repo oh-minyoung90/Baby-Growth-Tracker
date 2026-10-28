@@ -15,7 +15,6 @@ const badgeVariants = cva(
         word: 'bg-type-word text-type-word-text',
         behavior: 'bg-type-behavior text-type-behavior-text',
         expression: 'bg-type-expression text-type-expression-text',
-        play: 'bg-type-play text-type-play-text',
         food: 'bg-type-food text-type-food-text',
         measure: 'bg-type-measure text-type-measure-text',
         tried: 'bg-tried text-tried-text',

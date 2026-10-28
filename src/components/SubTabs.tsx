@@ -1,7 +1,7 @@
 import { NavLink } from 'react-router'
 import { cn } from '@/lib/utils'
 
-/** 화면 안의 상단 탭 (성장: 키·몸무게/단어/수면, 식사: 주간 식단/음식 목록/레시피) */
+/** 화면 안의 상단 탭 (성장: 기록/키·몸무게, 식사: 주간 식단/음식 목록/레시피) */
 export function SubTabs({
   label,
   items,

@@ -128,7 +128,6 @@ export default function UiPreview() {
             </Badge>
             <Badge variant="behavior">행동</Badge>
             <Badge variant="expression">표정</Badge>
-            <Badge variant="play">놀이</Badge>
             <Badge variant="food">처음 먹은 음식</Badge>
             <Badge variant="measure">키·몸무게</Badge>
             <Badge variant="tried">먹어봄</Badge>

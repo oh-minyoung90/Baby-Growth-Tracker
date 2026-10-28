@@ -79,7 +79,7 @@ describe('서버 검증 실패 (FR-COM-13)', () => {
       field: 'title',
       message: '이미 말한 단어예요',
     })
-    expect(serverFieldError('duplicate', 'play')).toEqual({
+    expect(serverFieldError('duplicate', 'expression')).toEqual({
       field: 'title',
       message: '이미 기록된 내용입니다',
     })

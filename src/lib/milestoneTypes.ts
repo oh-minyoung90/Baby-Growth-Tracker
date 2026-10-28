@@ -1,10 +1,10 @@
-import { Blocks, Footprints, MessageCircle, Smile, type LucideIcon } from 'lucide-react'
+import { Footprints, MessageCircle, Smile, type LucideIcon } from 'lucide-react'
 
 /**
- * 발달 기록 유형 (F-06): 단어·행동·표정·놀이.
- * 입력 화면, 단어 목록, 타임라인, 홈이 함께 쓴다. 값은 DB milestones.type과 같다 (T-18).
+ * 발달 기록 유형 (F-06): 단어·행동·표정. 놀이는 행동에 포함한다 (R42).
+ * 입력 화면, 타임라인, 홈이 함께 쓴다. 값은 DB milestones.type과 같다 (T-18).
  */
-export type MilestoneType = 'word' | 'behavior' | 'expression' | 'play'
+export type MilestoneType = 'word' | 'behavior' | 'expression'
 
 export interface MilestoneTypeInfo {
   value: MilestoneType
@@ -36,6 +36,10 @@ export const MILESTONE_TYPES: readonly MilestoneTypeInfo[] = [
       '박수 치기',
       '손 흔들기',
       '손가락으로 가리키기',
+      // 놀이에서 옮긴 예시 (R42)
+      '까꿍놀이',
+      '블록 쌓기',
+      '공놀이',
     ],
   },
   {
@@ -44,22 +48,6 @@ export const MILESTONE_TYPES: readonly MilestoneTypeInfo[] = [
     icon: Smile,
     placeholder: '예: 소리 내어 웃기',
     examples: ['눈 맞추며 웃기', '소리 내어 웃기', '찡그리기', '놀란 표정', '삐죽거리기', '낯가림'],
-  },
-  {
-    value: 'play',
-    label: '놀이',
-    icon: Blocks,
-    placeholder: '예: 까꿍놀이',
-    examples: [
-      '까꿍놀이',
-      '딸랑이',
-      '책 읽기',
-      '거울 보기',
-      '블록 쌓기',
-      '공놀이',
-      '노래·율동',
-      '숨바꼭질',
-    ],
   },
 ]
 

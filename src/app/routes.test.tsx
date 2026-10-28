@@ -6,7 +6,7 @@ import type { AuthState } from '@/lib/auth'
 import { fetchMyChild } from '@/lib/childApi'
 import { renderApp } from '@/test/renderApp'
 
-// 화면 이동과 로그인 여부에 따른 이동 (T-09, FR-AUTH-06)
+// 화면 이동과 로그인 여부에 따른 이동 (T-09, FR-AUTH-06, 메뉴 구조 R1)
 
 const signedIn: AuthState = { status: 'signedIn', session: { user: { id: 'test' } } as Session }
 const signedOut: AuthState = { status: 'signedOut', session: null }
@@ -29,7 +29,7 @@ function renderAt(path: string, auth: AuthState = signedIn) {
 
 describe('로그인 여부에 따른 이동', () => {
   it('로그인하지 않으면 로그인 화면으로 보낸다', async () => {
-    const router = renderAt('/growth/sleep', signedOut)
+    const router = renderAt('/growth/timeline', signedOut)
     expect(await screen.findByRole('button', { name: '인증 코드 받기' })).toBeInTheDocument()
     expect(router.state.location.pathname).toBe('/login')
   })
@@ -52,9 +52,9 @@ describe('로그인 후 원래 가려던 화면으로 이동', () => {
   }
 
   it('앱 안의 주소면 그 화면으로 보낸다', async () => {
-    const router = renderLoginWithFrom('/growth/sleep')
-    await screen.findByRole('heading', { level: 1, name: '성장' })
-    expect(router.state.location.pathname).toBe('/growth/sleep')
+    const router = renderLoginWithFrom('/sleep')
+    await screen.findByRole('heading', { level: 1, name: '수면' })
+    expect(router.state.location.pathname).toBe('/sleep')
   })
 
   it('외부 주소는 무시하고 홈으로 보낸다', async () => {
@@ -66,8 +66,8 @@ describe('로그인 후 원래 가려던 화면으로 이동', () => {
 
 describe('주 메뉴', () => {
   it('메뉴 5개가 있고 현재 화면이 선택 표시된다', async () => {
-    renderAt('/timeline')
-    await screen.findByRole('heading', { level: 1, name: '타임라인' })
+    renderAt('/sleep')
+    await screen.findByRole('heading', { level: 1, name: '수면' })
     // 모바일 하단 탭과 PC 왼쪽 메뉴가 함께 있다 (화면 폭에 따라 하나만 보임)
     const navs = screen.getAllByRole('navigation', { name: '주 메뉴' })
     expect(navs).toHaveLength(2)
@@ -75,12 +75,12 @@ describe('주 메뉴', () => {
       const links = within(nav).getAllByRole('link')
       expect(links.map((l) => l.textContent?.trim())).toEqual([
         expect.stringContaining('홈'),
+        '수면',
         '성장',
-        '타임라인',
         '식사',
         '설정',
       ])
-      expect(within(nav).getByRole('link', { name: '타임라인' })).toHaveAttribute(
+      expect(within(nav).getByRole('link', { name: '수면' })).toHaveAttribute(
         'aria-current',
         'page',
       )
@@ -99,14 +99,19 @@ describe('주 메뉴', () => {
 })
 
 describe('화면 안 상단 탭', () => {
-  // /growth → /growth/body로 바뀐 뒤 화면이 다시 그려질 때까지 기다린다 (느린 CI에서 실패했음)
-  it('성장 메뉴는 키·몸무게 탭으로 연다', async () => {
+  // /growth → /growth/timeline으로 바뀐 뒤 화면이 다시 그려질 때까지 기다린다 (느린 CI에서 실패했음)
+  it('성장 메뉴는 기록 탭으로 열고, 탭은 기록·키·몸무게 2개다', async () => {
     const router = renderAt('/growth')
     const tabs = await screen.findByRole('navigation', { name: '성장 기록 종류' })
     expect(
-      await within(tabs).findByRole('link', { name: '키·몸무게', current: 'page' }),
+      await within(tabs).findByRole('link', { name: '기록', current: 'page' }),
     ).toBeInTheDocument()
-    expect(router.state.location.pathname).toBe('/growth/body')
+    expect(router.state.location.pathname).toBe('/growth/timeline')
+    expect(
+      within(tabs)
+        .getAllByRole('link')
+        .map((link) => link.textContent),
+    ).toEqual(['기록', '키·몸무게'])
   })
 
   it('식사 메뉴는 주간 식단 탭으로 열고, 탭을 바꿀 수 있다', async () => {
@@ -137,7 +142,7 @@ describe('브라우저 탭 제목', () => {
 describe('아이 정보 등록 여부에 따른 이동 (FR-CHILD-01)', () => {
   it('아이 정보가 없으면 어느 화면을 열어도 등록 화면으로 보낸다', async () => {
     mockedFetchChild.mockResolvedValue(null)
-    const router = renderAt('/timeline')
+    const router = renderAt('/growth/timeline')
     expect(await screen.findByRole('heading', { name: /아이 정보를/ })).toBeInTheDocument()
     expect(router.state.location.pathname).toBe('/setup')
     // 등록 화면에는 메뉴가 없어 다른 화면으로 갈 수 없다
