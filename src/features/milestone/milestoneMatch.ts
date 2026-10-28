@@ -1,6 +1,6 @@
 import { findSimilar, isSameContent, toContentKey } from '@/domain/text'
 import type { MilestoneType } from '@/lib/milestoneTypes'
-import type { Milestone } from './milestoneApi'
+import type { Milestone } from '@/lib/milestoneApi'
 
 /**
  * 비슷한 기록·같은 내용 찾기 (F-07, FR-MS-05~06). 비교 규칙은 BR-03(domain/text.ts)을 따른다.

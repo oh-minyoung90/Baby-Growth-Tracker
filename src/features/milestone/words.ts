@@ -1,5 +1,5 @@
 import { toContentKey } from '@/domain/text'
-import type { Milestone } from './milestoneApi'
+import type { Milestone } from '@/lib/milestoneApi'
 
 /** 단어 목록 정렬: 최근순(기본) / 가나다순 (FR-WORD-02) */
 export type WordSort = 'recent' | 'name'

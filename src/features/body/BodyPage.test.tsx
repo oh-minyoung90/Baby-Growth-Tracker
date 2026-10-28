@@ -12,7 +12,7 @@ import {
   fetchBodyMeasures,
   updateBodyMeasure,
   type BodyMeasure,
-} from './bodyApi'
+} from '@/lib/bodyApi'
 
 // 키·몸무게 입력·목록 (T-16, SCR-04, FR-BODY-01~02, 05~07). 테스트 데이터는 가명이다.
 // 서버 대신 메모리 목록(store)에 저장해, 저장 후 목록을 다시 불러오는 흐름까지 확인한다.
@@ -21,8 +21,8 @@ vi.mock('@/lib/childApi', async (importOriginal) => ({
   ...(await importOriginal<typeof import('@/lib/childApi')>()),
   fetchMyChild: vi.fn(),
 }))
-vi.mock('./bodyApi', async (importOriginal) => ({
-  ...(await importOriginal<typeof import('./bodyApi')>()),
+vi.mock('@/lib/bodyApi', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@/lib/bodyApi')>()),
   fetchBodyMeasures: vi.fn(),
   createBodyMeasure: vi.fn(),
   updateBodyMeasure: vi.fn(),

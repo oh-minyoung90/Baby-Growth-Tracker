@@ -28,6 +28,7 @@ import { RouteError } from './RouteError'
  * /milestones/new?type=word  발달 기록 입력 (SCR-05). type: word|behavior|expression|play
  * /milestones/:id            발달 기록 수정 (SCR-05)
  * /timeline                  타임라인 (SCR-07)
+ *   ?types=word,measure&period=this|last|custom&from=&to=  필터 (features/timeline/timeline.ts)
  * /meals/week|foods|recipes  식사 (SCR-10~12)
  * /setup                     아이 정보 첫 등록 (SCR-02)
  * /settings                  설정 (SCR-09), /settings/child 아이 정보 수정

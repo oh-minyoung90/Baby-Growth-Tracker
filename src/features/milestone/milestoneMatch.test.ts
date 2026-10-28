@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import type { Milestone } from './milestoneApi'
+import type { Milestone } from '@/lib/milestoneApi'
 import { duplicateKey, findDuplicate, similarMilestones } from './milestoneMatch'
 
 // 비슷한 기록·같은 내용 찾기 (F-07, FR-MS-05~06). 기록은 가명 예시, 날짜 최신순

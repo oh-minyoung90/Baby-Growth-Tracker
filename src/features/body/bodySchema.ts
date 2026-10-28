@@ -1,6 +1,6 @@
 import { z } from 'zod'
 import { DATE_MESSAGES, maxLengthMessage, optionalText, recordDate } from '@/lib/validation'
-import type { BodySaveErrorReason } from './bodyApi'
+import type { BodySaveErrorReason } from '@/lib/bodyApi'
 
 /** 키·몸무게 입력 검증 (FR-BODY-01~02). DB의 CHECK 제약(T-15)과 같은 규칙이다 */
 

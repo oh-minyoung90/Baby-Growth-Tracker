@@ -7,7 +7,7 @@ import {
   recordDate,
   requiredText,
 } from '@/lib/validation'
-import type { MilestoneSaveErrorReason } from './milestoneApi'
+import type { MilestoneSaveErrorReason } from '@/lib/milestoneApi'
 
 /** 발달 기록 입력 검증 (FR-MS-02, FR-COM-10~12). DB의 CHECK 제약(T-18)과 같은 규칙이다 */
 

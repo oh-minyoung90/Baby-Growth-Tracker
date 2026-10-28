@@ -1,6 +1,6 @@
 import { addDays, subMonths } from 'date-fns'
 import { parseDate, todayString } from '@/domain/date'
-import type { BodyMeasure } from './bodyApi'
+import type { BodyMeasure } from '@/lib/bodyApi'
 
 /** 키·몸무게 차트 계산 (FR-BODY-03~04, FR-COM-21). 화면과 무관한 순수 함수 */
 

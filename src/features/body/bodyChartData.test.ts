@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { parseDate } from '@/domain/date'
-import type { BodyMeasure } from './bodyApi'
+import type { BodyMeasure } from '@/lib/bodyApi'
 import { chartPoints, periodStart, timeDomain, timeTicks, valueDomain } from './bodyChartData'
 
 // 키·몸무게 차트 계산 (FR-BODY-03~04, FR-COM-21)

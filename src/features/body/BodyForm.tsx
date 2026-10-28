@@ -11,7 +11,7 @@ import { Button } from '@/components/ui/button'
 import { todayString } from '@/domain/date'
 import { NETWORK_ERROR_MESSAGES } from '@/lib/messages'
 import { notifySaved } from '@/lib/notify'
-import { BodySaveError, type BodyMeasure, type BodyMeasureInput } from './bodyApi'
+import { BodySaveError, type BodyMeasure, type BodyMeasureInput } from '@/lib/bodyApi'
 import {
   BODY_MESSAGES,
   MEMO_MAX,
@@ -20,7 +20,7 @@ import {
   type BodyFormValues,
 } from './bodySchema'
 import { MeasureField } from './MeasureField'
-import { useDeleteBodyMeasure, useSaveBodyMeasure } from './useBodyMeasures'
+import { useDeleteBodyMeasure, useSaveBodyMeasure } from '@/lib/useBodyMeasures'
 
 /** 키·몸무게 입력·수정 폼 (FR-BODY-01~02, 06, FR-COM-30~31). 바텀 시트 안에 놓인다 */
 export function BodyForm({
