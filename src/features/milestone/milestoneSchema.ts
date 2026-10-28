@@ -1,5 +1,5 @@
 import { z } from 'zod'
-import { MILESTONE_TYPE_VALUES } from '@/lib/milestoneTypes'
+import { MILESTONE_TYPE_VALUES, type MilestoneType } from '@/lib/milestoneTypes'
 import {
   DATE_MESSAGES,
   maxLengthMessage,
@@ -18,7 +18,13 @@ export const MILESTONE_MESSAGES = {
   type: '유형을 골라 주세요',
   title: '내용을 입력해 주세요',
   duplicate: '이미 기록된 내용입니다',
+  duplicateWord: '이미 말한 단어예요',
 } as const
+
+/** 같은 유형에 같은 내용이 있을 때의 안내 (FR-MS-06). 단어는 "이미 말한 단어예요" */
+export function duplicateMessage(type: MilestoneType | undefined): string {
+  return type === 'word' ? MILESTONE_MESSAGES.duplicateWord : MILESTONE_MESSAGES.duplicate
+}
 
 export function milestoneSchema(birthDate: string) {
   return z.object({
@@ -39,6 +45,7 @@ export type MilestoneFormValues = z.input<ReturnType<typeof milestoneSchema>>
 /** 서버(DB) 검증 실패를 화면 검증과 같은 입력칸·문구로 바꾼다 (FR-COM-13). 네트워크 오류는 null */
 export function serverFieldError(
   reason: MilestoneSaveErrorReason,
+  type: MilestoneType,
 ): { field: keyof MilestoneFormValues; message: string } | null {
   switch (reason) {
     case 'futureDate':
@@ -49,6 +56,8 @@ export function serverFieldError(
       return { field: 'title', message: maxLengthMessage(TITLE_MAX) }
     case 'memoLength':
       return { field: 'memo', message: maxLengthMessage(MEMO_MAX) }
+    case 'duplicate':
+      return { field: 'title', message: duplicateMessage(type) }
     case 'network':
       return null
   }

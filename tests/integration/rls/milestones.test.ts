@@ -60,14 +60,67 @@ describe('milestones: title_key (BR-03)', () => {
     },
   )
 
-  it('같은 내용도 저장할 수 있고 title_key로 찾을 수 있다', async () => {
-    await insert(a.client, { date: '2026-10-13', type: 'behavior', title: ' 잡고  서기' })
+  it('유형이 다르면 같은 내용도 저장할 수 있고 title_key로 찾을 수 있다', async () => {
+    // beforeAll에서 행동 "잡고 서기"를 저장했다
+    expect(
+      (await insert(a.client, { date: '2026-10-13', type: 'play', title: ' 잡고  서기' })).error,
+    ).toBeNull()
     const { data } = await a.client
       .from('milestones')
       .select('id')
-      .eq('type', 'behavior')
+      .in('type', ['behavior', 'play'])
       .eq('title_key', toContentKey('잡고 서기'))
     expect(data?.length).toBe(2)
+  })
+})
+
+describe('milestones: 같은 유형에 같은 내용은 다시 저장할 수 없다 (FR-MS-06)', () => {
+  const update = (id: string, row: Database['public']['Tables']['milestones']['Update']) =>
+    a.client.from('milestones').update(row).eq('id', id).select().single()
+
+  it('띄어쓰기·대소문자만 달라도 같은 내용으로 거부된다 (단어·행동 모두)', async () => {
+    expect(
+      (await insert(a.client, { date: '2026-10-02', type: 'word', title: 'Bye bye' })).error,
+    ).toBeNull()
+    expect(
+      (await insert(a.client, { date: '2026-10-05', type: 'word', title: ' bye  BYE' })).error
+        ?.code,
+    ).toBe('23505')
+    // beforeAll에서 행동 "잡고 서기"를 저장했다
+    expect(
+      (await insert(a.client, { date: '2026-10-05', type: 'behavior', title: '잡고  서기 ' })).error
+        ?.code,
+    ).toBe('23505')
+  })
+
+  it('날짜·메모 수정은 되고, 다른 기록을 같은 유형·내용으로 바꾸면 거부된다', async () => {
+    const { data: word } = await insert(a.client, {
+      date: '2026-10-06',
+      type: 'word',
+      title: '까꿍',
+    })
+    const { data: other } = await insert(a.client, {
+      date: '2026-10-07',
+      type: 'word',
+      title: '빠이',
+    })
+    const { data: behavior } = await insert(a.client, {
+      date: '2026-10-07',
+      type: 'behavior',
+      title: '까꿍',
+    })
+    if (!word || !other || !behavior) throw new Error('기록을 만들지 못했습니다')
+
+    expect((await update(word.id, { date: '2026-10-08', memo: '메모' })).error).toBeNull()
+    expect((await update(other.id, { title: '까꿍 ' })).error?.code).toBe('23505')
+    expect((await update(behavior.id, { type: 'word' })).error?.code).toBe('23505')
+  })
+
+  it('다른 사람의 같은 내용과는 상관없다', async () => {
+    await insert(a.client, { date: '2026-10-09', type: 'word', title: '안녕' })
+    expect(
+      (await insert(b.client, { date: '2026-10-09', type: 'word', title: '안녕' })).error,
+    ).toBeNull()
   })
 })
 

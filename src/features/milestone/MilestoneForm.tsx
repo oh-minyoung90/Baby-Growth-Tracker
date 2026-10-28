@@ -1,13 +1,13 @@
 import { useState } from 'react'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useController, useForm, useWatch, type Control } from 'react-hook-form'
-import { ConfirmDialog } from '@/components/ConfirmDialog'
 import { DeleteRecordButton } from '@/components/DeleteRecordButton'
 import { ErrorBanner } from '@/components/ErrorBanner'
 import { DateField } from '@/components/form/DateField'
 import { FieldError } from '@/components/form/Field'
 import { TextField } from '@/components/form/TextField'
 import { FormActions } from '@/components/FormPage'
+import { NoticeDialog } from '@/components/NoticeDialog'
 import { Button } from '@/components/ui/button'
 import { calculateAge, formatAge } from '@/domain/age'
 import { formatDateLabel, isValidDateString, todayString } from '@/domain/date'
@@ -18,8 +18,8 @@ import { MilestoneSaveError, type Milestone, type MilestoneInput } from './miles
 import { duplicateKey, findDuplicate, similarMilestones } from './milestoneMatch'
 import {
   MEMO_MAX,
-  MILESTONE_MESSAGES,
   TITLE_MAX,
+  duplicateMessage,
   milestoneSchema,
   serverFieldError,
   type MilestoneFormValues,
@@ -53,13 +53,12 @@ export function MilestoneForm({
   const milestones = useMilestones()
   const ensureMilestones = useEnsureMilestones()
   const [failed, setFailed] = useState<'save' | 'delete' | null>(null)
-  // 같은 내용이 있는 걸 알고도 저장하기로 한 유형·내용. 수정할 때는 원래 유형·내용을 다시 묻지 않는다
-  const [allowedKey, setAllowedKey] = useState(initial ? duplicateKey(initial) : null)
-  const [duplicate, setDuplicate] = useState<{ record: Milestone; input: MilestoneInput } | null>(
-    null,
-  )
+  // 같은 유형·내용으로 이미 있는 기록. 저장하지 않고 안내 창으로 알린다 (FR-MS-06)
+  const [duplicate, setDuplicate] = useState<Milestone | null>(null)
   // 닫히는 동안에도 문구가 남아 있도록 열림 상태를 따로 둔다
   const [duplicateOpen, setDuplicateOpen] = useState(false)
+  // 수정할 때 원래 유형·내용 그대로면 같은 내용을 찾지 않는다 (변경 전에 저장된 같은 내용도 날짜·메모는 고칠 수 있게)
+  const originalKey = initial ? duplicateKey(initial) : null
 
   const {
     control,
@@ -85,25 +84,10 @@ export function MilestoneForm({
       : null
   const similar = similarMilestones(milestones.data ?? [], { type, title }, initial?.id)
 
-  const persist = async (input: MilestoneInput) => {
-    try {
-      await save.mutateAsync({ id: initial?.id, input })
-      notifySaved()
-      onDone()
-    } catch (error) {
-      // 서버(DB) 검증에 걸리면 화면 검증과 같은 자리에 같은 문구로 알린다 (FR-COM-13)
-      const fieldError = serverFieldError(
-        error instanceof MilestoneSaveError ? error.reason : 'network',
-      )
-      if (fieldError) setError(fieldError.field, { message: fieldError.message })
-      else setFailed('save')
-    }
-  }
-
   const onSubmit = handleSubmit(async (input) => {
     setFailed(null)
-    // 같은 유형에 같은 내용이 있으면 확인 창을 띄운다 (FR-MS-06)
-    if (duplicateKey(input) !== allowedKey) {
+    // 같은 유형에 같은 내용이 있으면 저장하지 않고 안내 창을 띄운다 (FR-MS-06)
+    if (duplicateKey(input) !== originalKey) {
       let records: Milestone[]
       try {
         records = await ensureMilestones()
@@ -113,20 +97,25 @@ export function MilestoneForm({
       }
       const record = findDuplicate(records, input, initial?.id)
       if (record) {
-        setDuplicate({ record, input })
+        setDuplicate(record)
         setDuplicateOpen(true)
         return
       }
     }
-    await persist(input)
+    try {
+      await save.mutateAsync({ id: initial?.id, input })
+      notifySaved()
+      onDone()
+    } catch (error) {
+      // 서버(DB) 검증에 걸리면 화면 검증과 같은 자리에 같은 문구로 알린다 (FR-COM-13)
+      const fieldError = serverFieldError(
+        error instanceof MilestoneSaveError ? error.reason : 'network',
+        input.type,
+      )
+      if (fieldError) setError(fieldError.field, { message: fieldError.message })
+      else setFailed('save')
+    }
   })
-
-  const saveDuplicate = () => {
-    if (!duplicate) return
-    // 저장이 실패해 다시 시도할 때는 다시 묻지 않는다
-    setAllowedKey(duplicateKey(duplicate.input))
-    void persist(duplicate.input)
-  }
 
   const onDelete = async () => {
     if (!initial) return
@@ -228,17 +217,15 @@ export function MilestoneForm({
         <DeleteRecordButton onConfirm={() => void onDelete()} pending={remove.isPending} />
       )}
 
-      <ConfirmDialog
+      <NoticeDialog
         open={duplicateOpen}
         onOpenChange={setDuplicateOpen}
-        title={MILESTONE_MESSAGES.duplicate}
+        title={duplicateMessage(duplicate?.type)}
         description={
           duplicate
-            ? `"${duplicate.record.title}" · ${formatDateLabel(duplicate.record.date)}에 기록했어요`
+            ? `"${duplicate.title}" · ${formatDateLabel(duplicate.date)}에 기록했어요`
             : undefined
         }
-        confirmLabel="그래도 저장"
-        onConfirm={saveDuplicate}
       />
     </form>
   )

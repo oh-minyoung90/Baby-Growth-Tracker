@@ -65,16 +65,24 @@ describe('milestoneSchema', () => {
 
 describe('서버 검증 실패 (FR-COM-13)', () => {
   it('화면 검증과 같은 칸·문구로 바꾼다', () => {
-    expect(serverFieldError('futureDate')).toEqual({
+    expect(serverFieldError('futureDate', 'word')).toEqual({
       field: 'date',
       message: '오늘 이후 날짜는 고를 수 없어요',
     })
-    expect(serverFieldError('beforeBirth')?.field).toBe('date')
-    expect(serverFieldError('titleLength')).toEqual({
+    expect(serverFieldError('beforeBirth', 'word')?.field).toBe('date')
+    expect(serverFieldError('titleLength', 'word')).toEqual({
       field: 'title',
       message: '30자까지 입력할 수 있어요',
     })
-    expect(serverFieldError('memoLength')?.field).toBe('memo')
-    expect(serverFieldError('network')).toBeNull()
+    expect(serverFieldError('memoLength', 'word')?.field).toBe('memo')
+    expect(serverFieldError('duplicate', 'word')).toEqual({
+      field: 'title',
+      message: '이미 말한 단어예요',
+    })
+    expect(serverFieldError('duplicate', 'play')).toEqual({
+      field: 'title',
+      message: '이미 기록된 내용입니다',
+    })
+    expect(serverFieldError('network', 'word')).toBeNull()
   })
 })
