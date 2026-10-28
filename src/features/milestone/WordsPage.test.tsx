@@ -5,7 +5,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import type { AuthState } from '@/lib/auth'
 import { fetchMyChild } from '@/lib/childApi'
 import { renderApp } from '@/test/renderApp'
-import { fetchMilestone, fetchMilestones, type Milestone } from './milestoneApi'
+import { fetchMilestone, fetchMilestones, type Milestone } from '@/lib/milestoneApi'
 
 // 성장 > 단어 (T-22, SCR-06, FR-WORD-01~03). 테스트 데이터는 가명이다.
 
@@ -13,8 +13,8 @@ vi.mock('@/lib/childApi', async (importOriginal) => ({
   ...(await importOriginal<typeof import('@/lib/childApi')>()),
   fetchMyChild: vi.fn(),
 }))
-vi.mock('./milestoneApi', async (importOriginal) => ({
-  ...(await importOriginal<typeof import('./milestoneApi')>()),
+vi.mock('@/lib/milestoneApi', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@/lib/milestoneApi')>()),
   fetchMilestones: vi.fn(),
   fetchMilestone: vi.fn(),
 }))

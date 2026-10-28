@@ -13,7 +13,7 @@ import {
   fetchMilestones,
   updateMilestone,
   type Milestone,
-} from './milestoneApi'
+} from '@/lib/milestoneApi'
 
 // 발달 기록 입력·수정 (T-20·T-21, SCR-05, FR-MS-01~07). 테스트 데이터는 가명이다.
 
@@ -21,8 +21,8 @@ vi.mock('@/lib/childApi', async (importOriginal) => ({
   ...(await importOriginal<typeof import('@/lib/childApi')>()),
   fetchMyChild: vi.fn(),
 }))
-vi.mock('./milestoneApi', async (importOriginal) => ({
-  ...(await importOriginal<typeof import('./milestoneApi')>()),
+vi.mock('@/lib/milestoneApi', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@/lib/milestoneApi')>()),
   fetchMilestone: vi.fn(),
   fetchMilestones: vi.fn(),
   createMilestone: vi.fn(),

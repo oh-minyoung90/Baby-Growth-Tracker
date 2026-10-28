@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import type { Milestone } from './milestoneApi'
+import type { Milestone } from '@/lib/milestoneApi'
 import { firstWords, sortWords } from './words'
 
 // 단어 목록 (FR-WORD-01~02). 기록은 가명 예시, 날짜 최신순(같은 날짜는 나중에 저장한 것이 먼저)

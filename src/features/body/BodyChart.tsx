@@ -13,7 +13,7 @@ import {
 import { ChoiceChips } from '@/components/ChoiceChips'
 import { ageLabel } from '@/domain/age'
 import { formatDateLabel, todayString } from '@/domain/date'
-import type { BodyMeasure } from './bodyApi'
+import type { BodyMeasure } from '@/lib/bodyApi'
 import {
   CHART_PERIODS,
   chartPoints,
@@ -24,7 +24,7 @@ import {
   type ChartPeriod,
   type ChartPoint,
 } from './bodyChartData'
-import { formatMeasureValue } from './bodyFormat'
+import { formatMeasureValue } from '@/lib/bodyFormat'
 
 const AXIS_TICK = { fill: 'var(--color-muted-foreground)', fontSize: 11 }
 

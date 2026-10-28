@@ -1,4 +1,4 @@
-# Baby Growth Tracker 태스크 분해 (MVP-1) v1.1
+# Baby Growth Tracker 태스크 분해 (MVP-1) v1.2
 
 Oct 20, 2026 · @오민영 · 상태: 확정
 
@@ -10,6 +10,7 @@ Oct 20, 2026 · @오민영 · 상태: 확정
 | v0.2 | 2026-10-20 | 파일명 `task.md`로 변경. 시안 방식·디자인 방향(D-01) 결정, PC 레이아웃(DS6) 추가 |
 | v1.0 | 2026-10-20 | K1~K5 확정. 태스크별 GitHub Issue(#3~#42) 생성·연결, 마일스톤 MVP-1 |
 | v1.1 | 2026-10-20 | 식사 기록을 MVP-1에 포함 (PRD v1.2). D-07, T-36~T-51 추가(Issue #44~#60), 설정·E2E 태스크 범위 확장 |
+| v1.2 | 2026-10-28 | T-23에 FR-TL-07(타임라인 키·몸무게) 포함. 어느 태스크에도 없었음. T-51에 유형 필터 "처음 먹은 음식" 추가를 명시 |
 
 ## 1. 기준
 
@@ -106,7 +107,7 @@ Oct 20, 2026 · @오민영 · 상태: 확정
 | T-20 [#27](https://github.com/oh-minyoung90/Baby-Growth-Tracker/issues/27) | 발달 기록 입력·수정 | SCR-05, FR-MS-01~04, 07 | 유형 선택, 날짜·생후 일수, 내용·메모, 기본 예시 버튼(부록 A), 수정·삭제 | 4가지 유형 생성·수정·삭제 | T-14, T-18 | M |
 | T-21 [#28](https://github.com/oh-minyoung90/Baby-Growth-Tracker/issues/28) | 유사 기록·중복 안내 | F-07, FR-MS-05~06 | 입력 중 유사 기록 최대 5개, 저장 시 중복 확인 창 | 같은 내용 저장 시 확인 창 표시 | T-19, T-20 | S |
 | T-22 [#29](https://github.com/oh-minyoung90/Baby-Growth-Tracker/issues/29) | 단어 목록 | SCR-06, FR-WORD-01~03 | 단어 수(중복 1개로 계산), 정렬, 추가 버튼 | 단어 수가 중복을 제외하고 표시됨 | T-20 | S |
-| T-23 [#30](https://github.com/oh-minyoung90/Baby-Growth-Tracker/issues/30) | 발달 타임라인 | SCR-07, FR-TL-01~05 | 월별 묶음, 유형·기간 필터, 결과 없음 화면 | 필터 조합별로 올바르게 표시 | T-20 | M |
+| T-23 [#30](https://github.com/oh-minyoung90/Baby-Growth-Tracker/issues/30) | 발달 타임라인 | SCR-07, FR-TL-01~05, 07 | 월별 묶음, 유형·기간 필터, 결과 없음 화면, 키·몸무게 측정 함께 표시 | 필터 조합별로 올바르게 표시 | T-20 | M |
 | T-24 [#31](https://github.com/oh-minyoung90/Baby-Growth-Tracker/issues/31) | 수면 DB | F-10 | `sleep_logs` 테이블, 수면일 unique, 검증 트리거(FR-SLEEP-07), RLS, RLS 테스트 | 겹치는 낮잠·범위 밖 밤잠이 DB에서 거부됨 | T-08 | M |
 | T-25 [#32](https://github.com/oh-minyoung90/Baby-Growth-Tracker/issues/32) | 수면 계산 | BR-04~07 | `domain/sleep.ts`(시각에 날짜 붙이기, 총 수면, 오류 판정), 경계값 단위 테스트 | 23:59/00:00/11:59/12:00 경계 테스트 통과 | T-03 | S |
 | T-26 [#33](https://github.com/oh-minyoung90/Baby-Growth-Tracker/issues/33) | 수면 입력·수정 | SCR-08, FR-SLEEP-01~08 | 수면일 기본값 어제, 시각 입력과 붙은 날짜 표시, 낮잠 추가·삭제, 실시간 총 수면, 기존 수면일 선택 시 수정 모드 | 낮잠 여러 개 저장, 오류 조건에서 저장 안 됨 | T-14, T-24, T-25 | M |
@@ -132,7 +133,7 @@ Oct 20, 2026 · @오민영 · 상태: 확정
 | T-48 [#57](https://github.com/oh-minyoung90/Baby-Growth-Tracker/issues/57) | 사진 저장소 | F-11, 기술요구사항서 6.3 | 비공개 버킷·Storage 정책(마이그레이션), 리사이즈·압축·업로드·서명 URL·삭제 유틸, 확인 항목 C8(HEIC) | 다른 계정 사진 접근 불가, 1,280px 이하로 저장 | T-07 | M |
 | T-49 [#58](https://github.com/oh-minyoung90/Baby-Growth-Tracker/issues/58) | 레시피 목록·상세 | SCR-12, FR-RCP-01~03 | 목록 카드, 이름 검색, 재료 필터(AND), 상세(번호 붙은 조리 순서, 주의 재료 표시) | 0건·1건에서 깨지지 않음 | T-14, T-47 | M |
 | T-50 [#59](https://github.com/oh-minyoung90/Baby-Growth-Tracker/issues/59) | 레시피 편집 | FR-RCP-04~08 | 재료 행·조리 순서 단계 편집, 사진 첨부·교체·삭제, 레시피 삭제(사진 파일 포함) | 사진 교체 시 이전 파일 삭제 | T-48, T-49 | M |
-| T-51 [#60](https://github.com/oh-minyoung90/Baby-Growth-Tracker/issues/60) | 식사 연동 마무리 | FR-HOME-07~08, FR-TL-06, FR-SET-09 | 홈 "오늘의 식단" 카드·식단 빠른 기록, 타임라인 "처음 먹은 음식", 레시피를 식단 칸에서 선택 가능하게 연결 | 처음 먹은 음식이 타임라인에 표시, 홈 빠른 기록 5개 | T-28, T-44, T-49 | S |
+| T-51 [#60](https://github.com/oh-minyoung90/Baby-Growth-Tracker/issues/60) | 식사 연동 마무리 | FR-HOME-07~08, FR-TL-06, FR-SET-09 | 홈 "오늘의 식단" 카드·식단 빠른 기록, 타임라인 "처음 먹은 음식"(목록과 유형 필터), 레시피를 식단 칸에서 선택 가능하게 연결 | 처음 먹은 음식이 타임라인에 표시, 홈 빠른 기록 5개 | T-28, T-44, T-49 | S |
 
 ### 4단계: 설정 (백업·삭제)
 

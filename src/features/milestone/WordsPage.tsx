@@ -9,8 +9,8 @@ import { ageLabel } from '@/domain/age'
 import { formatDateLabel } from '@/domain/date'
 import { NETWORK_ERROR_MESSAGES } from '@/lib/messages'
 import { useChild } from '@/lib/useChild'
-import type { Milestone } from './milestoneApi'
-import { useMilestones } from './useMilestones'
+import type { Milestone } from '@/lib/milestoneApi'
+import { useMilestones } from '@/lib/useMilestones'
 import { WORD_SORTS, firstWords, sortWords, type WordSort } from './words'
 
 /** 단어가 골라진 상태로 발달 기록 입력 화면을 연다 (FR-WORD-03) */

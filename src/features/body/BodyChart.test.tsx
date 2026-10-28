@@ -1,7 +1,7 @@
 import { fireEvent, render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import type { BodyMeasure } from './bodyApi'
+import type { BodyMeasure } from '@/lib/bodyApi'
 import { BodyCharts } from './BodyChart'
 
 // 키·몸무게 차트 (T-17, FR-BODY-03~04, FR-COM-21). 오늘은 2026-10-22, 생년월일은 2026-01-08 (가명 데이터)

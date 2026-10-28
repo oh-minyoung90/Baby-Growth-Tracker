@@ -10,10 +10,10 @@ import { formatDateLabel } from '@/domain/date'
 import { NETWORK_ERROR_MESSAGES } from '@/lib/messages'
 import { useChild } from '@/lib/useChild'
 import { useSheetParam } from '@/lib/useSheetParam'
-import type { BodyMeasure } from './bodyApi'
+import type { BodyMeasure } from '@/lib/bodyApi'
 import { BodyForm } from './BodyForm'
-import { formatMeasureValue } from './bodyFormat'
-import { useBodyMeasures } from './useBodyMeasures'
+import { formatMeasureValue } from '@/lib/bodyFormat'
+import { useBodyMeasures } from '@/lib/useBodyMeasures'
 
 // 차트 라이브러리(Recharts)가 커서, 키·몸무게 화면을 열 때 따로 내려받는다 (첫 화면 로딩을 가볍게)
 const BodyCharts = lazy(() =>

@@ -14,7 +14,7 @@ import { formatDateLabel, isValidDateString, todayString } from '@/domain/date'
 import { NETWORK_ERROR_MESSAGES } from '@/lib/messages'
 import { MILESTONE_TYPES, milestoneTypeInfo, type MilestoneType } from '@/lib/milestoneTypes'
 import { notifySaved } from '@/lib/notify'
-import { MilestoneSaveError, type Milestone, type MilestoneInput } from './milestoneApi'
+import { MilestoneSaveError, type Milestone, type MilestoneInput } from '@/lib/milestoneApi'
 import { duplicateKey, findDuplicate, similarMilestones } from './milestoneMatch'
 import {
   MEMO_MAX,
@@ -29,7 +29,7 @@ import {
   useEnsureMilestones,
   useMilestones,
   useSaveMilestone,
-} from './useMilestones'
+} from '@/lib/useMilestones'
 
 type FormControl = Control<MilestoneFormValues, unknown, MilestoneInput>
 

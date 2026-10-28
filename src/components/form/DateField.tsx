@@ -1,4 +1,4 @@
-import type { MouseEvent } from 'react'
+import type { ComponentProps, MouseEvent } from 'react'
 import { CalendarDays } from 'lucide-react'
 import { useController, type Control, type FieldPath, type FieldValues } from 'react-hook-form'
 import { formatDateLabel, isValidDateString } from '@/domain/date'
@@ -16,9 +16,44 @@ function openPicker(event: MouseEvent<HTMLInputElement>) {
 }
 
 /**
- * 날짜 입력 (FR-COM-02~05).
+ * 날짜 입력칸 (FR-COM-02~05). 폼 밖에서도 쓸 수 있는 화면 부분이다 (타임라인 기간 필터 등).
  * 브라우저 기본 달력을 쓰되, 값은 "2026. 10. 14. (수)"처럼 요일과 함께 보여 준다.
  * 화면에 보이는 칸 위에 투명한 날짜 입력칸을 겹쳐 두어, 누르면 기기의 달력이 열린다.
+ */
+export function DateInput({
+  value,
+  className,
+  ...props
+}: Omit<ComponentProps<'input'>, 'type' | 'value'> & { value: string }) {
+  const valid = isValidDateString(value)
+  return (
+    <div className={cn('relative', className)}>
+      <input
+        {...props}
+        type="date"
+        value={value}
+        onClick={openPicker}
+        className="peer absolute inset-0 z-10 size-full cursor-pointer opacity-0"
+      />
+      <div
+        aria-hidden
+        className={cn(
+          'flex h-12 items-center justify-between gap-2 rounded-input border border-line bg-surface px-3.5 text-base transition-colors',
+          'peer-focus-visible:border-2 peer-focus-visible:border-primary peer-focus-visible:px-[13px]',
+          'peer-aria-invalid:border-2 peer-aria-invalid:border-danger peer-aria-invalid:px-[13px]',
+        )}
+      >
+        <span className={cn(!valid && 'text-muted-foreground')}>
+          {valid ? formatDateLabel(value) : '날짜를 선택해 주세요'}
+        </span>
+        <CalendarDays className="size-5 shrink-0 text-muted-foreground" />
+      </div>
+    </div>
+  )
+}
+
+/**
+ * React Hook Form용 날짜 입력 (라벨 + DateInput + 오류 문구).
  * min·max는 달력에서 고를 수 있는 범위다. 직접 입력한 값은 스키마(lib/validation.ts의 recordDate)에서 한 번 더 검사한다.
  * 기본값(오늘)은 폼의 defaultValues에서 정한다.
  */
@@ -41,42 +76,21 @@ export function DateField<T extends FieldValues, TOut = T>({
   id?: string
 }) {
   const {
-    field: { ref, value: rawValue, ...field },
+    field: { value, ...field },
     fieldState,
   } = useController({ control, name })
-  const value = typeof rawValue === 'string' ? rawValue : ''
   const error = fieldState.error?.message
-  const valid = isValidDateString(value)
 
   return (
     <Field id={id} label={label} error={error}>
-      <div className="relative">
-        <input
-          {...field}
-          ref={ref}
-          id={id}
-          type="date"
-          value={value}
-          min={min}
-          max={max}
-          onClick={openPicker}
-          className="peer absolute inset-0 z-10 size-full cursor-pointer opacity-0"
-          {...invalidProps(id, error)}
-        />
-        <div
-          aria-hidden
-          className={cn(
-            'flex h-12 items-center justify-between gap-2 rounded-input border border-line bg-surface px-3.5 text-base transition-colors',
-            'peer-focus-visible:border-2 peer-focus-visible:border-primary peer-focus-visible:px-[13px]',
-            'peer-aria-invalid:border-2 peer-aria-invalid:border-danger peer-aria-invalid:px-[13px]',
-          )}
-        >
-          <span className={cn(!valid && 'text-muted-foreground')}>
-            {valid ? formatDateLabel(value) : '날짜를 선택해 주세요'}
-          </span>
-          <CalendarDays className="size-5 shrink-0 text-muted-foreground" />
-        </div>
-      </div>
+      <DateInput
+        {...field}
+        id={id}
+        value={typeof value === 'string' ? value : ''}
+        min={min}
+        max={max}
+        {...invalidProps(id, error)}
+      />
     </Field>
   )
 }

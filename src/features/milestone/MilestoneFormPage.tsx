@@ -7,7 +7,7 @@ import { isMilestoneType } from '@/lib/milestoneTypes'
 import { useChild } from '@/lib/useChild'
 import { useGoBack } from '@/lib/useGoBack'
 import { MilestoneForm } from './MilestoneForm'
-import { useMilestone } from './useMilestones'
+import { useMilestone } from '@/lib/useMilestones'
 
 /**
  * 발달 기록 입력·수정 화면 (SCR-05).
