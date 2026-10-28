@@ -8,6 +8,7 @@ import { DateField } from '@/components/form/DateField'
 import { FieldError } from '@/components/form/Field'
 import { TextField } from '@/components/form/TextField'
 import { FormActions } from '@/components/FormPage'
+import { NoticeDialog } from '@/components/NoticeDialog'
 import { Button } from '@/components/ui/button'
 import { calculateAge, formatAge } from '@/domain/age'
 import { formatDateLabel, isValidDateString, todayString } from '@/domain/date'
@@ -60,6 +61,8 @@ export function MilestoneForm({
   )
   // 닫히는 동안에도 문구가 남아 있도록 열림 상태를 따로 둔다
   const [duplicateOpen, setDuplicateOpen] = useState(false)
+  // 단어는 같은 내용을 저장하지 않고 알리기만 한다. 그 밖의 유형은 "그래도 저장"을 고를 수 있다
+  const duplicateWord = duplicate?.input.type === 'word'
 
   const {
     control,
@@ -102,7 +105,7 @@ export function MilestoneForm({
 
   const onSubmit = handleSubmit(async (input) => {
     setFailed(null)
-    // 같은 유형에 같은 내용이 있으면 확인 창을 띄운다 (FR-MS-06)
+    // 같은 유형에 같은 내용이 있으면 창을 띄운다. 단어는 안내 창, 그 밖의 유형은 확인 창 (FR-MS-06)
     if (duplicateKey(input) !== allowedKey) {
       let records: Milestone[]
       try {
@@ -228,20 +231,27 @@ export function MilestoneForm({
         <DeleteRecordButton onConfirm={() => void onDelete()} pending={remove.isPending} />
       )}
 
+      <NoticeDialog
+        open={duplicateOpen && duplicateWord}
+        onOpenChange={setDuplicateOpen}
+        title={MILESTONE_MESSAGES.duplicateWord}
+        description={duplicate ? duplicateDescription(duplicate.record) : undefined}
+      />
       <ConfirmDialog
-        open={duplicateOpen}
+        open={duplicateOpen && !duplicateWord}
         onOpenChange={setDuplicateOpen}
         title={MILESTONE_MESSAGES.duplicate}
-        description={
-          duplicate
-            ? `"${duplicate.record.title}" · ${formatDateLabel(duplicate.record.date)}에 기록했어요`
-            : undefined
-        }
+        description={duplicate ? duplicateDescription(duplicate.record) : undefined}
         confirmLabel="그래도 저장"
         onConfirm={saveDuplicate}
       />
     </form>
   )
+}
+
+/** 같은 내용 안내 창의 설명: 이미 있는 기록의 내용과 날짜 */
+function duplicateDescription(record: Milestone) {
+  return `"${record.title}" · ${formatDateLabel(record.date)}에 기록했어요`
 }
 
 /** 입력 중인 내용과 비슷한 이전 기록. 보여 주기만 한다 (FR-MS-05) */

@@ -18,6 +18,8 @@ export const MILESTONE_MESSAGES = {
   type: '유형을 골라 주세요',
   title: '내용을 입력해 주세요',
   duplicate: '이미 기록된 내용입니다',
+  /** 단어는 같은 내용을 다시 저장하지 않는다 (FR-MS-06) */
+  duplicateWord: '이미 말한 단어예요',
 } as const
 
 export function milestoneSchema(birthDate: string) {
@@ -49,6 +51,8 @@ export function serverFieldError(
       return { field: 'title', message: maxLengthMessage(TITLE_MAX) }
     case 'memoLength':
       return { field: 'memo', message: maxLengthMessage(MEMO_MAX) }
+    case 'duplicateWord':
+      return { field: 'title', message: MILESTONE_MESSAGES.duplicateWord }
     case 'network':
       return null
   }

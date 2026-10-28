@@ -75,6 +75,10 @@ describe('서버 검증 실패 (FR-COM-13)', () => {
       message: '30자까지 입력할 수 있어요',
     })
     expect(serverFieldError('memoLength')?.field).toBe('memo')
+    expect(serverFieldError('duplicateWord')).toEqual({
+      field: 'title',
+      message: '이미 말한 단어예요',
+    })
     expect(serverFieldError('network')).toBeNull()
   })
 })

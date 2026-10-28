@@ -19,7 +19,7 @@ export type MilestoneInput = Omit<Milestone, 'id'>
 
 /** 저장 실패 이유. 화면은 이 값으로 안내 문구와 표시할 입력칸을 고른다 */
 export type MilestoneSaveErrorReason =
-  'futureDate' | 'beforeBirth' | 'titleLength' | 'memoLength' | 'network'
+  'futureDate' | 'beforeBirth' | 'titleLength' | 'memoLength' | 'duplicateWord' | 'network'
 
 export class MilestoneSaveError extends Error {
   readonly reason: MilestoneSaveErrorReason
@@ -49,6 +49,8 @@ const CHECK_REASONS = {
 function toSaveError(error: PostgrestError, input: MilestoneInput): MilestoneSaveError {
   const dateReason = dateErrorReason(error, input.date)
   if (dateReason) return new MilestoneSaveError(dateReason)
+  // 23505: 같은 단어가 이미 있음 (FR-MS-06, 트리거 reject_duplicate_word)
+  if (error.code === '23505') return new MilestoneSaveError('duplicateWord')
   const check = violatedCheck(error, Object.keys(CHECK_REASONS) as (keyof typeof CHECK_REASONS)[])
   return new MilestoneSaveError(check ? CHECK_REASONS[check] : 'network')
 }
