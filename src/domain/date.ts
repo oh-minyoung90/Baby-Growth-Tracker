@@ -1,4 +1,4 @@
-import { format, isValid } from 'date-fns'
+import { format, isValid, subDays } from 'date-fns'
 import { ko } from 'date-fns/locale'
 
 const DATE_PATTERN = /^(\d{4})-(\d{2})-(\d{2})$/
@@ -44,4 +44,14 @@ export function todayString(now: Date = new Date()): string {
 /** 'YYYY-MM-DD' → '2026. 1. 8. (목)' (기능요구사항서 FR-COM-05) */
 export function formatDateLabel(value: string): string {
   return format(parseDate(value), 'yyyy. M. d. (EEE)', { locale: ko })
+}
+
+/** 기기 시간대 기준 어제 'YYYY-MM-DD' (수면일 기본값, FR-SLEEP-01) */
+export function yesterdayString(now: Date = new Date()): string {
+  return format(subDays(now, 1), 'yyyy-MM-dd')
+}
+
+/** 'YYYY-MM-DDTHH:MM' → '10. 19. (월) 21:30'. 수면 시각에 붙은 날짜 표시 (FR-SLEEP-03) */
+export function formatDateTimeLabel(value: string): string {
+  return `${format(parseDate(value.slice(0, 10)), 'M. d. (EEE)', { locale: ko })} ${value.slice(11, 16)}`
 }

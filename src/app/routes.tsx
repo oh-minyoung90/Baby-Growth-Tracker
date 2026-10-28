@@ -13,6 +13,7 @@ import { MealWeekPage } from '@/features/meal/MealWeekPage'
 import { MilestoneFormPage } from '@/features/milestone/MilestoneFormPage'
 import { RecipesPage } from '@/features/recipe/RecipesPage'
 import { SettingsPage } from '@/features/settings/SettingsPage'
+import { SleepFormPage } from '@/features/sleep/SleepFormPage'
 import { SleepPage } from '@/features/sleep/SleepPage'
 import { TimelinePage } from '@/features/timeline/TimelinePage'
 import { AppLayout, type AppRouteHandle } from './AppLayout'
@@ -23,6 +24,8 @@ import { RouteError } from './RouteError'
  * /login                     로그인 (SCR-01)
  * /                          홈 (SCR-03)
  * /sleep                     수면 (SCR-08)
+ * /sleep/new?date=YYYY-MM-DD 수면 입력 (SCR-08). date가 없으면 어제
+ * /sleep/:id                 수면 수정 (SCR-08)
  * /growth/timeline           성장 > 기록: 발달 타임라인 (SCR-07)
  *   ?types=word,measure&period=this|last|custom&from=&to=  필터 (features/timeline/timeline.ts)
  * /growth/body               성장 > 키·몸무게 (SCR-04)
@@ -73,6 +76,16 @@ export const routes: RouteObject[] = [
                   {
                     path: 'milestones/:id',
                     element: <MilestoneFormPage />,
+                    handle: { hideBottomNav: true } satisfies AppRouteHandle,
+                  },
+                  {
+                    path: 'sleep/new',
+                    element: <SleepFormPage />,
+                    handle: { hideBottomNav: true } satisfies AppRouteHandle,
+                  },
+                  {
+                    path: 'sleep/:id',
+                    element: <SleepFormPage />,
                     handle: { hideBottomNav: true } satisfies AppRouteHandle,
                   },
                   {
