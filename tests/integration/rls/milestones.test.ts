@@ -4,7 +4,7 @@ import { toContentKey } from '../../../src/domain/text'
 import type { Database } from '../../../src/lib/database.types'
 import { createAnonClient, createUserClient, ensureChild, utcDate } from '../supabase'
 
-// milestones 접근 제어, title_key, 제약 조건 (T-18, FR-MS-01~06, BR-03)
+// milestones 접근 제어, title_key, 제약 조건 (T-18, FR-MS-01~06, BR-03, R42)
 
 type Client = SupabaseClient<Database>
 type Insert = Database['public']['Tables']['milestones']['Insert']
@@ -63,12 +63,13 @@ describe('milestones: title_key (BR-03)', () => {
   it('유형이 다르면 같은 내용도 저장할 수 있고 title_key로 찾을 수 있다', async () => {
     // beforeAll에서 행동 "잡고 서기"를 저장했다
     expect(
-      (await insert(a.client, { date: '2026-10-13', type: 'play', title: ' 잡고  서기' })).error,
+      (await insert(a.client, { date: '2026-10-13', type: 'expression', title: ' 잡고  서기' }))
+        .error,
     ).toBeNull()
     const { data } = await a.client
       .from('milestones')
       .select('id')
-      .in('type', ['behavior', 'play'])
+      .in('type', ['behavior', 'expression'])
       .eq('title_key', toContentKey('잡고 서기'))
     expect(data?.length).toBe(2)
   })
@@ -125,9 +126,12 @@ describe('milestones: 같은 유형에 같은 내용은 다시 저장할 수 없
 })
 
 describe('milestones: 입력값 검증', () => {
-  it('정해진 유형만 허용된다', async () => {
+  it('정해진 유형만 허용된다. 놀이는 행동에 합쳐 더는 쓰지 않는다 (R42)', async () => {
     expect(
       (await insert(a.client, { date: '2026-10-01', type: 'food', title: '사과' })).error?.code,
+    ).toBe('23514')
+    expect(
+      (await insert(a.client, { date: '2026-10-01', type: 'play', title: '까꿍놀이' })).error?.code,
     ).toBe('23514')
   })
 

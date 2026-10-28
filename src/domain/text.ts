@@ -1,5 +1,5 @@
 /**
- * 발달 기록 내용 비교 규칙 (BR-03, 기능요구사항서 FR-MS-05~06, FR-WORD-01).
+ * 발달 기록 내용 비교 규칙 (BR-03, 기능요구사항서 FR-MS-05~06, FR-TL-08).
  *
  * DB의 milestones.title_key 생성 컬럼(T-18)도 같은 규칙으로 만들어야 한다.
  *   SQL: lower(regexp_replace(btrim(normalize(title, NFC)), '\s+', ' ', 'g'))
@@ -38,7 +38,7 @@ export function findSimilar<T extends { title: string }>(
   return records.filter((r) => isSimilarContent(query, r.title)).slice(0, limit)
 }
 
-/** 같은 내용 중복을 1개로 셌을 때의 개수 (FR-WORD-01 단어 수) */
+/** 같은 내용 중복을 1개로 셌을 때의 개수 (FR-TL-08 유형별 개수, R28) */
 export function countDistinctContent(titles: readonly string[]): number {
   return new Set(titles.map(toContentKey)).size
 }

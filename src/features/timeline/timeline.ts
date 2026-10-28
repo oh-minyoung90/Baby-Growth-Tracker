@@ -1,22 +1,31 @@
 import { format, subMonths } from 'date-fns'
 import { Ruler, type LucideIcon } from 'lucide-react'
 import { parseDate } from '@/domain/date'
+import { countDistinctContent } from '@/domain/text'
 import type { BodyMeasure } from '@/lib/bodyApi'
 import { formatMeasureValue } from '@/lib/bodyFormat'
 import type { Milestone } from '@/lib/milestoneApi'
 import { MILESTONE_TYPE_VALUES, milestoneTypeInfo, type MilestoneType } from '@/lib/milestoneTypes'
 
 /**
- * 타임라인 유형 (FR-TL-03): 발달 4유형 + 키·몸무게.
+ * 타임라인 유형 (FR-TL-03): 발달 유형(단어·행동·표정) + 키·몸무게.
  * "처음 먹은 음식"(FR-TL-06)은 음식 목록이 생기는 T-51에서 추가한다.
  */
 export type TimelineType = MilestoneType | 'measure'
 
 export const TIMELINE_TYPE_VALUES: readonly TimelineType[] = [...MILESTONE_TYPE_VALUES, 'measure']
 
-/** 유형 이름과 아이콘 (FR-TL-02). 발달 4유형은 입력 화면과 같다 */
+/** 유형 이름과 아이콘 (FR-TL-02). 발달 유형은 입력 화면과 같다 */
 export function timelineTypeInfo(type: TimelineType): { label: string; icon: LucideIcon } {
   return type === 'measure' ? { label: '키·몸무게', icon: Ruler } : milestoneTypeInfo(type)
+}
+
+/** 유형 색 (docs/디자인.md 2.3). 색만으로 구분하지 않도록 이름을 함께 쓴다 */
+export const TYPE_COLORS: Record<TimelineType, string> = {
+  word: 'bg-type-word text-type-word-text',
+  behavior: 'bg-type-behavior text-type-behavior-text',
+  expression: 'bg-type-expression text-type-expression-text',
+  measure: 'bg-type-measure text-type-measure-text',
 }
 
 /** 타임라인 한 줄 (FR-TL-02) */
@@ -145,6 +154,32 @@ export function filterTimeline(
       (from === '' || item.date >= from) &&
       (to === '' || item.date <= to),
   )
+}
+
+/** 유형별 개수 (FR-TL-08). 필터와 관계없이 전체 기록 기준이며, 같은 내용(BR-03)은 1개로 센다 (R28) */
+export function countMilestones(milestones: readonly Milestone[]): Record<MilestoneType, number> {
+  const count = (type: MilestoneType) =>
+    countDistinctContent(
+      milestones.filter((record) => record.type === type).map((record) => record.title),
+    )
+  return { word: count('word'), behavior: count('behavior'), expression: count('expression') }
+}
+
+/** 개수 칸으로 고른 유형 (FR-TL-09): 유형 필터가 발달 유형 하나뿐이고 기간이 전체일 때 */
+export function selectedCountType(filter: TimelineFilter): MilestoneType | null {
+  if (filter.types.length !== 1 || filter.period !== 'all') return null
+  return MILESTONE_TYPE_VALUES.find((type) => filter.types.includes(type)) ?? null
+}
+
+/** 개수 칸을 눌렀을 때의 필터 (FR-TL-09): 그 유형만, 기간은 전체. 이미 그 유형만 보고 있으면 초기화 */
+export function toggleCountType(filter: TimelineFilter, type: MilestoneType): TimelineFilter {
+  return selectedCountType(filter) === type ? DEFAULT_FILTER : { ...DEFAULT_FILTER, types: [type] }
+}
+
+/** 추가 버튼으로 여는 입력 화면 (FR-TL-10). 발달 유형이 하나만 켜져 있으면 그 유형을 고른 채 연다 */
+export function newMilestonePath(filter: TimelineFilter): string {
+  const [only, ...rest] = MILESTONE_TYPE_VALUES.filter((type) => filter.types.includes(type))
+  return only && rest.length === 0 ? `/milestones/new?type=${only}` : '/milestones/new'
 }
 
 /** 월 단위 묶음: "2026년 10월" (FR-TL-01). items는 날짜 최신순 */

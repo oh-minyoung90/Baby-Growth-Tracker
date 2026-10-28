@@ -8,7 +8,7 @@ import { fetchMyChild } from '@/lib/childApi'
 import { fetchMilestone, fetchMilestones, type Milestone } from '@/lib/milestoneApi'
 import { renderApp } from '@/test/renderApp'
 
-// 타임라인 (T-23, SCR-07, FR-TL-01~05, 07). 테스트 데이터는 가명이다.
+// 성장 > 기록: 타임라인 (T-23, T-52, SCR-07, FR-TL-01~05, 07~10). 테스트 데이터는 가명이다.
 
 vi.mock('@/lib/childApi', async (importOriginal) => ({
   ...(await importOriginal<typeof import('@/lib/childApi')>()),
@@ -55,7 +55,7 @@ beforeEach(() => {
 })
 afterEach(() => vi.useRealTimers())
 
-async function renderTimeline(path = '/timeline') {
+async function renderTimeline(path = '/growth/timeline') {
   const result = renderApp(path, auth)
   await screen.findByRole('group', { name: '유형' })
   return result
@@ -99,13 +99,13 @@ describe('목록 (FR-TL-01~02, 07)', () => {
   })
 
   it('발달 기록을 누르면 수정 화면이 열리고, 취소하면 필터를 유지한 채 돌아온다', async () => {
-    const { router } = await renderTimeline('/timeline?types=word,expression')
+    const { router } = await renderTimeline('/growth/timeline?types=word,expression')
     await userEvent.click(screen.getByRole('link', { name: /소리 내어 웃기/ }))
     expect(await screen.findByRole('heading', { name: '발달 기록 수정' })).toBeInTheDocument()
     expect(router.state.location.pathname).toBe('/milestones/e1')
 
     await userEvent.click(await screen.findByRole('button', { name: '취소' }))
-    await waitFor(() => expect(router.state.location.pathname).toBe('/timeline'))
+    await waitFor(() => expect(router.state.location.pathname).toBe('/growth/timeline'))
     expect(router.state.location.search).toBe('?types=word,expression')
     expect(await screen.findByRole('button', { name: '행동' })).toHaveAttribute(
       'aria-pressed',
@@ -126,7 +126,7 @@ describe('목록 (FR-TL-01~02, 07)', () => {
 describe('필터 (FR-TL-03~05)', () => {
   it('기본은 모든 유형·전체 기간이고, 유형을 끄고 켤 수 있다', async () => {
     const { router } = await renderTimeline()
-    for (const name of ['단어', '행동', '표정', '놀이', '키·몸무게']) {
+    for (const name of ['단어', '행동', '표정', '키·몸무게']) {
       expect(typeChip(name)).toHaveAttribute('aria-pressed', 'true')
     }
     expect(periodChip('전체')).toBeChecked()
@@ -134,7 +134,7 @@ describe('필터 (FR-TL-03~05)', () => {
     await userEvent.click(typeChip('단어'))
     expect(typeChip('단어')).toHaveAttribute('aria-pressed', 'false')
     expect(titles()).toEqual(['소리 내어 웃기', '72.1cm · 8.9kg', '잡고 서기'])
-    expect(router.state.location.search).toBe('?types=behavior%2Cexpression%2Cplay%2Cmeasure')
+    expect(router.state.location.search).toBe('?types=behavior%2Cexpression%2Cmeasure')
 
     await userEvent.click(typeChip('단어'))
     expect(titles()).toHaveLength(5)
@@ -163,18 +163,71 @@ describe('필터 (FR-TL-03~05)', () => {
   })
 
   it('종료일이 시작일보다 빠르면 종료일 아래에 안내한다', async () => {
-    await renderTimeline('/timeline?period=custom&from=2026-10-10&to=2026-10-01')
+    await renderTimeline('/growth/timeline?period=custom&from=2026-10-10&to=2026-10-01')
     expect(screen.getByText('종료일은 시작일 이후로 골라 주세요')).toBeInTheDocument()
     expect(screen.getByLabelText('종료일')).toHaveAttribute('aria-invalid', 'true')
   })
 
   it('결과가 없으면 안내하고, 필터 초기화로 전체를 다시 보여 준다', async () => {
-    const { router } = await renderTimeline('/timeline?types=play')
+    const { router } = await renderTimeline(
+      '/growth/timeline?types=word&period=custom&from=2026-08-01&to=2026-08-31',
+    )
     expect(screen.getByText('조건에 맞는 기록이 없어요')).toBeInTheDocument()
     await userEvent.click(screen.getByRole('button', { name: '필터 초기화' }))
     expect(titles()).toHaveLength(5)
     expect(router.state.location.search).toBe('')
-    expect(typeChip('놀이')).toHaveAttribute('aria-pressed', 'true')
+    expect(typeChip('행동')).toHaveAttribute('aria-pressed', 'true')
+    expect(periodChip('전체')).toBeChecked()
+  })
+})
+
+describe('유형별 개수와 추가 버튼 (FR-TL-08~10)', () => {
+  function countCard(name: string) {
+    return within(screen.getByRole('group', { name: '유형별 개수' })).getByRole('button', { name })
+  }
+
+  it('단어·행동·표정 개수를 보여 주고, 누르면 그 유형만 본다', async () => {
+    const { router } = await renderTimeline()
+    expect(countCard('단어 2개')).toHaveAttribute('aria-pressed', 'false')
+    expect(countCard('행동 1개')).toBeInTheDocument()
+    expect(countCard('표정 1개')).toBeInTheDocument()
+
+    await userEvent.click(countCard('단어 2개'))
+    expect(titles()).toEqual(['네', '엄마'])
+    expect(router.state.location.search).toBe('?types=word')
+    expect(countCard('단어 2개')).toHaveAttribute('aria-pressed', 'true')
+    expect(typeChip('행동')).toHaveAttribute('aria-pressed', 'false')
+
+    // 다시 누르면 필터 초기화
+    await userEvent.click(countCard('단어 2개'))
+    expect(titles()).toHaveLength(5)
+    expect(router.state.location.search).toBe('')
+  })
+
+  it('개수는 필터와 관계없이 전체 기준이고, 누르면 기간도 전체로 바꾼다', async () => {
+    await renderTimeline('/growth/timeline?period=this')
+    expect(titles()).toEqual(['네', '소리 내어 웃기'])
+    expect(countCard('행동 1개')).toBeInTheDocument()
+    await userEvent.click(countCard('행동 1개'))
+    expect(titles()).toEqual(['잡고 서기'])
+    expect(periodChip('전체')).toBeChecked()
+  })
+
+  it('한 유형만 보고 있으면 추가 버튼이 그 유형을 고른 채 입력 화면을 연다', async () => {
+    const { router } = await renderTimeline('/growth/timeline?types=expression,measure')
+    await userEvent.click(screen.getByRole('button', { name: '발달 기록 추가' }))
+    expect(await screen.findByRole('heading', { name: '발달 기록' })).toBeInTheDocument()
+    expect(router.state.location.pathname + router.state.location.search).toBe(
+      '/milestones/new?type=expression',
+    )
+    expect(screen.getByRole('radio', { name: '표정' })).toBeChecked()
+  })
+
+  it('여러 유형을 보고 있으면 유형을 고르지 않은 채 연다', async () => {
+    const { router } = await renderTimeline()
+    await userEvent.click(screen.getByRole('button', { name: '발달 기록 추가' }))
+    await waitFor(() => expect(router.state.location.pathname).toBe('/milestones/new'))
+    expect(router.state.location.search).toBe('')
   })
 })
 
@@ -182,7 +235,7 @@ describe('0건·불러오기 실패 (FR-COM-20~22)', () => {
   it('기록이 하나도 없으면 안내와 기록하기 버튼을 보여 준다', async () => {
     vi.mocked(fetchMilestones).mockResolvedValue([])
     vi.mocked(fetchBodyMeasures).mockResolvedValue([])
-    const { router } = renderApp('/timeline', auth)
+    const { router } = renderApp('/growth/timeline', auth)
     expect(await screen.findByText('아직 기록이 없어요')).toBeInTheDocument()
     expect(screen.queryByRole('group', { name: '유형' })).not.toBeInTheDocument()
     await userEvent.click(screen.getByRole('link', { name: '기록하기' }))
@@ -191,7 +244,7 @@ describe('0건·불러오기 실패 (FR-COM-20~22)', () => {
 
   it('불러오지 못하면 안내하고, 다시 시도할 수 있다', async () => {
     vi.mocked(fetchBodyMeasures).mockRejectedValueOnce(new Error('offline'))
-    renderApp('/timeline', auth)
+    renderApp('/growth/timeline', auth)
     const banner = await screen.findByRole('alert')
     await userEvent.click(within(banner).getByRole('button', { name: '다시 시도' }))
     expect(await screen.findByText('72.1cm · 8.9kg')).toBeInTheDocument()

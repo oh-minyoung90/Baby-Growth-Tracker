@@ -34,13 +34,13 @@ describe('similarMilestones (FR-MS-05)', () => {
       '맘마',
     ])
     const many = Array.from({ length: 7 }, (_, i): Milestone => ({
-      id: `p${i}`,
-      type: 'play',
+      id: `b${i}`,
+      type: 'behavior',
       date: '2026-10-01',
       title: `까꿍놀이 ${i}`,
       memo: null,
     }))
-    expect(similarMilestones(many, { type: 'play', title: '까꿍' })).toHaveLength(5)
+    expect(similarMilestones(many, { type: 'behavior', title: '까꿍' })).toHaveLength(5)
   })
 })
 
@@ -52,7 +52,7 @@ describe('findDuplicate (FR-MS-06)', () => {
 
   it('포함만 하거나 유형이 다르면 같은 내용이 아니다', () => {
     expect(findDuplicate(records, { type: 'word', title: '맘' })).toBeUndefined()
-    expect(findDuplicate(records, { type: 'play', title: '잡고 서기' })).toBeUndefined()
+    expect(findDuplicate(records, { type: 'expression', title: '잡고 서기' })).toBeUndefined()
   })
 
   it('수정 중인 기록 자신은 중복으로 보지 않는다', () => {
@@ -69,7 +69,7 @@ describe('duplicateKey', () => {
   it('유형과 정리한 내용으로 만든다', () => {
     expect(duplicateKey({ type: 'word', title: ' Mam  MA ' })).toBe('word:mam ma')
     expect(duplicateKey({ type: 'word', title: '맘마' })).not.toBe(
-      duplicateKey({ type: 'play', title: '맘마' }),
+      duplicateKey({ type: 'expression', title: '맘마' }),
     )
   })
 })

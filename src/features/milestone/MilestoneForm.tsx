@@ -172,7 +172,7 @@ export function MilestoneForm({
         {similar.length > 0 && <SimilarList records={similar} />}
       </div>
 
-      {/* 행동·표정·놀이는 기본 예시를 누르면 내용 칸에 채운다. 단어는 예시 없음 (FR-MS-04) */}
+      {/* 행동·표정은 기본 예시를 누르면 내용 칸에 채운다. 단어는 예시 없음 (FR-MS-04) */}
       {typeInfo && typeInfo.examples.length > 0 && (
         <div className="flex flex-col gap-2">
           <span id="ms-examples-label" className="text-sm font-bold">
@@ -261,7 +261,7 @@ function SimilarList({ records }: { records: Milestone[] }) {
   )
 }
 
-/** 유형 고르기: 단어·행동·표정·놀이 (FR-MS-01). 선택 상태는 보라색 (docs/디자인.md 2.4) */
+/** 유형 고르기: 단어·행동·표정 (FR-MS-01). 선택 상태는 보라색 (docs/디자인.md 2.4) */
 function TypeField({ control }: { control: FormControl }) {
   const {
     field: { ref, value, onChange },

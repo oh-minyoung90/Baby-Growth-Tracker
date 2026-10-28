@@ -3,16 +3,7 @@ import { Badge } from '@/components/ui/badge'
 import { ageLabel } from '@/domain/age'
 import { formatDateLabel } from '@/domain/date'
 import { cn } from '@/lib/utils'
-import { groupByMonth, timelineTypeInfo, type TimelineItem, type TimelineType } from './timeline'
-
-/** 유형 색 (docs/디자인.md 2.3). 색만으로 구분하지 않도록 글자 배지를 함께 쓴다 */
-const ICON_COLORS: Record<TimelineType, string> = {
-  word: 'bg-type-word text-type-word-text',
-  behavior: 'bg-type-behavior text-type-behavior-text',
-  expression: 'bg-type-expression text-type-expression-text',
-  play: 'bg-type-play text-type-play-text',
-  measure: 'bg-type-measure text-type-measure-text',
-}
+import { TYPE_COLORS, groupByMonth, timelineTypeInfo, type TimelineItem } from './timeline'
 
 /** 월별로 묶은 타임라인 (FR-TL-01~02). 누르면 그 기록의 수정 화면이 열린다 (FR-COM-30) */
 export function TimelineList({
@@ -61,7 +52,7 @@ function TimelineRow({ item, age }: { item: TimelineItem; age: string | null }) 
         className={cn(
           'flex size-10 items-center justify-center rounded-xl md:hidden',
           item.memo ? 'row-span-3' : 'row-span-2',
-          ICON_COLORS[item.type],
+          TYPE_COLORS[item.type],
         )}
       >
         <Icon className="size-5" aria-hidden />

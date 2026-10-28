@@ -60,8 +60,6 @@
   --color-type-behavior-text: var(--type-behavior-text);
   --color-type-expression: var(--type-expression);
   --color-type-expression-text: var(--type-expression-text);
-  --color-type-play: var(--type-play);
-  --color-type-play-text: var(--type-play-text);
   --color-type-food: var(--type-food);
   --color-type-food-text: var(--type-food-text);
   --color-type-measure: var(--type-measure);
@@ -110,8 +108,6 @@
   --type-behavior-text: #9a4515;
   --type-expression: #ddf4ec;
   --type-expression-text: #1d6b59;
-  --type-play: #fff0c2;
-  --type-play-text: #8a6800;
   --type-food: #f1eff6;
   --type-food-text: #4f4b5c;
   --type-measure: #e3eeff;
@@ -150,8 +146,6 @@
   --type-behavior-text: #ffc4a3;
   --type-expression: #1e3d35;
   --type-expression-text: #9be8d3;
-  --type-play: #3b331c;
-  --type-play-text: #ffe08a;
   --type-food: #2a2733;
   --type-food-text: #d6d2e0;
   --type-measure: #1d3350;

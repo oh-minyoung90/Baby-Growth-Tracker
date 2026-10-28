@@ -72,7 +72,7 @@ describe('findSimilar', () => {
   })
 })
 
-describe('countDistinctContent (FR-WORD-01 단어 수)', () => {
+describe('countDistinctContent (FR-TL-08 유형별 개수)', () => {
   it('같은 내용 중복은 1개로 센다', () => {
     expect(countDistinctContent(['맘마', ' 맘마', '엄마', '아빠', '아빠 '])).toBe(3)
   })

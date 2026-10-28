@@ -11,7 +11,6 @@ import { HomePage } from '@/features/home/HomePage'
 import { MealsLayout } from '@/features/meal/MealsLayout'
 import { MealWeekPage } from '@/features/meal/MealWeekPage'
 import { MilestoneFormPage } from '@/features/milestone/MilestoneFormPage'
-import { WordsPage } from '@/features/milestone/WordsPage'
 import { RecipesPage } from '@/features/recipe/RecipesPage'
 import { SettingsPage } from '@/features/settings/SettingsPage'
 import { SleepPage } from '@/features/sleep/SleepPage'
@@ -23,12 +22,13 @@ import { RouteError } from './RouteError'
  * 화면 주소 (기능요구사항서 2.1)
  * /login                     로그인 (SCR-01)
  * /                          홈 (SCR-03)
- * /growth/body|words|sleep   성장 (SCR-04, 06, 08)
- *   ?record=new|<id>         입력·수정 바텀 시트 열기 (키·몸무게, lib/useSheetParam)
- * /milestones/new?type=word  발달 기록 입력 (SCR-05). type: word|behavior|expression|play
- * /milestones/:id            발달 기록 수정 (SCR-05)
- * /timeline                  타임라인 (SCR-07)
+ * /sleep                     수면 (SCR-08)
+ * /growth/timeline           성장 > 기록: 발달 타임라인 (SCR-07)
  *   ?types=word,measure&period=this|last|custom&from=&to=  필터 (features/timeline/timeline.ts)
+ * /growth/body               성장 > 키·몸무게 (SCR-04)
+ *   ?record=new|<id>         입력·수정 바텀 시트 열기 (lib/useSheetParam)
+ * /milestones/new?type=word  발달 기록 입력 (SCR-05). type: word|behavior|expression
+ * /milestones/:id            발달 기록 수정 (SCR-05)
  * /meals/week|foods|recipes  식사 (SCR-10~12)
  * /setup                     아이 정보 첫 등록 (SCR-02)
  * /settings                  설정 (SCR-09), /settings/child 아이 정보 수정
@@ -54,14 +54,14 @@ export const routes: RouteObject[] = [
                 element: <AppLayout />,
                 children: [
                   { index: true, element: <HomePage /> },
+                  { path: 'sleep', element: <SleepPage /> },
                   {
                     path: 'growth',
                     element: <GrowthLayout />,
                     children: [
-                      { index: true, element: <Navigate to="body" replace /> },
+                      { index: true, element: <Navigate to="timeline" replace /> },
+                      { path: 'timeline', element: <TimelinePage /> },
                       { path: 'body', element: <BodyPage /> },
-                      { path: 'words', element: <WordsPage /> },
-                      { path: 'sleep', element: <SleepPage /> },
                     ],
                   },
                   // 입력 화면: 모바일에서 하단 탭 없이 전체 화면 (components/FormPage)
@@ -75,7 +75,6 @@ export const routes: RouteObject[] = [
                     element: <MilestoneFormPage />,
                     handle: { hideBottomNav: true } satisfies AppRouteHandle,
                   },
-                  { path: 'timeline', element: <TimelinePage /> },
                   {
                     path: 'meals',
                     element: <MealsLayout />,

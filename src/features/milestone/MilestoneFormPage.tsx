@@ -13,7 +13,7 @@ import { useMilestone } from '@/lib/useMilestones'
  * 발달 기록 입력·수정 화면 (SCR-05).
  * - /milestones/new?type=word: 새 기록. type이 있으면 그 유형을 고른 상태로 연다 (FR-MS-01)
  * - /milestones/:id: 수정
- * 저장·취소하면 진입했던 화면으로 돌아간다 (FR-MS-07). 이 주소로 바로 들어왔으면 단어는 단어 목록, 나머지는 타임라인으로
+ * 저장·취소하면 진입했던 화면으로 돌아간다 (FR-MS-07). 이 주소로 바로 들어왔으면 성장 > 기록으로
  */
 export function MilestoneFormPage() {
   const { id } = useParams()
@@ -23,8 +23,7 @@ export function MilestoneFormPage() {
 
   const typeParam = params.get('type')
   const defaultType = isMilestoneType(typeParam) ? typeParam : undefined
-  const type = milestone.data?.type ?? defaultType
-  const goBack = useGoBack(type === 'word' ? '/growth/words' : '/timeline')
+  const goBack = useGoBack('/growth/timeline')
 
   return (
     <FormPage title={id ? '발달 기록 수정' : '발달 기록'} onBack={goBack}>

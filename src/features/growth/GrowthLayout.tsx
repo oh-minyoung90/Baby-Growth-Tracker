@@ -2,11 +2,10 @@ import { Outlet } from 'react-router'
 import { Page } from '@/components/Page'
 import { SubTabs } from '@/components/SubTabs'
 
-// 성장 탭: 키·몸무게 / 단어 / 수면 (기능요구사항서 2.2)
+// 성장 탭: 기록(발달 타임라인) / 키·몸무게 (기능요구사항서 2.2, R1)
 const TABS = [
+  { to: '/growth/timeline', label: '기록' },
   { to: '/growth/body', label: '키·몸무게' },
-  { to: '/growth/words', label: '단어' },
-  { to: '/growth/sleep', label: '수면' },
 ]
 
 export function GrowthLayout() {
