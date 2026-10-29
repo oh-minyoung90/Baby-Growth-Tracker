@@ -2,10 +2,10 @@ import type { LucideIcon } from 'lucide-react'
 import { Moon, Sun } from 'lucide-react'
 import { Link } from 'react-router'
 import { formatDateLabel } from '@/domain/date'
-import { formatDuration, formatNightSleep, formatTotalSleep } from '@/domain/sleep'
+import { formatNapSleep, formatNightSleep, formatTotalSleep } from '@/domain/sleep'
 import type { SleepLog } from '@/lib/sleepApi'
+import { summarizeSleepLog } from '@/lib/sleepSummary'
 import { cn } from '@/lib/utils'
-import { calculateSleepValues, toSleepFormValues } from './sleepSchema'
 
 /** 수면 목록, 수면일 최신순 (FR-SLEEP-09). 누르면 그 기록의 수정 화면이 열린다 (FR-COM-30) */
 export function SleepList({ logs }: { logs: readonly SleepLog[] }) {
@@ -25,8 +25,8 @@ export function SleepList({ logs }: { logs: readonly SleepLog[] }) {
  * 잠든·일어난 시간 중 하나만 있으면 밤잠과 총 수면은 "계산 불가" (FR-SLEEP-06, BR-07)
  */
 function SleepRow({ log }: { log: SleepLog }) {
-  // 입력 화면과 같은 규칙(BR-05~07)으로 계산한다. 계산할 수 없으면(null) 모두 "계산 불가"
-  const result = calculateSleepValues(toSleepFormValues(log))
+  // 계산할 수 없으면(null) 모두 "계산 불가"
+  const result = summarizeSleepLog(log)
   const total = result ? result.totalMinutes : null
 
   return (
@@ -49,13 +49,7 @@ function SleepRow({ log }: { log: SleepLog }) {
           <SleepPart
             icon={Sun}
             label="낮잠"
-            value={
-              !result
-                ? '계산 불가'
-                : result.naps.length > 0
-                  ? `${result.naps.length}회 · ${formatDuration(result.napMinutes)}`
-                  : '없음'
-            }
+            value={result ? formatNapSleep(result) : '계산 불가'}
             known={Boolean(result && result.naps.length > 0)}
           />
         </span>

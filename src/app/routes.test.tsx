@@ -41,7 +41,7 @@ describe('로그인 여부에 따른 이동', () => {
 
   it('이미 로그인했으면 로그인 화면 대신 홈으로 보낸다', async () => {
     const router = renderAt('/login')
-    expect(await screen.findByRole('heading', { level: 1, name: '홈' })).toBeInTheDocument()
+    expect(await screen.findByRole('heading', { level: 1, name: /^하늘이/ })).toBeInTheDocument()
     expect(router.state.location.pathname).toBe('/')
   })
 })
@@ -59,7 +59,7 @@ describe('로그인 후 원래 가려던 화면으로 이동', () => {
 
   it('외부 주소는 무시하고 홈으로 보낸다', async () => {
     const router = renderLoginWithFrom('//evil.example.com')
-    await screen.findByRole('heading', { level: 1, name: '홈' })
+    await screen.findByRole('heading', { level: 1, name: /^하늘이/ })
     expect(router.state.location.pathname).toBe('/')
   })
 })
@@ -151,7 +151,7 @@ describe('아이 정보 등록 여부에 따른 이동 (FR-CHILD-01)', () => {
 
   it('이미 등록했으면 등록 화면 대신 홈으로 보낸다', async () => {
     const router = renderAt('/setup')
-    expect(await screen.findByRole('heading', { level: 1, name: '홈' })).toBeInTheDocument()
+    expect(await screen.findByRole('heading', { level: 1, name: /^하늘이/ })).toBeInTheDocument()
     expect(router.state.location.pathname).toBe('/')
   })
 

@@ -96,7 +96,7 @@ describe('첫 등록 (SCR-02)', () => {
     await userEvent.type(nameInput(), '  하늘이 ')
     setBirth('2026-01-08')
     await userEvent.click(screen.getByRole('button', { name: '시작하기' }))
-    expect(await screen.findByRole('heading', { level: 1, name: '홈' })).toBeInTheDocument()
+    expect(await screen.findByRole('heading', { level: 1, name: /^하늘이/ })).toBeInTheDocument()
     expect(mockedSaveChild).toHaveBeenCalledWith('u1', {
       nickname: '하늘이',
       birthDate: '2026-01-08',
@@ -135,7 +135,7 @@ describe('네트워크 오류 (기능요구사항서 3.4)', () => {
     expect(nameInput()).toHaveValue('하늘이')
 
     await userEvent.click(within(banner).getByRole('button', { name: '다시 시도' }))
-    expect(await screen.findByRole('heading', { level: 1, name: '홈' })).toBeInTheDocument()
+    expect(await screen.findByRole('heading', { level: 1, name: /^하늘이/ })).toBeInTheDocument()
     expect(mockedSaveChild).toHaveBeenCalledTimes(2)
     expect(router.state.location.pathname).toBe('/')
   })
