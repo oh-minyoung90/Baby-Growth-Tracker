@@ -126,11 +126,12 @@ describe('새 기록 (FR-SLEEP-01~05)', () => {
     await waitFor(() => expect(router.state.location.pathname).toBe('/sleep'))
   })
 
-  it('잠든 시간만 있어도 저장하고, 밤잠은 계산 불가로 보여 준다 (FR-SLEEP-06)', async () => {
+  it('잠든 시간만 있어도 저장하고, 밤잠과 총 수면은 계산 불가로 보여 준다 (FR-SLEEP-06)', async () => {
     await openFrom('/sleep/new')
     change('잠든 시간', '00:20')
     expect(screen.getByText('→ 10. 22. (목) 00:20')).toBeInTheDocument()
     expect(summary()).toHaveTextContent('밤잠 계산 불가 + 낮잠 없음')
+    expect(summary()).toHaveTextContent('총 계산 불가')
     await userEvent.click(screen.getByRole('button', { name: '저장' }))
     await waitFor(() =>
       expect(createSleepLog).toHaveBeenCalledWith(

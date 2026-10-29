@@ -20,7 +20,12 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { formatDateTimeLabel, todayString } from '@/domain/date'
-import { formatDuration } from '@/domain/sleep'
+import {
+  formatDuration,
+  formatNightSleep,
+  formatTotalSleep,
+  type SleepResult,
+} from '@/domain/sleep'
 import { NETWORK_ERROR_MESSAGES } from '@/lib/messages'
 import { notifySaved } from '@/lib/notify'
 import { SleepSaveError, type SleepLog, type SleepLogInput } from '@/lib/sleepApi'
@@ -173,13 +178,7 @@ export function SleepForm({
         </button>
       </section>
 
-      <SleepSummary
-        nightMinutes={result?.nightMinutes ?? null}
-        hasNightInput={Boolean(bedTime || wakeTime)}
-        napMinutes={result?.napMinutes ?? 0}
-        napCount={result?.naps.length ?? 0}
-        totalMinutes={result?.totalMinutes ?? 0}
-      />
+      <SleepSummary result={result} />
 
       <TextField
         control={control}
@@ -379,23 +378,14 @@ function NapRow({
 }
 
 /** 총 수면 = 밤잠 + 낮잠, 입력하는 동안 바로 계산 (FR-SLEEP-05~06, BR-07) */
-function SleepSummary({
-  nightMinutes,
-  hasNightInput,
-  napMinutes,
-  napCount,
-  totalMinutes,
-}: {
-  nightMinutes: number | null
-  hasNightInput: boolean
-  napMinutes: number
-  napCount: number
-  totalMinutes: number
-}) {
-  // 잠든·일어난 시간 중 하나만 있으면 밤잠은 계산하지 않는다 (FR-SLEEP-06)
-  const night =
-    nightMinutes !== null ? formatDuration(nightMinutes) : hasNightInput ? '계산 불가' : '없음'
-  const nap = napCount > 0 ? `${formatDuration(napMinutes)} (${napCount}회)` : '없음'
+function SleepSummary({ result }: { result: SleepResult | null }) {
+  // 수면일이 올바르지 않으면 날짜를 붙일 수 없어 계산하지 않는다 (result가 null)
+  const night = result ? formatNightSleep(result) : '계산 불가'
+  const nap = !result
+    ? '계산 불가'
+    : result.naps.length > 0
+      ? `${formatDuration(result.napMinutes)} (${result.naps.length}회)`
+      : '없음'
   return (
     <section
       aria-label="총 수면 시간"
@@ -404,7 +394,9 @@ function SleepSummary({
       <span className="text-sm">
         밤잠 {night} + 낮잠 {nap}
       </span>
-      <strong className="text-2xl tracking-[-0.3px]">총 {formatDuration(totalMinutes)}</strong>
+      <strong className="text-2xl tracking-[-0.3px]">
+        총 {formatTotalSleep(result ? result.totalMinutes : null)}
+      </strong>
     </section>
   )
 }
