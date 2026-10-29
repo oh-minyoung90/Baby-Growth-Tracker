@@ -124,8 +124,9 @@ function Note({ icon: Icon, text }: { icon: LucideIcon; text: string }) {
   )
 }
 
+/** 반응 글자 색 (docs/디자인.md 2.4): 매우 좋아함은 메인 보라, 좋아함은 먹어봄 초록, 거부는 코랄 */
 const PREFERENCE_COLORS: Record<FoodPreference, string> = {
-  love: 'text-tried-text',
+  love: 'text-primary',
   like: 'text-tried-text',
   neutral: 'text-foreground',
   refuse: 'text-danger',
