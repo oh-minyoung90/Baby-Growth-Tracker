@@ -74,6 +74,119 @@ export type Database = {
         }
         Relationships: []
       }
+      food_status_history: {
+        Row: {
+          caution_tag: boolean
+          changed_at: string
+          food_id: string
+          from_status: string
+          id: string
+          meal_entry_id: string | null
+          owner_id: string
+          reason: string | null
+          to_status: string
+          trigger: string
+        }
+        Insert: {
+          caution_tag?: boolean
+          changed_at?: string
+          food_id: string
+          from_status: string
+          id?: string
+          meal_entry_id?: string | null
+          owner_id?: string
+          reason?: string | null
+          to_status: string
+          trigger: string
+        }
+        Update: {
+          caution_tag?: boolean
+          changed_at?: string
+          food_id?: string
+          from_status?: string
+          id?: string
+          meal_entry_id?: string | null
+          owner_id?: string
+          reason?: string | null
+          to_status?: string
+          trigger?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "food_status_history_food_id_fkey"
+            columns: ["food_id"]
+            isOneToOne: false
+            referencedRelation: "foods"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      foods: {
+        Row: {
+          caution_since: string | null
+          caution_tag: boolean
+          check_note: string | null
+          created_at: string
+          first_tried_date: string | null
+          food_group: string
+          id: string
+          is_default: boolean
+          manual_first_tried_date: string | null
+          manual_tried: boolean
+          memo: string | null
+          name: string
+          name_key: string | null
+          owner_id: string
+          preference: string | null
+          reaction_date: string | null
+          status: string
+          symptom_note: string | null
+          updated_at: string
+        }
+        Insert: {
+          caution_since?: string | null
+          caution_tag?: boolean
+          check_note?: string | null
+          created_at?: string
+          first_tried_date?: string | null
+          food_group: string
+          id?: string
+          is_default?: boolean
+          manual_first_tried_date?: string | null
+          manual_tried?: boolean
+          memo?: string | null
+          name: string
+          name_key?: string | null
+          owner_id?: string
+          preference?: string | null
+          reaction_date?: string | null
+          status?: string
+          symptom_note?: string | null
+          updated_at?: string
+        }
+        Update: {
+          caution_since?: string | null
+          caution_tag?: boolean
+          check_note?: string | null
+          created_at?: string
+          first_tried_date?: string | null
+          food_group?: string
+          id?: string
+          is_default?: boolean
+          manual_first_tried_date?: string | null
+          manual_tried?: boolean
+          memo?: string | null
+          name?: string
+          name_key?: string | null
+          owner_id?: string
+          preference?: string | null
+          reaction_date?: string | null
+          status?: string
+          symptom_note?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       milestones: {
         Row: {
           created_at: string
@@ -151,7 +264,43 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      add_food: {
+        Args: {
+          already_tried?: boolean
+          first_tried_date?: string
+          food_group: string
+          memo?: string
+          name: string
+        }
+        Returns: {
+          caution_since: string | null
+          caution_tag: boolean
+          check_note: string | null
+          created_at: string
+          first_tried_date: string | null
+          food_group: string
+          id: string
+          is_default: boolean
+          manual_first_tried_date: string | null
+          manual_tried: boolean
+          memo: string | null
+          name: string
+          name_key: string | null
+          owner_id: string
+          preference: string | null
+          reaction_date: string | null
+          status: string
+          symptom_note: string | null
+          updated_at: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "foods"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      seed_default_foods: { Args: never; Returns: number }
     }
     Enums: {
       [_ in never]: never

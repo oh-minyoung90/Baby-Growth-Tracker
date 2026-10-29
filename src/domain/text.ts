@@ -1,7 +1,8 @@
 /**
  * 발달 기록 내용 비교 규칙 (BR-03, 기능요구사항서 FR-MS-05~06, FR-TL-08).
+ * 음식 이름 중복(BR-18)도 같은 규칙으로 비교한다.
  *
- * DB의 milestones.title_key 생성 컬럼(T-18)도 같은 규칙으로 만들어야 한다.
+ * DB의 milestones.title_key(T-18)와 foods.name_key(T-36) 생성 컬럼도 같은 규칙으로 만들어야 한다.
  *   SQL: lower(regexp_replace(btrim(normalize(title, NFC)), '\s+', ' ', 'g'))
  */
 
