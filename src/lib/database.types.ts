@@ -293,6 +293,12 @@ export type Database = {
           symptom_note: string | null
           updated_at: string
         }
+        SetofOptions: {
+          from: "*"
+          to: "foods"
+          isOneToOne: true
+          isSetofReturn: false
+        }
       }
       seed_default_foods: { Args: never; Returns: number }
     }
