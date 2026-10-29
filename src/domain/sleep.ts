@@ -51,8 +51,11 @@ export interface SleepResult {
   nightMinutes: number | null
   /** 낮잠 합계(분) */
   napMinutes: number
-  /** 총 수면(분) = 밤잠 + 낮잠 (BR-07) */
-  totalMinutes: number
+  /**
+   * 총 수면(분) = 밤잠 + 낮잠 (BR-07). 잠든·일어난 시각 중 하나만 있으면 밤잠을 알 수 없어 null.
+   * 둘 다 없으면 낮잠 합계
+   */
+  totalMinutes: number | null
   /** 저장을 막는 오류 (FR-SLEEP-07). 비어 있으면 저장 가능 */
   errors: SleepError[]
 }
@@ -134,13 +137,14 @@ export function calculateSleep(input: SleepInput): SleepResult {
   }
 
   const napMinutes = naps.reduce((sum, n) => sum + (n.end - n.start), 0)
+  const nightUnknown = (bed === null) !== (wake === null)
   return {
     bedAt: bed === null ? null : toDateTime(date, bed),
     wakeAt: wake === null ? null : toDateTime(date, wake),
     naps: naps.map((n) => ({ startAt: toDateTime(date, n.start), endAt: toDateTime(date, n.end) })),
     nightMinutes,
     napMinutes,
-    totalMinutes: (nightMinutes ?? 0) + napMinutes,
+    totalMinutes: nightUnknown ? null : (nightMinutes ?? 0) + napMinutes,
     errors,
   }
 }
@@ -151,6 +155,21 @@ export function formatDuration(minutes: number): string {
   const m = minutes % 60
   if (h === 0) return `${m}분`
   return m === 0 ? `${h}시간` : `${h}시간 ${m}분`
+}
+
+/** 밤잠 표시 (FR-SLEEP-06): 잠든·일어난 시각 중 하나만 있으면 "계산 불가", 둘 다 없으면 "없음" */
+export function formatNightSleep({
+  bedAt,
+  wakeAt,
+  nightMinutes,
+}: Pick<SleepResult, 'bedAt' | 'wakeAt' | 'nightMinutes'>): string {
+  if (nightMinutes !== null) return formatDuration(nightMinutes)
+  return bedAt === null && wakeAt === null ? '없음' : '계산 불가'
+}
+
+/** 총 수면 표시 (BR-07): 밤잠을 알 수 없으면 "계산 불가" */
+export function formatTotalSleep(totalMinutes: number | null): string {
+  return totalMinutes === null ? '계산 불가' : formatDuration(totalMinutes)
 }
 
 /** 오류 → 화면 안내 문구 (FR-SLEEP-07) */
