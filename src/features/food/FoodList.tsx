@@ -124,27 +124,29 @@ function Note({ icon: Icon, text }: { icon: LucideIcon; text: string }) {
   )
 }
 
-/** 반응 글자 색 (docs/디자인.md 2.4): 매우 좋아함은 메인 보라, 좋아함은 먹어봄 초록, 거부는 코랄 */
-const PREFERENCE_COLORS: Record<FoodPreference, string> = {
-  love: 'text-primary',
-  like: 'text-tried-text',
-  neutral: 'text-foreground',
-  refuse: 'text-danger',
+/**
+ * 반응 배지 색 (docs/디자인.md 2.4): 매우 좋아함은 메인 보라, 좋아함은 연보라, 보통은 회색, 거부는 연코랄.
+ * 연한 색은 배경으로만 쓰고 글자는 진하게 두어 글자 대비(4.5:1)를 지킨다
+ */
+const PREFERENCE_BADGES: Record<FoodPreference, string> = {
+  love: 'bg-primary text-primary-foreground',
+  like: 'bg-soft text-soft-text',
+  neutral: 'bg-muted text-foreground',
+  refuse: 'bg-danger-soft text-danger-text',
 }
 
 /** 아이 반응 (FR-FOOD-10, R46). 고르지 않았으면 "미입력" */
 function Preference({ value }: { value: FoodPreference | null }) {
   return (
-    <span className="flex shrink-0 flex-col items-end gap-0.5">
+    <span className="flex shrink-0 flex-col items-end gap-1">
       <span className="text-xs text-muted-foreground">반응</span>{' '}
-      <strong
-        className={cn(
-          'text-[15px]',
-          value ? PREFERENCE_COLORS[value] : 'font-normal text-muted-foreground',
-        )}
-      >
-        {value ? foodPreferenceLabel(value) : '미입력'}
-      </strong>
+      {value ? (
+        <Badge className={cn('h-7 px-3 text-[13px]', PREFERENCE_BADGES[value])}>
+          {foodPreferenceLabel(value)}
+        </Badge>
+      ) : (
+        <span className="text-[15px] text-muted-foreground">미입력</span>
+      )}
     </span>
   )
 }
