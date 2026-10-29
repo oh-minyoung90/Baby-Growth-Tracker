@@ -75,7 +75,7 @@ describe('수면 목록 (FR-SLEEP-09)', () => {
     renderApp('/sleep', auth)
     const [first, second, third] = await rows()
     expect(first).toHaveTextContent('2026. 10. 20. (화)')
-    expect(first).toHaveTextContent('밤잠 9시간 30분 · 낮잠 2회 2시간 20분')
+    expect(first).toHaveTextContent('밤잠 9시간 30분 낮잠 2회 · 2시간 20분')
     expect(first).toHaveTextContent('총 수면11시간 50분')
     expect(second).toHaveTextContent('2026. 10. 18. (일)')
     expect(third).toHaveTextContent('2026. 10. 17. (토)')
@@ -84,14 +84,14 @@ describe('수면 목록 (FR-SLEEP-09)', () => {
   it('잠든·일어난 시간 중 하나만 있으면 밤잠과 총 수면은 계산 불가로 보여 준다 (FR-SLEEP-06)', async () => {
     renderApp('/sleep', auth)
     const [, partial] = await rows()
-    expect(partial).toHaveTextContent('밤잠 계산 불가 · 낮잠 1회 1시간')
+    expect(partial).toHaveTextContent('밤잠 계산 불가 낮잠 1회 · 1시간')
     expect(partial).toHaveTextContent('총 수면계산 불가')
   })
 
   it('밤잠 기록 없이 낮잠만 있으면 총 수면은 낮잠 합계다 (BR-07)', async () => {
     renderApp('/sleep', auth)
     const [, , napsOnly] = await rows()
-    expect(napsOnly).toHaveTextContent('밤잠 없음 · 낮잠 1회 1시간 30분')
+    expect(napsOnly).toHaveTextContent('밤잠 없음 낮잠 1회 · 1시간 30분')
     expect(napsOnly).toHaveTextContent('총 수면1시간 30분')
   })
 
