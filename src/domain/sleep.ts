@@ -167,6 +167,14 @@ export function formatNightSleep({
   return bedAt === null && wakeAt === null ? '없음' : '계산 불가'
 }
 
+/** 낮잠 표시: "2회 · 2시간 20분", 낮잠이 없으면 "없음" */
+export function formatNapSleep({
+  naps,
+  napMinutes,
+}: Pick<SleepResult, 'naps' | 'napMinutes'>): string {
+  return naps.length > 0 ? `${naps.length}회 · ${formatDuration(napMinutes)}` : '없음'
+}
+
 /** 총 수면 표시 (BR-07): 밤잠을 알 수 없으면 "계산 불가" */
 export function formatTotalSleep(totalMinutes: number | null): string {
   return totalMinutes === null ? '계산 불가' : formatDuration(totalMinutes)

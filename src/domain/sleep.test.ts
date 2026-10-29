@@ -3,6 +3,7 @@ import {
   bedMinutesFromD,
   calculateSleep,
   formatDuration,
+  formatNapSleep,
   formatNightSleep,
   formatTotalSleep,
   parseTime,
@@ -68,6 +69,8 @@ describe('BR-07 총 수면 시간', () => {
     })
     expect(r.errors).toEqual([])
     expect([r.nightMinutes, r.napMinutes, r.totalMinutes]).toEqual([580, 150, 730])
+    expect(formatNightSleep(r)).toBe('9시간 40분')
+    expect(formatNapSleep(r)).toBe('2회 · 2시간 30분')
     expect(formatTotalSleep(r.totalMinutes)).toBe('12시간 10분')
   })
 
@@ -81,6 +84,11 @@ describe('BR-07 총 수면 시간', () => {
     expect(r.errors).toEqual([])
     expect(formatNightSleep(r)).toBe('계산 불가')
     expect(formatTotalSleep(r.totalMinutes)).toBe('계산 불가')
+  })
+
+  it('낮잠이 없으면 낮잠은 없음이다', () => {
+    const r = calculateSleep({ ...base, bedTime: '21:00', wakeTime: '07:00' })
+    expect(formatNapSleep(r)).toBe('없음')
   })
 
   it('잠든·일어난 시각이 둘 다 없으면 총 수면은 낮잠 합계다', () => {
