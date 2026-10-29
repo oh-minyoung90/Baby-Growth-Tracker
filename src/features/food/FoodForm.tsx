@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { Info } from 'lucide-react'
 import { useController, useForm, useWatch, type Control } from 'react-hook-form'
@@ -28,10 +28,14 @@ import {
 
 type FormControl = Control<FoodFormValues, unknown, FoodInput>
 
-/** 음식 추가·수정 폼 (FR-FOOD-04~05, 08, 10, R45~47). 바텀 시트 안에 놓인다 */
+/**
+ * 음식 추가·수정 폼 (FR-FOOD-04~05, 08, 10, R45~47). 바텀 시트 안에 놓인다.
+ * 상태는 고르지 않는다. 추가는 보고 있던 탭(먹어봄 / 안 먹어봄)이, 수정은 그 음식의 상태가 화면 모양을 정한다.
+ * 먹어봄이면 처음 먹은 날·반응을 함께 입력한다
+ */
 export function FoodForm({
   initial,
-  defaultTried = false,
+  addTried = false,
   birthDate,
   foods,
   onDone,
@@ -39,8 +43,8 @@ export function FoodForm({
 }: {
   /** 수정할 음식. 없으면 새 음식 */
   initial?: Food
-  /** 새 음식의 처음 상태. 먹어봄 탭에서 추가하면 먹어봄으로 시작한다 (R47) */
-  defaultTried?: boolean
+  /** 새 음식을 먹어봄으로 추가하는지 (먹어봄 탭에서 열었을 때) */
+  addTried?: boolean
   birthDate: string
   /** 같은 이름의 음식이 있는지 확인할 때 쓴다 (BR-18) */
   foods: readonly Food[]
@@ -52,8 +56,15 @@ export function FoodForm({
   const save = useSaveFood()
   const remove = useDeleteFood()
   const [failed, setFailed] = useState<'save' | 'delete' | null>(null)
+  // 수정 전 상태. 알러지·주의 음식은 지정·해제로만 상태가 바뀌므로 묻지 않는다 (FR-FOOD-06, T-38)
+  // T-40 이후 식단 "먹음" 기록으로 먹어봄이 된 음식을 옮길 때의 동작은 그때 다시 정한다
+  const initialTried = initial
+    ? initial.status === 'caution'
+      ? null
+      : initial.status === 'tried'
+    : addTried
 
-  const { control, handleSubmit, setError, setFocus, setValue } = useForm<
+  const { control, handleSubmit, setError, setFocus, setValue, getValues } = useForm<
     FoodFormValues,
     unknown,
     FoodInput
@@ -63,30 +74,29 @@ export function FoodForm({
       name: initial?.name ?? '',
       group: initial?.group ?? '',
       memo: initial?.memo ?? '',
-      // 알러지·주의 음식의 상태는 지정·해제로만 바뀌므로 묻지 않는다 (FR-FOOD-06, T-38)
-      // T-40 이후 식단 "먹음" 기록으로 먹어봄이 된 음식은 여기서 상태를 다시 정해야 한다
-      alreadyTried: initial
-        ? initial.status === 'caution'
-          ? null
-          : initial.manualTried
-        : defaultTried,
+      alreadyTried: initialTried,
       firstTriedDate: initial?.manualFirstTriedDate ?? '',
       preference: initial?.preference ?? null,
     },
   })
+  const tried = useWatch({ control, name: 'alreadyTried' })
+
   // 같은 이름의 음식은 하나만 둔다 (BR-18). 입력하는 동안 바로 알려 준다 (R47)
   const name = useWatch({ control, name: 'name' })
   const sameName = findSameName(foods, name, initial?.id)
+  // 먹어 본 음식을 추가하는데 안 먹어봄에 같은 이름이 있으면, 새로 만들지 않고 그 음식을 먹어봄으로 옮긴다
+  const moveTarget = !initial && addTried && sameName?.status === 'not_tried' ? sameName : undefined
 
-  const onSubmit = handleSubmit(async (input) => {
-    setFailed(null)
-    // 아래 안내가 이미 보이므로 이름 칸으로 돌아가기만 한다. 서버도 같은 기준으로 거부한다
-    if (findSameName(foods, input.name, initial?.id)) {
-      setFocus('name')
-      return
+  // 옮길 음식의 식품군을 채운다 (비어 있을 때만)
+  useEffect(() => {
+    if (moveTarget && getValues('group') === '') {
+      setValue('group', moveTarget.group, { shouldValidate: true })
     }
+  }, [moveTarget, getValues, setValue])
+
+  const submit = async (id: string | undefined, input: FoodInput) => {
     try {
-      await save.mutateAsync({ id: initial?.id, input })
+      await save.mutateAsync({ id, input })
       notifySaved()
       onDone()
     } catch (error) {
@@ -95,6 +105,22 @@ export function FoodForm({
       if (fieldError) setError(fieldError.field, { message: fieldError.message })
       else setFailed('save')
     }
+  }
+
+  const onSubmit = handleSubmit(async (input) => {
+    setFailed(null)
+    const same = findSameName(foods, input.name, initial?.id)
+    if (same && same === moveTarget) {
+      // 이름은 기존 음식 그대로 두고, 메모를 비워 두었으면 기존 메모를 남긴다
+      await submit(same.id, { ...input, name: same.name, memo: input.memo ?? same.memo })
+      return
+    }
+    if (same) {
+      // 아래 안내가 이미 보이므로 이름 칸으로 돌아가기만 한다. 서버도 같은 기준으로 거부한다
+      setFocus('name')
+      return
+    }
+    await submit(initial?.id, input)
   })
 
   const onDelete = async () => {
@@ -107,6 +133,9 @@ export function FoodForm({
       setFailed('delete')
     }
   }
+
+  // 수정할 때 다른 상태로 옮기는 중인지 (저장해야 옮겨진다)
+  const moving = initial !== undefined && initialTried !== null && tried !== initialTried
 
   return (
     <form onSubmit={onSubmit} noValidate className="flex flex-col gap-4">
@@ -121,12 +150,17 @@ export function FoodForm({
           retrying={remove.isPending}
         />
       )}
+      {moving && (
+        <Notice
+          title={tried ? '먹어봄으로 옮겨요' : '아직 안 먹어봄으로 옮겨요'}
+          detail={
+            tried
+              ? '처음 먹은 날과 반응을 넣고 저장해 주세요'
+              : '저장하면 처음 먹은 날과 반응은 지워져요'
+          }
+        />
+      )}
 
-      <StatusField
-        control={control}
-        // 먹어 보지 않은 음식에는 처음 먹은 날이 없다 (반응은 저장할 때 지운다)
-        onNotTried={() => setValue('firstTriedDate', '')}
-      />
       <div className="flex flex-col gap-2">
         <TextField
           control={control}
@@ -136,10 +170,21 @@ export function FoodForm({
           placeholder="예: 브로콜리"
           maxLength={NAME_MAX}
         />
-        {sameName && <SameNameNotice food={sameName} onOpen={() => onEditExisting(sameName.id)} />}
+        {sameName && (
+          <SameNameNotice
+            food={sameName}
+            moves={sameName === moveTarget}
+            onOpen={() => onEditExisting(sameName.id)}
+          />
+        )}
       </div>
       <GroupField control={control} />
-      <TriedDetails control={control} birthDate={birthDate} />
+      {tried === true && (
+        <>
+          <FirstTriedDateField control={control} birthDate={birthDate} />
+          <PreferenceField control={control} />
+        </>
+      )}
       <TextField
         control={control}
         name="memo"
@@ -158,6 +203,27 @@ export function FoodForm({
           {save.isPending ? '저장하는 중…' : '저장'}
         </Button>
       </div>
+      {initial && initialTried !== null && (
+        // 잘못 넣었을 때 다른 상태로 옮긴다 (R45, R47). 누르면 화면만 바뀌고 저장해야 옮겨진다
+        <Button
+          type="button"
+          variant="outline"
+          onClick={() => {
+            const next = !tried
+            setValue('alreadyTried', next)
+            // 먹어 보지 않은 음식에는 처음 먹은 날이 없다 (반응은 저장할 때 지운다)
+            if (!next) setValue('firstTriedDate', '')
+          }}
+        >
+          {moving
+            ? initialTried
+              ? '먹어봄에 두기'
+              : '아직 안 먹어봄에 두기'
+            : initialTried
+              ? '아직 안 먹어봄으로 옮기기'
+              : '먹어봄으로 옮기기'}
+        </Button>
+      )}
       {initial && (
         <DeleteRecordButton
           onConfirm={() => void onDelete()}
@@ -170,9 +236,16 @@ export function FoodForm({
   )
 }
 
-/** 같은 이름의 음식이 이미 있을 때: 어느 목록에 있는지 알리고, 그 음식을 열 수 있게 한다 (BR-18, R47) */
-function SameNameNotice({ food, onOpen }: { food: Food; onOpen: () => void }) {
-  const { title, detail } = sameNameMessage(food)
+/** 연보라 안내 상자: 아이콘 + 제목 + 설명 (+ 버튼) */
+function Notice({
+  title,
+  detail,
+  action,
+}: {
+  title: string
+  detail: string
+  action?: { label: string; onClick: () => void }
+}) {
   return (
     <div
       role="status"
@@ -183,68 +256,71 @@ function SameNameNotice({ food, onOpen }: { food: Food; onOpen: () => void }) {
         <strong className="block">{title}</strong>
         {detail}
       </p>
-      <Button type="button" variant="outline" size="sm" className="shrink-0" onClick={onOpen}>
-        이 음식 열기
-      </Button>
+      {action && (
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          className="shrink-0"
+          onClick={action.onClick}
+        >
+          {action.label}
+        </Button>
+      )}
     </div>
   )
-}
-
-function sameNameMessage(food: Food): { title: string; detail: string } {
-  const name = withTopicParticle(food.name)
-  switch (food.status) {
-    case 'tried':
-      return { title: '이미 먹어 본 음식이에요', detail: `${name} '먹어봄'에 있어요` }
-    case 'not_tried':
-      return {
-        title: FOOD_MESSAGES.duplicate,
-        detail: `${name} '아직 안 먹어봄'에 있어요. 열어서 먹어봄으로 바꿀 수 있어요`,
-      }
-    case 'caution':
-      return { title: FOOD_MESSAGES.duplicate, detail: `${name} '알러지·주의'에 있어요` }
-  }
 }
 
 /**
- * 상태: 먹어봄 / 아직 안 먹어봄 (FR-FOOD-05, BR-17, R45, R47).
- * 새 음식은 보고 있던 탭의 상태로 시작한다. 기본 음식처럼 아직 안 먹어봄으로 들어간 음식도 수정할 때 바꿀 수 있다.
- * 알러지·주의 음식은 묻지 않는다
+ * 같은 이름의 음식이 이미 있을 때 (BR-18, R47).
+ * 먹어 본 음식을 추가하는데 안 먹어봄에 있으면 저장할 때 그 음식을 옮긴다고 알리고,
+ * 그 밖에는 어느 목록에 있는지 알리고 그 음식을 열 수 있게 한다
  */
-function StatusField({ control, onNotTried }: { control: FormControl; onNotTried: () => void }) {
-  const {
-    field: { value, onChange },
-  } = useController({ control, name: 'alreadyTried' })
-
-  if (value === null) return null
-
-  const options = [
-    { tried: true, label: '먹어봄' },
-    { tried: false, label: '아직 안 먹어봄' },
-  ]
-  return (
-    <div className="flex flex-col gap-2">
-      <span id="food-status-label" className="text-sm font-bold">
-        상태
-      </span>
-      <div role="radiogroup" aria-labelledby="food-status-label" className="grid grid-cols-2 gap-2">
-        {options.map((option) => (
-          <button
-            key={option.label}
-            type="button"
-            role="radio"
-            aria-checked={value === option.tried}
-            onClick={() => {
-              onChange(option.tried)
-              if (!option.tried) onNotTried()
-            }}
-            className="h-12 rounded-xl border border-line bg-surface text-[15px] font-bold text-muted-foreground transition-colors aria-checked:border-2 aria-checked:border-primary aria-checked:bg-soft aria-checked:text-soft-text"
-          >
-            {option.label}
-          </button>
-        ))}
-      </div>
-    </div>
-  )
+function SameNameNotice({
+  food,
+  moves,
+  onOpen,
+}: {
+  food: Food
+  moves: boolean
+  onOpen: () => void
+}) {
+  const name = withTopicParticle(food.name)
+  if (moves) {
+    return (
+      <Notice
+        title="아직 안 먹어 본 음식으로 있어요"
+        detail={`${name} '아직 안 먹어봄'에 있어요. 저장하면 먹어봄으로 옮겨요`}
+      />
+    )
+  }
+  const action = { label: '이 음식 열기', onClick: onOpen }
+  switch (food.status) {
+    case 'tried':
+      return (
+        <Notice
+          title="이미 먹어 본 음식이에요"
+          detail={`${name} '먹어봄'에 있어요`}
+          action={action}
+        />
+      )
+    case 'not_tried':
+      return (
+        <Notice
+          title={FOOD_MESSAGES.duplicate}
+          detail={`${name} '아직 안 먹어봄'에 있어요`}
+          action={action}
+        />
+      )
+    case 'caution':
+      return (
+        <Notice
+          title={FOOD_MESSAGES.duplicate}
+          detail={`${name} '알러지·주의'에 있어요`}
+          action={action}
+        />
+      )
+  }
 }
 
 /** 식품군 고르기 (FR-FOOD-04). 선택 상태는 보라색 (docs/디자인.md 2.4) */
@@ -286,18 +362,7 @@ function GroupField({ control }: { control: FormControl }) {
   )
 }
 
-/** 먹어봄일 때만: 처음 먹은 날(선택)과 아이 반응(선택) (BR-17, FR-FOOD-10, R46) */
-function TriedDetails({ control, birthDate }: { control: FormControl; birthDate: string }) {
-  const tried = useWatch({ control, name: 'alreadyTried' })
-  if (tried !== true) return null
-  return (
-    <>
-      <FirstTriedDateField control={control} birthDate={birthDate} />
-      <PreferenceField control={control} />
-    </>
-  )
-}
-
+/** 처음 먹은 날 (선택, BR-17). 먹어봄일 때만 보인다 */
 function FirstTriedDateField({ control, birthDate }: { control: FormControl; birthDate: string }) {
   const {
     field: { value, onChange, ...field },

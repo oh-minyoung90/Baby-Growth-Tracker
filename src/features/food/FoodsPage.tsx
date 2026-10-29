@@ -30,11 +30,17 @@ const GROUP_OPTIONS: { value: FoodGroupFilter; label: string }[] = [
   ...FOOD_GROUPS,
 ]
 
+/** 탭에서 추가하는 음식 (R47). 알러지·주의는 음식마다 지정하므로(T-38) 추가 버튼을 두지 않는다 */
+const ADD_LABELS: Partial<Record<FoodStatus, string>> = {
+  tried: '먹어 본 음식 추가',
+  not_tried: '안 먹어 본 음식 추가',
+}
+
 /** 탭에 음식이 하나도 없을 때의 안내 */
 const EMPTY_TAB_MESSAGES: Record<FoodStatus, { title: string; description?: string }> = {
   tried: {
     title: '아직 먹어 본 음식이 없어요',
-    description: '먹어 본 음식을 추가하거나, 안 먹어봄 음식을 먹어봄으로 바꾸면 여기에 모여요',
+    description: '먹어 본 음식을 추가하거나, 안 먹어봄 음식을 먹어봄으로 옮기면 여기에 모여요',
   },
   not_tried: {
     title: '아직 안 먹어 본 음식이 없어요',
@@ -97,7 +103,9 @@ export function FoodsPage() {
       )}
       <div className="flex items-center justify-end gap-3">
         {hasFoods && <SearchInput value={query} onChange={setQuery} />}
-        <AddRecordButton label="음식 추가" onClick={() => sheet.open('new')} />
+        {ADD_LABELS[status] && (
+          <AddRecordButton label={ADD_LABELS[status]} onClick={() => sheet.open('new')} />
+        )}
       </div>
 
       {seed.isError && (
@@ -142,8 +150,8 @@ export function FoodsPage() {
           initial={editing}
           birthDate={child.birthDate}
           foods={all}
-          // 먹어봄 탭에서 추가하면 먹어봄으로 시작한다 (R47)
-          defaultTried={status === 'tried'}
+          // 보고 있던 탭이 추가할 음식의 상태를 정한다 (R47)
+          addTried={status === 'tried'}
           onClose={sheet.close}
           // 같은 이름의 음식을 열 때는 주소를 바꿔 끼워, 닫으면 시트를 열기 전 화면으로 돌아가게 한다
           onEditExisting={(id) => sheet.open(id, { replace: true })}
@@ -235,7 +243,7 @@ function FoodSheet({
   initial,
   birthDate,
   foods,
-  defaultTried,
+  addTried,
   onClose,
   onEditExisting,
 }: {
@@ -243,23 +251,24 @@ function FoodSheet({
   initial: Food | undefined
   birthDate: string
   foods: readonly Food[]
-  defaultTried: boolean
+  addTried: boolean
   onClose: () => void
   onEditExisting: (id: string) => void
 }) {
   // 닫히는 동안(애니메이션)에도 열려 있던 내용을 유지한다. 수정 시트가 닫히며 빈 입력 화면으로 바뀌어 보이지 않게
   const [shown, setShown] = useState(initial)
   if (open && shown !== initial) setShown(initial)
+  const title = shown ? '음식 수정' : addTried ? '먹어 본 음식 추가' : '안 먹어 본 음식 추가'
 
   return (
     <Sheet open={open} onOpenChange={(next) => !next && onClose()}>
       {/* 설명 문구가 없는 창이라 aria-describedby를 비운다 (Radix 경고 방지) */}
       <SheetContent aria-describedby={undefined}>
-        <SheetTitle>{shown ? '음식 수정' : '음식 추가'}</SheetTitle>
+        <SheetTitle>{title}</SheetTitle>
         <FoodForm
           key={shown?.id ?? 'new'}
           initial={shown}
-          defaultTried={defaultTried}
+          addTried={addTried}
           birthDate={birthDate}
           foods={foods}
           onDone={onClose}
