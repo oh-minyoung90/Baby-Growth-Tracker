@@ -1,4 +1,4 @@
-import { isSimilarContent } from '@/domain/text'
+import { isSameContent, isSimilarContent } from '@/domain/text'
 import type { Food } from '@/lib/foodApi'
 import {
   FOOD_STATUSES,
@@ -65,6 +65,19 @@ export function filterFoods(foods: readonly Food[], { status, group, query }: Fo
       (group === 'all' || food.group === group) &&
       (!searching || isSimilarContent(query, food.name)),
   )
+}
+
+/**
+ * 이름이 같은 다른 음식 (BR-18: 띄어쓰기·대소문자 무시). 이름이 비어 있으면 찾지 않는다.
+ * exceptId: 수정 중인 음식 자신은 빼고 찾는다
+ */
+export function findSameName(
+  foods: readonly Food[],
+  name: string,
+  exceptId?: string,
+): Food | undefined {
+  if (name.trim() === '') return undefined
+  return foods.find((food) => food.id !== exceptId && isSameContent(food.name, name))
 }
 
 /** 여러 줄 메모의 첫 줄 (FR-FOOD-03: 증상 메모 첫 줄). 비어 있으면 null */

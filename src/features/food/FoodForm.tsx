@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { zodResolver } from '@hookform/resolvers/zod'
-import { useController, useForm, type Control } from 'react-hook-form'
+import { Info } from 'lucide-react'
+import { useController, useForm, useWatch, type Control } from 'react-hook-form'
 import { DeleteRecordButton } from '@/components/DeleteRecordButton'
 import { ErrorBanner } from '@/components/ErrorBanner'
 import { DateInput } from '@/components/form/DateField'
@@ -8,15 +9,14 @@ import { Field, FieldError } from '@/components/form/Field'
 import { invalidProps } from '@/components/form/invalidProps'
 import { TextField } from '@/components/form/TextField'
 import { Button } from '@/components/ui/button'
-import { Checkbox } from '@/components/ui/checkbox'
-import { Label } from '@/components/ui/label'
 import { todayString } from '@/domain/date'
-import { isSameContent } from '@/domain/text'
+import { withTopicParticle } from '@/domain/josa'
 import { FoodSaveError, type Food, type FoodInput } from '@/lib/foodApi'
 import { FOOD_GROUPS, FOOD_PREFERENCES } from '@/lib/foodTypes'
 import { NETWORK_ERROR_MESSAGES } from '@/lib/messages'
 import { notifySaved } from '@/lib/notify'
 import { useDeleteFood, useSaveFood } from '@/lib/useFoods'
+import { findSameName } from './foodFilter'
 import {
   FOOD_MESSAGES,
   MEMO_MAX,
@@ -28,43 +28,61 @@ import {
 
 type FormControl = Control<FoodFormValues, unknown, FoodInput>
 
-/** 음식 추가·수정 폼 (FR-FOOD-04~05, 08, 10, R45~46). 바텀 시트 안에 놓인다 */
+/** 음식 추가·수정 폼 (FR-FOOD-04~05, 08, 10, R45~47). 바텀 시트 안에 놓인다 */
 export function FoodForm({
   initial,
+  defaultTried = false,
   birthDate,
   foods,
   onDone,
+  onEditExisting,
 }: {
   /** 수정할 음식. 없으면 새 음식 */
   initial?: Food
+  /** 새 음식의 처음 상태. 먹어봄 탭에서 추가하면 먹어봄으로 시작한다 (R47) */
+  defaultTried?: boolean
   birthDate: string
   /** 같은 이름의 음식이 있는지 확인할 때 쓴다 (BR-18) */
   foods: readonly Food[]
   /** 저장·삭제·취소 후 시트를 닫는다 */
   onDone: () => void
+  /** 같은 이름의 기존 음식을 수정 시트로 연다 */
+  onEditExisting: (id: string) => void
 }) {
   const save = useSaveFood()
   const remove = useDeleteFood()
   const [failed, setFailed] = useState<'save' | 'delete' | null>(null)
 
-  const { control, handleSubmit, setError } = useForm<FoodFormValues, unknown, FoodInput>({
+  const { control, handleSubmit, setError, setFocus, setValue } = useForm<
+    FoodFormValues,
+    unknown,
+    FoodInput
+  >({
     resolver: zodResolver(foodSchema(birthDate)),
     defaultValues: {
       name: initial?.name ?? '',
       group: initial?.group ?? '',
       memo: initial?.memo ?? '',
       // 알러지·주의 음식의 상태는 지정·해제로만 바뀌므로 묻지 않는다 (FR-FOOD-06, T-38)
-      alreadyTried: initial?.status === 'caution' ? null : (initial?.manualTried ?? false),
+      // T-40 이후 식단 "먹음" 기록으로 먹어봄이 된 음식은 여기서 상태를 다시 정해야 한다
+      alreadyTried: initial
+        ? initial.status === 'caution'
+          ? null
+          : initial.manualTried
+        : defaultTried,
       firstTriedDate: initial?.manualFirstTriedDate ?? '',
       preference: initial?.preference ?? null,
     },
   })
+  // 같은 이름의 음식은 하나만 둔다 (BR-18). 입력하는 동안 바로 알려 준다 (R47)
+  const name = useWatch({ control, name: 'name' })
+  const sameName = findSameName(foods, name, initial?.id)
 
   const onSubmit = handleSubmit(async (input) => {
     setFailed(null)
-    // 같은 이름의 음식은 하나만 둔다 (BR-18). 서버도 같은 기준으로 거부한다
-    if (foods.some((food) => food.id !== initial?.id && isSameContent(food.name, input.name))) {
-      setError('name', { message: FOOD_MESSAGES.duplicate }, { shouldFocus: true })
+    // 아래 안내가 이미 보이므로 이름 칸으로 돌아가기만 한다. 서버도 같은 기준으로 거부한다
+    if (findSameName(foods, input.name, initial?.id)) {
+      setFocus('name')
       return
     }
     try {
@@ -104,15 +122,24 @@ export function FoodForm({
         />
       )}
 
-      <TextField
+      <StatusField
         control={control}
-        name="name"
-        id="food-name"
-        label="이름"
-        placeholder="예: 브로콜리"
-        maxLength={NAME_MAX}
+        // 먹어 보지 않은 음식에는 처음 먹은 날이 없다 (반응은 저장할 때 지운다)
+        onNotTried={() => setValue('firstTriedDate', '')}
       />
+      <div className="flex flex-col gap-2">
+        <TextField
+          control={control}
+          name="name"
+          id="food-name"
+          label="이름"
+          placeholder="예: 브로콜리"
+          maxLength={NAME_MAX}
+        />
+        {sameName && <SameNameNotice food={sameName} onOpen={() => onEditExisting(sameName.id)} />}
+      </div>
       <GroupField control={control} />
+      <TriedDetails control={control} birthDate={birthDate} />
       <TextField
         control={control}
         name="memo"
@@ -122,7 +149,6 @@ export function FoodForm({
         maxLength={MEMO_MAX}
         multiline
       />
-      <TriedField control={control} birthDate={birthDate} />
 
       <div className="mt-1 grid grid-cols-2 gap-2.5">
         <Button type="button" variant="soft" size="lg" onClick={onDone}>
@@ -141,6 +167,83 @@ export function FoodForm({
         />
       )}
     </form>
+  )
+}
+
+/** 같은 이름의 음식이 이미 있을 때: 어느 목록에 있는지 알리고, 그 음식을 열 수 있게 한다 (BR-18, R47) */
+function SameNameNotice({ food, onOpen }: { food: Food; onOpen: () => void }) {
+  const { title, detail } = sameNameMessage(food)
+  return (
+    <div
+      role="status"
+      className="flex items-center gap-3 rounded-input bg-soft px-3.5 py-3 text-soft-text"
+    >
+      <Info className="size-5 shrink-0" aria-hidden />
+      <p className="min-w-0 flex-1 text-sm">
+        <strong className="block">{title}</strong>
+        {detail}
+      </p>
+      <Button type="button" variant="outline" size="sm" className="shrink-0" onClick={onOpen}>
+        이 음식 열기
+      </Button>
+    </div>
+  )
+}
+
+function sameNameMessage(food: Food): { title: string; detail: string } {
+  const name = withTopicParticle(food.name)
+  switch (food.status) {
+    case 'tried':
+      return { title: '이미 먹어 본 음식이에요', detail: `${name} '먹어봄'에 있어요` }
+    case 'not_tried':
+      return {
+        title: FOOD_MESSAGES.duplicate,
+        detail: `${name} '아직 안 먹어봄'에 있어요. 열어서 먹어봄으로 바꿀 수 있어요`,
+      }
+    case 'caution':
+      return { title: FOOD_MESSAGES.duplicate, detail: `${name} '알러지·주의'에 있어요` }
+  }
+}
+
+/**
+ * 상태: 먹어봄 / 아직 안 먹어봄 (FR-FOOD-05, BR-17, R45, R47).
+ * 새 음식은 보고 있던 탭의 상태로 시작한다. 기본 음식처럼 아직 안 먹어봄으로 들어간 음식도 수정할 때 바꿀 수 있다.
+ * 알러지·주의 음식은 묻지 않는다
+ */
+function StatusField({ control, onNotTried }: { control: FormControl; onNotTried: () => void }) {
+  const {
+    field: { value, onChange },
+  } = useController({ control, name: 'alreadyTried' })
+
+  if (value === null) return null
+
+  const options = [
+    { tried: true, label: '먹어봄' },
+    { tried: false, label: '아직 안 먹어봄' },
+  ]
+  return (
+    <div className="flex flex-col gap-2">
+      <span id="food-status-label" className="text-sm font-bold">
+        상태
+      </span>
+      <div role="radiogroup" aria-labelledby="food-status-label" className="grid grid-cols-2 gap-2">
+        {options.map((option) => (
+          <button
+            key={option.label}
+            type="button"
+            role="radio"
+            aria-checked={value === option.tried}
+            onClick={() => {
+              onChange(option.tried)
+              if (!option.tried) onNotTried()
+            }}
+            className="h-12 rounded-xl border border-line bg-surface text-[15px] font-bold text-muted-foreground transition-colors aria-checked:border-2 aria-checked:border-primary aria-checked:bg-soft aria-checked:text-soft-text"
+          >
+            {option.label}
+          </button>
+        ))}
+      </div>
+    </div>
   )
 }
 
@@ -183,76 +286,52 @@ function GroupField({ control }: { control: FormControl }) {
   )
 }
 
-/**
- * "이미 먹어 봤어요" + 처음 먹은 날(선택)과 아이 반응(선택) (FR-FOOD-05, 10, BR-17, R45~46).
- * 기본 음식처럼 아직 안 먹어봄으로 들어간 음식도 수정할 때 고를 수 있다. 알러지·주의 음식은 묻지 않는다
- */
-function TriedField({ control, birthDate }: { control: FormControl; birthDate: string }) {
+/** 먹어봄일 때만: 처음 먹은 날(선택)과 아이 반응(선택) (BR-17, FR-FOOD-10, R46) */
+function TriedDetails({ control, birthDate }: { control: FormControl; birthDate: string }) {
+  const tried = useWatch({ control, name: 'alreadyTried' })
+  if (tried !== true) return null
+  return (
+    <>
+      <FirstTriedDateField control={control} birthDate={birthDate} />
+      <PreferenceField control={control} />
+    </>
+  )
+}
+
+function FirstTriedDateField({ control, birthDate }: { control: FormControl; birthDate: string }) {
   const {
-    field: { value: tried, onChange: setTried },
-  } = useController({ control, name: 'alreadyTried' })
-  const {
-    field: { value: date, onChange: setDate, ...dateField },
+    field: { value, onChange, ...field },
     fieldState,
   } = useController({ control, name: 'firstTriedDate' })
   const error = fieldState.error?.message
 
-  if (tried === null) return null
-  const checked = tried === true
-
   return (
-    <div className="flex flex-col gap-3 rounded-input border border-line p-3.5">
-      <div className="flex items-start gap-3">
-        <Checkbox
-          id="food-tried"
-          checked={checked}
-          onCheckedChange={(next) => {
-            setTried(next === true)
-            // 체크를 끄면 날짜를 비운다 (먹어 보지 않은 음식에는 처음 먹은 날이 없다)
-            if (next !== true) setDate('')
-          }}
-          className="mt-0.5"
-          aria-describedby="food-tried-help"
-        />
-        <div className="flex flex-col gap-0.5">
-          <Label htmlFor="food-tried" className="text-[15px]">
-            이미 먹어 봤어요
-          </Label>
-          <p id="food-tried-help" className="text-[13px] text-muted-foreground">
-            앱을 쓰기 전에 먹어 본 음식이면 골라 주세요
-          </p>
-        </div>
-      </div>
-      {checked && (
-        <Field
-          id="food-first-tried"
-          label="처음 먹은 날 (선택)"
-          error={error}
-          aside={
-            date ? (
-              <button
-                type="button"
-                onClick={() => setDate('')}
-                className="relative text-sm font-bold text-soft-text after:absolute after:-inset-3"
-              >
-                날짜 지우기
-              </button>
-            ) : undefined
-          }
-        >
-          <DateInput
-            {...dateField}
-            id="food-first-tried"
-            value={typeof date === 'string' ? date : ''}
-            onChange={(event) => setDate(event.target.value)}
-            min={birthDate}
-            max={todayString()}
-            {...invalidProps('food-first-tried', error)}
-          />
-        </Field>
-      )}
-      {checked && <PreferenceField control={control} />}
-    </div>
+    <Field
+      id="food-first-tried"
+      label="처음 먹은 날 (선택)"
+      error={error}
+      aside={
+        value ? (
+          <button
+            type="button"
+            onClick={() => onChange('')}
+            className="relative text-sm font-bold text-soft-text after:absolute after:-inset-3"
+          >
+            날짜 지우기
+          </button>
+        ) : undefined
+      }
+    >
+      <DateInput
+        {...field}
+        id="food-first-tried"
+        value={typeof value === 'string' ? value : ''}
+        onChange={(event) => onChange(event.target.value)}
+        min={birthDate}
+        max={todayString()}
+        {...invalidProps('food-first-tried', error)}
+      />
+    </Field>
   )
 }
 

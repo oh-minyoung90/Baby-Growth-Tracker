@@ -299,7 +299,13 @@ describe('식품군 필터와 이름 검색 (FR-FOOD-02)', () => {
   })
 })
 
-describe('음식 추가 (FR-FOOD-04~05)', () => {
+function statusRadio(sheet: HTMLElement, name: '먹어봄' | '아직 안 먹어봄') {
+  return within(within(sheet).getByRole('radiogroup', { name: '상태' })).getByRole('radio', {
+    name,
+  })
+}
+
+describe('음식 추가 (FR-FOOD-04~05, R47)', () => {
   beforeEach(() => {
     store = [food({ id: 'a', name: 'Oat Milk', group: 'dairy' })]
   })
@@ -313,9 +319,10 @@ describe('음식 추가 (FR-FOOD-04~05)', () => {
     expect(createFood).not.toHaveBeenCalled()
   })
 
-  it('기본은 아직 안 먹어봄으로 추가하고, 시트를 닫은 뒤 목록에 반영한다', async () => {
+  it('안 먹어봄 탭에서 추가하면 아직 안 먹어봄으로 시작하고, 저장하면 목록에 반영한다', async () => {
     const { router } = await renderFoods('/meals/foods?status=not_tried')
     const sheet = await openNewSheet()
+    expect(statusRadio(sheet, '아직 안 먹어봄')).toHaveAttribute('aria-checked', 'true')
     await userEvent.type(within(sheet).getByLabelText('이름'), ' 브로콜리 ')
     await userEvent.click(within(sheet).getByRole('radio', { name: '채소' }))
     await userEvent.type(within(sheet).getByLabelText('메모'), '찐 다음 다지기')
@@ -338,12 +345,12 @@ describe('음식 추가 (FR-FOOD-04~05)', () => {
     expect(router.state.location.search).toBe('?status=not_tried')
   })
 
-  it('"이미 먹어 봤어요"를 고르면 처음 먹은 날(선택)을 넣을 수 있다 (BR-17)', async () => {
+  it('먹어봄 탭에서 추가하면 먹어봄으로 시작하고, 처음 먹은 날·반응(선택)을 넣을 수 있다 (BR-17)', async () => {
     await renderFoods()
     const sheet = await openNewSheet()
+    expect(statusRadio(sheet, '먹어봄')).toHaveAttribute('aria-checked', 'true')
     await userEvent.type(within(sheet).getByLabelText('이름'), '쌀')
     await userEvent.click(within(sheet).getByRole('radio', { name: '곡류' }))
-    await userEvent.click(within(sheet).getByRole('checkbox', { name: '이미 먹어 봤어요' }))
     const date = within(sheet).getByLabelText('처음 먹은 날 (선택)')
     expect(date).toHaveAttribute('min', '2026-01-08')
     expect(date).toHaveAttribute('max', '2026-10-22')
@@ -370,27 +377,67 @@ describe('음식 추가 (FR-FOOD-04~05)', () => {
     expect(statusTab(/^먹어봄 1개/)).toBeInTheDocument()
   })
 
-  it('체크를 끄면 입력한 날짜도 지운다', async () => {
+  it('알러지·주의 탭에서 추가하면 아직 안 먹어봄으로 시작한다', async () => {
+    await renderFoods('/meals/foods?status=caution')
+    const sheet = await openNewSheet()
+    expect(statusRadio(sheet, '아직 안 먹어봄')).toHaveAttribute('aria-checked', 'true')
+  })
+
+  it('아직 안 먹어봄으로 바꾸면 처음 먹은 날·반응을 묻지 않고, 입력한 날짜도 지운다', async () => {
     await renderFoods()
     const sheet = await openNewSheet()
-    const checkbox = within(sheet).getByRole('checkbox', { name: '이미 먹어 봤어요' })
-    await userEvent.click(checkbox)
     fireEvent.change(within(sheet).getByLabelText('처음 먹은 날 (선택)'), {
       target: { value: '2026-07-01' },
     })
-    await userEvent.click(checkbox)
-    await userEvent.click(checkbox)
+    await userEvent.click(statusRadio(sheet, '아직 안 먹어봄'))
+    expect(within(sheet).queryByLabelText('처음 먹은 날 (선택)')).toBeNull()
+    expect(within(sheet).queryByRole('radiogroup', { name: '아이 반응 (선택)' })).toBeNull()
+    await userEvent.click(statusRadio(sheet, '먹어봄'))
     expect(within(sheet).getByLabelText('처음 먹은 날 (선택)')).toHaveValue('')
   })
 
-  it('같은 이름(띄어쓰기·대소문자 무시)이 있으면 저장하지 않고 안내한다 (BR-18)', async () => {
+  it('이름을 입력하는 동안 같은 이름의 음식이 어느 목록에 있는지 알리고, 저장하지 않는다 (BR-18)', async () => {
     await renderFoods()
     const sheet = await openNewSheet()
     await userEvent.type(within(sheet).getByLabelText('이름'), 'oat  milk')
+    const notice = within(sheet).getByRole('status')
+    expect(notice).toHaveTextContent('이미 있는 음식이에요')
+    expect(notice).toHaveTextContent("Oat Milk은(는) '아직 안 먹어봄'에 있어요")
+
     await userEvent.click(within(sheet).getByRole('radio', { name: '유제품' }))
     await userEvent.click(within(sheet).getByRole('button', { name: '저장' }))
-    expect(await within(sheet).findByText('이미 있는 음식이에요')).toBeInTheDocument()
     expect(createFood).not.toHaveBeenCalled()
+    expect(within(sheet).getByLabelText('이름')).toHaveFocus()
+
+    // 이름을 바꾸면 안내가 사라진다
+    await userEvent.type(within(sheet).getByLabelText('이름'), ' 라떼')
+    expect(within(sheet).queryByRole('status')).toBeNull()
+  })
+
+  it('먹어 본 음식과 이름이 같으면 "이미 먹어 본 음식이에요"로 알린다', async () => {
+    store = [food({ id: 'r', name: '쌀', group: 'grain', status: 'tried', manualTried: true })]
+    await renderFoods()
+    const sheet = await openNewSheet()
+    await userEvent.type(within(sheet).getByLabelText('이름'), '쌀')
+    expect(within(sheet).getByRole('status')).toHaveTextContent(
+      "이미 먹어 본 음식이에요쌀은 '먹어봄'에 있어요",
+    )
+  })
+
+  it('"이 음식 열기"를 누르면 그 음식의 수정 시트로 바뀌고, 닫으면 목록으로 돌아간다', async () => {
+    const { router } = await renderFoods()
+    const sheet = await openNewSheet()
+    await userEvent.type(within(sheet).getByLabelText('이름'), 'oat milk')
+    await userEvent.click(within(sheet).getByRole('button', { name: '이 음식 열기' }))
+
+    const edit = await screen.findByRole('dialog', { name: '음식 수정' })
+    expect(within(edit).getByLabelText('이름')).toHaveValue('Oat Milk')
+    expect(statusRadio(edit, '아직 안 먹어봄')).toHaveAttribute('aria-checked', 'true')
+    expect(router.state.location.search).toBe('?record=a')
+
+    await userEvent.click(within(edit).getByRole('button', { name: '취소' }))
+    await waitForSheetClosed()
+    expect(router.state.location.search).toBe('')
   })
 
   it('서버가 같은 이름으로 거부해도 같은 문구로 안내한다', async () => {
@@ -428,7 +475,7 @@ describe('음식 수정·삭제 (FR-FOOD-04~06, 08, R45)', () => {
     ]
   })
 
-  it('누르면 수정 시트가 열리고, 아직 안 먹어봄 음식을 "이미 먹어 봤어요"로 바꿀 수 있다', async () => {
+  it('누르면 수정 시트가 열리고, 아직 안 먹어봄 음식을 먹어봄으로 바꿀 수 있다', async () => {
     const { router } = await renderFoods('/meals/foods?status=not_tried')
     await userEvent.click(await screen.findByRole('button', { name: /애호박/ }))
     const sheet = await screen.findByRole('dialog', { name: '음식 수정' })
@@ -440,7 +487,8 @@ describe('음식 수정·삭제 (FR-FOOD-04~06, 08, R45)', () => {
     )
     expect(within(sheet).getByLabelText('메모')).toHaveValue('껍질 벗기기')
 
-    await userEvent.click(within(sheet).getByRole('checkbox', { name: '이미 먹어 봤어요' }))
+    expect(statusRadio(sheet, '아직 안 먹어봄')).toHaveAttribute('aria-checked', 'true')
+    await userEvent.click(statusRadio(sheet, '먹어봄'))
     await userEvent.click(within(sheet).getByRole('button', { name: '저장' }))
     expect(await screen.findByText('저장했어요')).toBeInTheDocument()
     expect(updateFood).toHaveBeenCalledWith('a', {
@@ -483,10 +531,10 @@ describe('음식 수정·삭제 (FR-FOOD-04~06, 08, R45)', () => {
     expect(screen.getByRole('button', { name: /사과/ })).toHaveTextContent('반응 거부')
   })
 
-  it('"이미 먹어 봤어요"를 끄면 반응을 묻지 않고 지운다', async () => {
+  it('아직 안 먹어봄으로 되돌리면 반응을 묻지 않고 지운다', async () => {
     await renderFoods('/meals/foods?record=c')
     const sheet = await screen.findByRole('dialog', { name: '음식 수정' })
-    await userEvent.click(within(sheet).getByRole('checkbox', { name: '이미 먹어 봤어요' }))
+    await userEvent.click(statusRadio(sheet, '아직 안 먹어봄'))
     expect(
       within(sheet).queryByRole('radiogroup', { name: '아이 반응 (선택)' }),
     ).not.toBeInTheDocument()
@@ -498,10 +546,10 @@ describe('음식 수정·삭제 (FR-FOOD-04~06, 08, R45)', () => {
     )
   })
 
-  it('알러지·주의 음식은 "이미 먹어 봤어요"를 묻지 않고 상태를 그대로 둔다 (FR-FOOD-06)', async () => {
+  it('알러지·주의 음식은 상태를 묻지 않고 그대로 둔다 (FR-FOOD-06)', async () => {
     await renderFoods('/meals/foods?status=caution&record=b')
     const sheet = await screen.findByRole('dialog', { name: '음식 수정' })
-    expect(within(sheet).queryByRole('checkbox')).not.toBeInTheDocument()
+    expect(within(sheet).queryByRole('radiogroup', { name: '상태' })).toBeNull()
     await userEvent.clear(within(sheet).getByLabelText('이름'))
     await userEvent.type(within(sheet).getByLabelText('이름'), '땅콩버터')
     // 반응도 묻지 않고, 저장된 반응은 그대로 둔다

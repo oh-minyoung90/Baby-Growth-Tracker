@@ -34,7 +34,7 @@ const GROUP_OPTIONS: { value: FoodGroupFilter; label: string }[] = [
 const EMPTY_TAB_MESSAGES: Record<FoodStatus, { title: string; description?: string }> = {
   tried: {
     title: '아직 먹어 본 음식이 없어요',
-    description: '음식을 눌러 "이미 먹어 봤어요"를 고르면 여기에 모여요',
+    description: '먹어 본 음식을 추가하거나, 안 먹어봄 음식을 먹어봄으로 바꾸면 여기에 모여요',
   },
   not_tried: {
     title: '아직 안 먹어 본 음식이 없어요',
@@ -142,7 +142,11 @@ export function FoodsPage() {
           initial={editing}
           birthDate={child.birthDate}
           foods={all}
+          // 먹어봄 탭에서 추가하면 먹어봄으로 시작한다 (R47)
+          defaultTried={status === 'tried'}
           onClose={sheet.close}
+          // 같은 이름의 음식을 열 때는 주소를 바꿔 끼워, 닫으면 시트를 열기 전 화면으로 돌아가게 한다
+          onEditExisting={(id) => sheet.open(id, { replace: true })}
         />
       )}
     </div>
@@ -231,13 +235,17 @@ function FoodSheet({
   initial,
   birthDate,
   foods,
+  defaultTried,
   onClose,
+  onEditExisting,
 }: {
   open: boolean
   initial: Food | undefined
   birthDate: string
   foods: readonly Food[]
+  defaultTried: boolean
   onClose: () => void
+  onEditExisting: (id: string) => void
 }) {
   // 닫히는 동안(애니메이션)에도 열려 있던 내용을 유지한다. 수정 시트가 닫히며 빈 입력 화면으로 바뀌어 보이지 않게
   const [shown, setShown] = useState(initial)
@@ -251,9 +259,11 @@ function FoodSheet({
         <FoodForm
           key={shown?.id ?? 'new'}
           initial={shown}
+          defaultTried={defaultTried}
           birthDate={birthDate}
           foods={foods}
           onDone={onClose}
+          onEditExisting={onEditExisting}
         />
       </SheetContent>
     </Sheet>

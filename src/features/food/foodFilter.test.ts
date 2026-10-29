@@ -5,6 +5,7 @@ import {
   filterFoods,
   filterFromParams,
   filterToParams,
+  findSameName,
   firstLine,
 } from './foodFilter'
 
@@ -86,6 +87,15 @@ describe('filterFromParams / filterToParams', () => {
     expect(filterToParams(params, { status: 'not_tried', group: 'dairy' }).toString()).toBe(
       'record=new&status=not_tried&group=dairy',
     )
+  })
+})
+
+describe('findSameName', () => {
+  it('띄어쓰기·대소문자만 다른 이름을 찾고, 수정 중인 음식 자신은 뺀다 (BR-18)', () => {
+    expect(findSameName(foods, ' oat  MILK ')?.id).toBe('3')
+    expect(findSameName(foods, 'Oat Milk', '3')).toBeUndefined()
+    expect(findSameName(foods, '오트')).toBeUndefined()
+    expect(findSameName(foods, '  ')).toBeUndefined()
   })
 })
 

@@ -31,9 +31,9 @@ export function foodSchema(birthDate: string) {
         return z.NEVER
       }),
       memo: optionalText(MEMO_MAX),
-      // null: 알러지·주의 음식이라 바꾸지 않음
+      // 먹어봄(true) / 아직 안 먹어봄(false). null: 알러지·주의 음식이라 바꾸지 않음
       alreadyTried: z.boolean().nullable(),
-      // 처음 먹은 날(선택). "이미 먹어 봤어요"를 끄면 화면에서 비운다
+      // 처음 먹은 날(선택). 아직 안 먹어봄으로 바꾸면 화면에서 비운다
       firstTriedDate: optionalRecordDate({ birthDate }),
       // 아이 반응(선택, R46). 고르지 않았으면 null
       preference: z.enum(FOOD_PREFERENCE_VALUES).nullable(),
