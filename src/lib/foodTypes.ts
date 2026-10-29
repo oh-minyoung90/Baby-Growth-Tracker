@@ -42,13 +42,19 @@ export function isFoodStatus(value: string | null | undefined): value is FoodSta
   return FOOD_STATUSES.some((status) => status.value === value)
 }
 
-/** 아이 반응 (FR-FOOD-10): 음식 상세에서 사용자가 고른다 */
-export type FoodPreference = 'like' | 'neutral' | 'refuse'
+/** 아이 반응 (FR-FOOD-10, R46): 먹어 본 음식에 사용자가 고른다 */
+export type FoodPreference = 'love' | 'like' | 'neutral' | 'refuse'
 
 export const FOOD_PREFERENCES: readonly { value: FoodPreference; label: string }[] = [
+  { value: 'love', label: '매우 좋아함' },
   { value: 'like', label: '좋아함' },
   { value: 'neutral', label: '보통' },
   { value: 'refuse', label: '거부' },
+]
+
+export const FOOD_PREFERENCE_VALUES = FOOD_PREFERENCES.map((preference) => preference.value) as [
+  FoodPreference,
+  ...FoodPreference[],
 ]
 
 export function isFoodPreference(value: string | null | undefined): value is FoodPreference {

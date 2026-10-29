@@ -88,6 +88,7 @@ beforeEach(() => {
       manualTried: input.alreadyTried ?? false,
       manualFirstTriedDate: input.firstTriedDate,
       firstTriedDate: input.firstTriedDate,
+      preference: input.preference,
     })
     store.push(created)
     return created
@@ -104,7 +105,14 @@ beforeEach(() => {
             manualFirstTriedDate: input.firstTriedDate,
             firstTriedDate: input.firstTriedDate,
           }
-    const updated = { ...current, name: input.name, group: input.group, memo: input.memo, ...tried }
+    const updated = {
+      ...current,
+      name: input.name,
+      group: input.group,
+      memo: input.memo,
+      preference: input.preference,
+      ...tried,
+    }
     store = store.map((item) => (item.id === id ? updated : item))
     return updated
   })
@@ -311,7 +319,9 @@ describe('음식 추가 (FR-FOOD-04~05)', () => {
     await userEvent.type(within(sheet).getByLabelText('이름'), ' 브로콜리 ')
     await userEvent.click(within(sheet).getByRole('radio', { name: '채소' }))
     await userEvent.type(within(sheet).getByLabelText('메모'), '찐 다음 다지기')
+    // 먹어 보지 않은 음식에는 처음 먹은 날과 반응을 묻지 않는다
     expect(within(sheet).queryByLabelText('처음 먹은 날 (선택)')).not.toBeInTheDocument()
+    expect(within(sheet).queryByRole('radiogroup', { name: '아이 반응 (선택)' })).toBeNull()
     await userEvent.click(within(sheet).getByRole('button', { name: '저장' }))
 
     expect(await screen.findByText('저장했어요')).toBeInTheDocument()
@@ -321,6 +331,7 @@ describe('음식 추가 (FR-FOOD-04~05)', () => {
       memo: '찐 다음 다지기',
       alreadyTried: false,
       firstTriedDate: null,
+      preference: null,
     })
     await waitForSheetClosed()
     expect(await screen.findByText('브로콜리')).toBeInTheDocument()
@@ -343,10 +354,17 @@ describe('음식 추가 (FR-FOOD-04~05)', () => {
     expect(await within(sheet).findByText('오늘 이후 날짜는 고를 수 없어요')).toBeInTheDocument()
 
     fireEvent.change(date, { target: { value: '2026-07-01' } })
+    // 먹어 본 음식이면 반응도 함께 고를 수 있다 (R46)
+    await userEvent.click(within(sheet).getByRole('radio', { name: '매우 좋아함' }))
     await userEvent.click(within(sheet).getByRole('button', { name: '저장' }))
     expect(await screen.findByText('저장했어요')).toBeInTheDocument()
     expect(createFood).toHaveBeenCalledWith(
-      expect.objectContaining({ name: '쌀', alreadyTried: true, firstTriedDate: '2026-07-01' }),
+      expect.objectContaining({
+        name: '쌀',
+        alreadyTried: true,
+        firstTriedDate: '2026-07-01',
+        preference: 'love',
+      }),
     )
     await waitForSheetClosed()
     expect(statusTab(/^먹어봄 1개/)).toBeInTheDocument()
@@ -391,7 +409,22 @@ describe('음식 수정·삭제 (FR-FOOD-04~06, 08, R45)', () => {
   beforeEach(() => {
     store = [
       food({ id: 'a', name: '애호박', memo: '껍질 벗기기' }),
-      food({ id: 'b', name: '땅콩', group: 'etc', status: 'caution', reactionDate: '2026-10-01' }),
+      food({
+        id: 'b',
+        name: '땅콩',
+        group: 'etc',
+        status: 'caution',
+        reactionDate: '2026-10-01',
+        preference: 'refuse',
+      }),
+      food({
+        id: 'c',
+        name: '사과',
+        group: 'fruit',
+        status: 'tried',
+        manualTried: true,
+        preference: 'love',
+      }),
     ]
   })
 
@@ -416,11 +449,53 @@ describe('음식 수정·삭제 (FR-FOOD-04~06, 08, R45)', () => {
       memo: '껍질 벗기기',
       alreadyTried: true,
       firstTriedDate: null,
+      preference: null,
     })
     await waitForSheetClosed()
     expect(router.state.location.search).toBe('?status=not_tried')
-    expect(statusTab(/^먹어봄 1개/)).toBeInTheDocument()
+    expect(statusTab(/^먹어봄 2개/)).toBeInTheDocument()
     expect(statusTab(/^아직 안 먹어봄 0개/)).toBeInTheDocument()
+  })
+
+  it('먹어 본 음식은 반응을 바꿀 수 있고, 고른 반응을 다시 누르면 선택을 푼다 (R46)', async () => {
+    await renderFoods('/meals/foods?record=c')
+    const sheet = await screen.findByRole('dialog', { name: '음식 수정' })
+    const reaction = within(sheet).getByRole('radiogroup', { name: '아이 반응 (선택)' })
+    expect(
+      within(reaction)
+        .getAllByRole('radio')
+        .map((radio) => radio.textContent),
+    ).toEqual(['매우 좋아함', '좋아함', '보통', '거부'])
+    expect(within(reaction).getByRole('radio', { name: '매우 좋아함' })).toHaveAttribute(
+      'aria-checked',
+      'true',
+    )
+    await userEvent.click(within(reaction).getByRole('radio', { name: '매우 좋아함' }))
+    expect(within(reaction).getByRole('radio', { name: '매우 좋아함' })).toHaveAttribute(
+      'aria-checked',
+      'false',
+    )
+    await userEvent.click(within(reaction).getByRole('radio', { name: '거부' }))
+    await userEvent.click(within(sheet).getByRole('button', { name: '저장' }))
+    expect(await screen.findByText('저장했어요')).toBeInTheDocument()
+    expect(updateFood).toHaveBeenCalledWith('c', expect.objectContaining({ preference: 'refuse' }))
+    await waitForSheetClosed()
+    expect(screen.getByRole('button', { name: /사과/ })).toHaveTextContent('반응 거부')
+  })
+
+  it('"이미 먹어 봤어요"를 끄면 반응을 묻지 않고 지운다', async () => {
+    await renderFoods('/meals/foods?record=c')
+    const sheet = await screen.findByRole('dialog', { name: '음식 수정' })
+    await userEvent.click(within(sheet).getByRole('checkbox', { name: '이미 먹어 봤어요' }))
+    expect(
+      within(sheet).queryByRole('radiogroup', { name: '아이 반응 (선택)' }),
+    ).not.toBeInTheDocument()
+    await userEvent.click(within(sheet).getByRole('button', { name: '저장' }))
+    expect(await screen.findByText('저장했어요')).toBeInTheDocument()
+    expect(updateFood).toHaveBeenCalledWith(
+      'c',
+      expect.objectContaining({ alreadyTried: false, preference: null }),
+    )
   })
 
   it('알러지·주의 음식은 "이미 먹어 봤어요"를 묻지 않고 상태를 그대로 둔다 (FR-FOOD-06)', async () => {
@@ -429,9 +504,14 @@ describe('음식 수정·삭제 (FR-FOOD-04~06, 08, R45)', () => {
     expect(within(sheet).queryByRole('checkbox')).not.toBeInTheDocument()
     await userEvent.clear(within(sheet).getByLabelText('이름'))
     await userEvent.type(within(sheet).getByLabelText('이름'), '땅콩버터')
+    // 반응도 묻지 않고, 저장된 반응은 그대로 둔다
+    expect(within(sheet).queryByRole('radiogroup', { name: '아이 반응 (선택)' })).toBeNull()
     await userEvent.click(within(sheet).getByRole('button', { name: '저장' }))
     expect(await screen.findByText('저장했어요')).toBeInTheDocument()
-    expect(updateFood).toHaveBeenCalledWith('b', expect.objectContaining({ alreadyTried: null }))
+    expect(updateFood).toHaveBeenCalledWith(
+      'b',
+      expect.objectContaining({ alreadyTried: null, preference: 'refuse' }),
+    )
   })
 
   it('삭제하면 식단과 레시피에 이름이 남는다고 확인한 뒤 지운다 (FR-FOOD-08)', async () => {

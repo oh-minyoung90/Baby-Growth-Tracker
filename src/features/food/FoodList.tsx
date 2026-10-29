@@ -125,12 +125,13 @@ function Note({ icon: Icon, text }: { icon: LucideIcon; text: string }) {
 }
 
 const PREFERENCE_COLORS: Record<FoodPreference, string> = {
+  love: 'text-tried-text',
   like: 'text-tried-text',
   neutral: 'text-foreground',
   refuse: 'text-danger',
 }
 
-/** 아이 반응 (FR-FOOD-10). 고르지 않았으면 "미입력" */
+/** 아이 반응 (FR-FOOD-10, R46). 고르지 않았으면 "미입력" */
 function Preference({ value }: { value: FoodPreference | null }) {
   return (
     <span className="flex shrink-0 flex-col items-end gap-0.5">

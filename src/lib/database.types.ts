@@ -271,6 +271,7 @@ export type Database = {
           food_group: string
           memo?: string
           name: string
+          preference?: string
         }
         Returns: {
           caution_since: string | null
@@ -309,6 +310,7 @@ export type Database = {
           food_id: string
           memo?: string
           name: string
+          preference?: string
         }
         Returns: {
           caution_since: string | null

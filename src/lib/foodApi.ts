@@ -41,6 +41,8 @@ export interface FoodInput {
   alreadyTried: boolean | null
   /** 처음 먹은 날 (선택). alreadyTried일 때만 넣는다 */
   firstTriedDate: string | null
+  /** 아이 반응 (선택, R46). 수정할 때 null이면 지운다 */
+  preference: FoodPreference | null
 }
 
 /** 저장 실패 이유. 화면은 이 값으로 안내 문구와 표시할 입력칸을 고른다 */
@@ -117,6 +119,7 @@ function toArgs(input: FoodInput) {
     food_group: input.group,
     memo: input.memo ?? undefined,
     first_tried_date: input.firstTriedDate ?? undefined,
+    preference: input.preference ?? undefined,
   }
 }
 

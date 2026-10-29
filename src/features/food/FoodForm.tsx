@@ -13,7 +13,7 @@ import { Label } from '@/components/ui/label'
 import { todayString } from '@/domain/date'
 import { isSameContent } from '@/domain/text'
 import { FoodSaveError, type Food, type FoodInput } from '@/lib/foodApi'
-import { FOOD_GROUPS } from '@/lib/foodTypes'
+import { FOOD_GROUPS, FOOD_PREFERENCES } from '@/lib/foodTypes'
 import { NETWORK_ERROR_MESSAGES } from '@/lib/messages'
 import { notifySaved } from '@/lib/notify'
 import { useDeleteFood, useSaveFood } from '@/lib/useFoods'
@@ -28,7 +28,7 @@ import {
 
 type FormControl = Control<FoodFormValues, unknown, FoodInput>
 
-/** 음식 추가·수정 폼 (FR-FOOD-04~05, 08, R45). 바텀 시트 안에 놓인다 */
+/** 음식 추가·수정 폼 (FR-FOOD-04~05, 08, 10, R45~46). 바텀 시트 안에 놓인다 */
 export function FoodForm({
   initial,
   birthDate,
@@ -56,6 +56,7 @@ export function FoodForm({
       // 알러지·주의 음식의 상태는 지정·해제로만 바뀌므로 묻지 않는다 (FR-FOOD-06, T-38)
       alreadyTried: initial?.status === 'caution' ? null : (initial?.manualTried ?? false),
       firstTriedDate: initial?.manualFirstTriedDate ?? '',
+      preference: initial?.preference ?? null,
     },
   })
 
@@ -183,7 +184,7 @@ function GroupField({ control }: { control: FormControl }) {
 }
 
 /**
- * "이미 먹어 봤어요" + 처음 먹은 날(선택) (FR-FOOD-05, BR-17, R45).
+ * "이미 먹어 봤어요" + 처음 먹은 날(선택)과 아이 반응(선택) (FR-FOOD-05, 10, BR-17, R45~46).
  * 기본 음식처럼 아직 안 먹어봄으로 들어간 음식도 수정할 때 고를 수 있다. 알러지·주의 음식은 묻지 않는다
  */
 function TriedField({ control, birthDate }: { control: FormControl; birthDate: string }) {
@@ -250,6 +251,40 @@ function TriedField({ control, birthDate }: { control: FormControl; birthDate: s
           />
         </Field>
       )}
+      {checked && <PreferenceField control={control} />}
+    </div>
+  )
+}
+
+/** 아이 반응 (선택): 매우 좋아함·좋아함·보통·거부. 고른 것을 다시 누르면 선택을 푼다 (시안 D-07 음식 상세와 같음) */
+function PreferenceField({ control }: { control: FormControl }) {
+  const {
+    field: { value, onChange },
+  } = useController({ control, name: 'preference' })
+
+  return (
+    <div className="flex flex-col gap-2">
+      <span id="food-preference-label" className="text-sm font-bold">
+        아이 반응 (선택)
+      </span>
+      <div
+        role="radiogroup"
+        aria-labelledby="food-preference-label"
+        className="grid grid-cols-2 gap-2 sm:grid-cols-4"
+      >
+        {FOOD_PREFERENCES.map((preference) => (
+          <button
+            key={preference.value}
+            type="button"
+            role="radio"
+            aria-checked={value === preference.value}
+            onClick={() => onChange(value === preference.value ? null : preference.value)}
+            className="h-11 rounded-xl border border-line bg-surface text-sm font-bold text-muted-foreground transition-colors aria-checked:border-2 aria-checked:border-primary aria-checked:bg-soft aria-checked:text-soft-text"
+          >
+            {preference.label}
+          </button>
+        ))}
+      </div>
     </div>
   )
 }

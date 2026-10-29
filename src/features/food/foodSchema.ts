@@ -1,6 +1,6 @@
 import { z } from 'zod'
 import type { FoodInput, FoodSaveErrorReason } from '@/lib/foodApi'
-import { FOOD_GROUP_VALUES } from '@/lib/foodTypes'
+import { FOOD_GROUP_VALUES, FOOD_PREFERENCE_VALUES } from '@/lib/foodTypes'
 import {
   DATE_MESSAGES,
   maxLengthMessage,
@@ -35,10 +35,14 @@ export function foodSchema(birthDate: string) {
       alreadyTried: z.boolean().nullable(),
       // 처음 먹은 날(선택). "이미 먹어 봤어요"를 끄면 화면에서 비운다
       firstTriedDate: optionalRecordDate({ birthDate }),
+      // 아이 반응(선택, R46). 고르지 않았으면 null
+      preference: z.enum(FOOD_PREFERENCE_VALUES).nullable(),
     })
     .transform((value): FoodInput => ({
       ...value,
       firstTriedDate: value.alreadyTried ? value.firstTriedDate : null,
+      // 먹어 보지 않은 음식에는 반응이 없다. 알러지·주의 음식(null)은 저장된 반응을 그대로 둔다
+      preference: value.alreadyTried === false ? null : value.preference,
     }))
 }
 

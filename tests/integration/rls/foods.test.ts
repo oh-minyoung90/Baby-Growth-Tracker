@@ -81,12 +81,14 @@ describe('add_food: 음식 추가 (FR-FOOD-04~05, BR-17)', () => {
       food_group: 'grain',
       already_tried: true,
       first_tried_date: '2026-07-01',
+      preference: 'love',
     })
     expect(withDate.data).toMatchObject({
       status: 'tried',
       manual_tried: true,
       manual_first_tried_date: '2026-07-01',
       first_tried_date: '2026-07-01',
+      preference: 'love',
     })
     // 처음 먹은 날은 선택 항목이다
     const withoutDate = await addFood(a.client, {
@@ -211,8 +213,9 @@ describe('상태 컬럼 보호 (D10, FR-FOOD-06)', () => {
     })
   })
 
-  it('반응은 좋아함·보통·거부만 허용된다', async () => {
-    expect((await update(aFoodId, { preference: 'love' })).error?.code).toBe('23514')
+  it('반응은 매우 좋아함·좋아함·보통·거부만 허용된다 (R46)', async () => {
+    expect((await update(aFoodId, { preference: 'love' })).data?.preference).toBe('love')
+    expect((await update(aFoodId, { preference: 'hate' })).error?.code).toBe('23514')
   })
 
   it('상태 이력은 화면에서 추가할 수 없다', async () => {
@@ -274,6 +277,14 @@ describe('update_food: 음식 수정과 "이미 먹어 봤어요" (FR-FOOD-04~05
       manual_first_tried_date: null,
       first_tried_date: null,
     })
+  })
+
+  it('반응을 함께 저장하고, 주지 않으면 지운다 (R46)', async () => {
+    const base = { food_id: foodId, name: '양배추', food_group: 'vegetable' }
+    const set = await updateFood(a.client, { ...base, preference: 'refuse' })
+    expect(set.data?.preference).toBe('refuse')
+    expect((await updateFood(a.client, base)).data?.preference).toBeNull()
+    expect((await updateFood(a.client, { ...base, preference: 'hate' })).error?.code).toBe('23514')
   })
 
   it('먹어 보지 않은 음식에 처음 먹은 날을 넣으면 거부된다', async () => {
