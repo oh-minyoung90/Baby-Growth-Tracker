@@ -44,7 +44,8 @@ export function ChildForm({
   initial?: Child
   onSaved: (child: Child) => void
 }) {
-  const save = useSaveChild()
+  // 첫 등록이면 기본 음식 목록도 함께 추가한다 (FR-FOOD-07)
+  const save = useSaveChild({ withDefaultFoods: mode === 'create' })
   const [confirmInput, setConfirmInput] = useState<ChildInput | null>(null)
   const [networkError, setNetworkError] = useState(false)
 

@@ -46,6 +46,17 @@ export function recordDate({
   })
 }
 
+/** 선택 날짜 (처음 먹은 날 등): 비어 있으면 null. 값이 있으면 recordDate와 같은 규칙으로 검사한다 */
+export function optionalRecordDate({ birthDate }: { birthDate?: string } = {}) {
+  return z
+    .string()
+    .superRefine((value, ctx) => {
+      const message = value === '' ? null : dateProblem(value, birthDate, false)
+      if (message) ctx.addIssue({ code: 'custom', message })
+    })
+    .transform((value) => (value === '' ? null : value))
+}
+
 function dateProblem(value: string, birthDate: string | undefined, allowFuture: boolean) {
   if (value === '') return DATE_MESSAGES.required
   if (!isValidDateString(value)) return DATE_MESSAGES.invalid

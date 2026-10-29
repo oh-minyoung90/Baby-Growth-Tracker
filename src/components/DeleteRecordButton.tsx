@@ -6,10 +6,15 @@ import { ConfirmDialog } from './ConfirmDialog'
 export function DeleteRecordButton({
   onConfirm,
   pending = false,
+  title = '이 기록을 삭제할까요?',
+  description = '삭제하면 되돌릴 수 없어요',
 }: {
   onConfirm: () => void
   /** 삭제 요청 중이면 버튼을 잠근다 */
   pending?: boolean
+  /** 확인 창 문구. 음식처럼 삭제 후 남는 것을 알려야 할 때 바꾼다 (FR-FOOD-08) */
+  title?: string
+  description?: string
 }) {
   const [open, setOpen] = useState(false)
   return (
@@ -20,8 +25,8 @@ export function DeleteRecordButton({
       <ConfirmDialog
         open={open}
         onOpenChange={setOpen}
-        title="이 기록을 삭제할까요?"
-        description="삭제하면 되돌릴 수 없어요"
+        title={title}
+        description={description}
         confirmLabel="삭제"
         destructive
         onConfirm={onConfirm}

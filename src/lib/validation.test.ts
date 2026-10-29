@@ -1,6 +1,12 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { z } from 'zod'
-import { DATE_MESSAGES, optionalText, recordDate, requiredText } from './validation'
+import {
+  DATE_MESSAGES,
+  optionalRecordDate,
+  optionalText,
+  recordDate,
+  requiredText,
+} from './validation'
 
 // 입력 검증 규칙 (기능요구사항서 FR-COM-02~04, 10~12)
 
@@ -83,6 +89,26 @@ describe('recordDate', () => {
   it('생년월일 이전 날짜는 받지 않는다 (FR-COM-04)', () => {
     const schema = recordDate({ birthDate: '2026-01-08' })
     expect(schema.parse('2026-01-08')).toBe('2026-01-08')
+    expect(firstError(schema.safeParse('2026-01-07'))).toBe(DATE_MESSAGES.beforeBirth)
+  })
+})
+
+describe('optionalRecordDate', () => {
+  beforeEach(() => {
+    vi.useFakeTimers({ toFake: ['Date'] })
+    vi.setSystemTime(new Date(2026, 9, 22, 9, 0))
+  })
+  afterEach(() => vi.useRealTimers())
+
+  it('비어 있으면 null로 받는다', () => {
+    expect(optionalRecordDate().parse('')).toBeNull()
+  })
+
+  it('값이 있으면 recordDate와 같은 규칙으로 검사한다', () => {
+    const schema = optionalRecordDate({ birthDate: '2026-01-08' })
+    expect(schema.parse('2026-07-01')).toBe('2026-07-01')
+    expect(firstError(schema.safeParse('2026-02-30'))).toBe(DATE_MESSAGES.invalid)
+    expect(firstError(schema.safeParse('2026-10-23'))).toBe(DATE_MESSAGES.future)
     expect(firstError(schema.safeParse('2026-01-07'))).toBe(DATE_MESSAGES.beforeBirth)
   })
 })

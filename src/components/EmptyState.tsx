@@ -14,6 +14,7 @@ export function EmptyState({
   actionLabel = '기록하기',
   to,
   onAction,
+  actionPending = false,
 }: {
   icon: LucideIcon
   title: string
@@ -21,6 +22,8 @@ export function EmptyState({
   actionLabel?: string
   to?: string
   onAction?: () => void
+  /** onAction 요청 중이면 버튼을 잠근다 */
+  actionPending?: boolean
 }) {
   return (
     <section className="flex flex-col items-center gap-3 rounded-card border bg-card px-5 py-10 text-center">
@@ -38,7 +41,7 @@ export function EmptyState({
         </Button>
       ) : (
         onAction && (
-          <Button type="button" className="mt-2" onClick={onAction}>
+          <Button type="button" className="mt-2" onClick={onAction} disabled={actionPending}>
             <Plus aria-hidden />
             {actionLabel}
           </Button>
