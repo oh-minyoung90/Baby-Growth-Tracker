@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import { Carrot, Search, TriangleAlert } from 'lucide-react'
 import { useSearchParams } from 'react-router'
 import { AddRecordButton } from '@/components/AddRecordButton'
@@ -15,6 +15,7 @@ import { notifyDone } from '@/lib/notify'
 import { useChild } from '@/lib/useChild'
 import { useFoods, useSeedDefaultFoods } from '@/lib/useFoods'
 import { useSheetParam } from '@/lib/useSheetParam'
+import { CautionForm } from './CautionForm'
 import { FoodForm } from './FoodForm'
 import { FoodList } from './FoodList'
 import {
@@ -30,7 +31,7 @@ const GROUP_OPTIONS: { value: FoodGroupFilter; label: string }[] = [
   ...FOOD_GROUPS,
 ]
 
-/** 탭에서 추가하는 음식 (R47). 알러지·주의는 음식마다 지정하므로(T-38) 추가 버튼을 두지 않는다 */
+/** 탭에서 추가하는 음식 (R47). 알러지·주의는 음식마다 수정 시트에서 지정하므로(R48) 추가 버튼을 두지 않는다 */
 const ADD_LABELS: Partial<Record<FoodStatus, string>> = {
   tried: '먹어 본 음식 추가',
   not_tried: '안 먹어 본 음식 추가',
@@ -46,7 +47,10 @@ const EMPTY_TAB_MESSAGES: Record<FoodStatus, { title: string; description?: stri
     title: '아직 안 먹어 본 음식이 없어요',
     description: '새로 시도할 음식을 추가해 보세요',
   },
-  caution: { title: '알러지·주의 음식이 없어요' },
+  caution: {
+    title: '알러지·주의 음식이 없어요',
+    description: '음식을 눌러 [알러지·주의로 지정]을 고르면 여기에 모여요',
+  },
 }
 
 /**
@@ -237,7 +241,7 @@ function SearchInput({ value, onChange }: { value: string; onChange: (value: str
   )
 }
 
-/** 추가·수정 바텀 시트 */
+/** 추가·수정 바텀 시트. 수정 중에 알러지·주의 지정 화면으로 바뀔 수 있다 (R48) */
 function FoodSheet({
   open,
   initial,
@@ -258,23 +262,81 @@ function FoodSheet({
   // 닫히는 동안(애니메이션)에도 열려 있던 내용을 유지한다. 수정 시트가 닫히며 빈 입력 화면으로 바뀌어 보이지 않게
   const [shown, setShown] = useState(initial)
   if (open && shown !== initial) setShown(initial)
-  const title = shown ? '음식 수정' : addTried ? '먹어 본 음식 추가' : '안 먹어 본 음식 추가'
 
   return (
     <Sheet open={open} onOpenChange={(next) => !next && onClose()}>
       {/* 설명 문구가 없는 창이라 aria-describedby를 비운다 (Radix 경고 방지) */}
       <SheetContent aria-describedby={undefined}>
-        <SheetTitle>{title}</SheetTitle>
-        <FoodForm
+        <FoodSheetBody
+          // 다른 음식을 열면 수정 화면부터 다시 시작한다
           key={shown?.id ?? 'new'}
           initial={shown}
           addTried={addTried}
           birthDate={birthDate}
           foods={foods}
-          onDone={onClose}
+          onClose={onClose}
           onEditExisting={onEditExisting}
         />
       </SheetContent>
     </Sheet>
+  )
+}
+
+function FoodSheetBody({
+  initial,
+  addTried,
+  birthDate,
+  foods,
+  onClose,
+  onEditExisting,
+}: {
+  initial: Food | undefined
+  addTried: boolean
+  birthDate: string
+  foods: readonly Food[]
+  onClose: () => void
+  onEditExisting: (id: string) => void
+}) {
+  const [designating, setDesignating] = useState(false)
+  const titleRef = useRef<HTMLHeadingElement>(null)
+
+  // 화면이 바뀌면 시트 맨 위로 올리고 시트에 초점을 둔다 (누른 버튼이 사라지므로)
+  const switchTo = (next: boolean) => {
+    setDesignating(next)
+    const content = titleRef.current?.closest<HTMLElement>('[data-slot="sheet-content"]')
+    if (content) {
+      content.scrollTop = 0
+      content.focus()
+    }
+  }
+
+  if (initial && designating) {
+    return (
+      <>
+        <SheetTitle ref={titleRef}>알러지·주의 지정</SheetTitle>
+        <CautionForm
+          food={initial}
+          birthDate={birthDate}
+          onCancel={() => switchTo(false)}
+          onDone={onClose}
+        />
+      </>
+    )
+  }
+
+  const title = initial ? '음식 수정' : addTried ? '먹어 본 음식 추가' : '안 먹어 본 음식 추가'
+  return (
+    <>
+      <SheetTitle ref={titleRef}>{title}</SheetTitle>
+      <FoodForm
+        initial={initial}
+        addTried={addTried}
+        birthDate={birthDate}
+        foods={foods}
+        onDone={onClose}
+        onEditExisting={onEditExisting}
+        onDesignate={() => switchTo(true)}
+      />
+    </>
   )
 }

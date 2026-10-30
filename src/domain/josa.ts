@@ -21,3 +21,10 @@ export function withTopicParticle(word: string): string {
   const particle = batchim === null ? '은(는)' : batchim ? '은' : '는'
   return `${word.trim()}${particle}`
 }
+
+/** 을/를: 받침이 있으면 "을", 없으면 "를", 한글이 아니면 "을(를)". 예: 달걀을, 우유를 */
+export function withObjectParticle(word: string): string {
+  const batchim = hasFinalConsonant(word)
+  const particle = batchim === null ? '을(를)' : batchim ? '을' : '를'
+  return `${word.trim()}${particle}`
+}

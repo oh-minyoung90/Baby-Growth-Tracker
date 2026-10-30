@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { zodResolver } from '@hookform/resolvers/zod'
-import { Info } from 'lucide-react'
+import { TriangleAlert } from 'lucide-react'
 import { useController, useForm, useWatch, type Control } from 'react-hook-form'
 import { DeleteRecordButton } from '@/components/DeleteRecordButton'
 import { ErrorBanner } from '@/components/ErrorBanner'
@@ -9,29 +9,58 @@ import { Field, FieldError } from '@/components/form/Field'
 import { invalidProps } from '@/components/form/invalidProps'
 import { TextField } from '@/components/form/TextField'
 import { Button } from '@/components/ui/button'
-import { todayString } from '@/domain/date'
-import { withTopicParticle } from '@/domain/josa'
-import { FoodSaveError, type Food, type FoodInput } from '@/lib/foodApi'
+import { formatDateLabel, todayString } from '@/domain/date'
+import { withObjectParticle, withTopicParticle } from '@/domain/josa'
+import {
+  CautionSaveError,
+  FoodSaveError,
+  type CautionInput,
+  type Food,
+  type FoodInput,
+} from '@/lib/foodApi'
 import { FOOD_GROUPS, FOOD_PREFERENCES } from '@/lib/foodTypes'
 import { NETWORK_ERROR_MESSAGES } from '@/lib/messages'
-import { notifySaved } from '@/lib/notify'
-import { useDeleteFood, useSaveFood } from '@/lib/useFoods'
+import { notifyDone, notifySaved } from '@/lib/notify'
+import {
+  useClearCautionTag,
+  useDeleteFood,
+  useReleaseFoodCaution,
+  useSaveCautionFood,
+  useSaveFood,
+} from '@/lib/useFoods'
+import { CautionInfoFields } from './CautionFields'
+import { Notice } from './Notice'
+import { ReasonDialog } from './ReasonDialog'
 import { findSameName } from './foodFilter'
 import {
   FOOD_MESSAGES,
   MEMO_MAX,
   NAME_MAX,
   foodSchema,
+  serverCautionFieldError,
   serverFieldError,
+  type FoodFormOutput,
   type FoodFormValues,
 } from './foodSchema'
 
-type FormControl = Control<FoodFormValues, unknown, FoodInput>
+type FormControl = Control<FoodFormValues, unknown, FoodFormOutput>
+
+/** 서버(DB) 검증 실패 → 입력칸과 문구. 네트워크 오류는 null (FR-COM-13) */
+function fieldErrorOf(error: unknown): { field: keyof FoodFormValues; message: string } | null {
+  if (error instanceof CautionSaveError) {
+    const fieldError = serverCautionFieldError(error.reason)
+    // 수정 화면은 사유를 보내지 않는다
+    if (!fieldError || fieldError.field === 'reason') return null
+    return { field: fieldError.field, message: fieldError.message }
+  }
+  return serverFieldError(error instanceof FoodSaveError ? error.reason : 'network')
+}
 
 /**
- * 음식 추가·수정 폼 (FR-FOOD-04~05, 08, 10, R45~47). 바텀 시트 안에 놓인다.
+ * 음식 추가·수정 폼 (FR-FOOD-04~05, 08, 10~13, R45~49). 바텀 시트 안에 놓인다.
  * 상태는 고르지 않는다. 추가는 보고 있던 탭(먹어봄 / 안 먹어봄)이, 수정은 그 음식의 상태가 화면 모양을 정한다.
- * 먹어봄이면 처음 먹은 날·반응을 함께 입력한다
+ * 먹어봄이면 처음 먹은 날·반응을, 알러지·주의면 반응 날짜·증상·확인 메모를 함께 고친다.
+ * 알러지·주의 지정은 시트가 지정 화면(CautionForm)으로 바뀌고, 해제·"주의" 태그 해제는 사유를 묻는 확인 창을 거친다
  */
 export function FoodForm({
   initial,
@@ -40,6 +69,7 @@ export function FoodForm({
   foods,
   onDone,
   onEditExisting,
+  onDesignate,
 }: {
   /** 수정할 음식. 없으면 새 음식 */
   initial?: Food
@@ -52,10 +82,18 @@ export function FoodForm({
   onDone: () => void
   /** 같은 이름의 기존 음식을 수정 시트로 연다 */
   onEditExisting: (id: string) => void
+  /** 시트를 알러지·주의 지정 화면으로 바꾼다 (R48) */
+  onDesignate?: () => void
 }) {
   const save = useSaveFood()
+  const saveCaution = useSaveCautionFood()
   const remove = useDeleteFood()
+  const release = useReleaseFoodCaution()
+  const clearTag = useClearCautionTag()
   const [failed, setFailed] = useState<'save' | 'delete' | null>(null)
+  const [dialog, setDialog] = useState<'release' | 'clearTag' | null>(null)
+  const saving = save.isPending || saveCaution.isPending
+  const isCaution = initial?.status === 'caution'
   // 수정 전 상태. 알러지·주의 음식은 지정·해제로만 상태가 바뀌므로 묻지 않는다 (FR-FOOD-06, T-38)
   // T-40 이후 식단 "먹음" 기록으로 먹어봄이 된 음식을 옮길 때의 동작은 그때 다시 정한다
   const initialTried = initial
@@ -67,9 +105,9 @@ export function FoodForm({
   const { control, handleSubmit, setError, setFocus, setValue, getValues } = useForm<
     FoodFormValues,
     unknown,
-    FoodInput
+    FoodFormOutput
   >({
-    resolver: zodResolver(foodSchema(birthDate)),
+    resolver: zodResolver(foodSchema(birthDate, { caution: isCaution })),
     defaultValues: {
       name: initial?.name ?? '',
       group: initial?.group ?? '',
@@ -77,6 +115,9 @@ export function FoodForm({
       alreadyTried: initialTried,
       firstTriedDate: initial?.manualFirstTriedDate ?? '',
       preference: initial?.preference ?? null,
+      reactionDate: initial?.reactionDate ?? '',
+      symptomNote: initial?.symptomNote ?? '',
+      checkNote: initial?.checkNote ?? '',
     },
   })
   const tried = useWatch({ control, name: 'alreadyTried' })
@@ -94,25 +135,45 @@ export function FoodForm({
     }
   }, [moveTarget, getValues, setValue])
 
-  const submit = async (id: string | undefined, input: FoodInput) => {
+  const submit = async (saving: () => Promise<unknown>) => {
     try {
-      await save.mutateAsync({ id, input })
+      await saving()
       notifySaved()
       onDone()
     } catch (error) {
       // 서버(DB) 검증에 걸리면 화면 검증과 같은 자리에 같은 문구로 알린다 (FR-COM-13)
-      const fieldError = serverFieldError(error instanceof FoodSaveError ? error.reason : 'network')
+      const fieldError = fieldErrorOf(error)
       if (fieldError) setError(fieldError.field, { message: fieldError.message })
       else setFailed('save')
     }
   }
+  const saveFood = (id: string | undefined, input: FoodInput) =>
+    submit(() => save.mutateAsync({ id, input }))
 
-  const onSubmit = handleSubmit(async (input) => {
+  // 알러지·주의 음식: 이름·식품군·메모와 알러지·주의 정보 중 바뀐 것만 저장한다.
+  // 아무것도 바꾸지 않았으면 다른 음식처럼 이름·식품군·메모를 그대로 다시 저장한다
+  const saveCautionFood = (food: Food, input: FoodInput, caution: CautionInput) => {
+    const infoChanged =
+      caution.reactionDate !== food.reactionDate ||
+      caution.symptomNote !== food.symptomNote ||
+      caution.checkNote !== food.checkNote
+    const basicChanged =
+      input.name !== food.name || input.group !== food.group || input.memo !== food.memo
+    return submit(() =>
+      saveCaution.mutateAsync({
+        id: food.id,
+        input: basicChanged || !infoChanged ? input : undefined,
+        caution: infoChanged ? caution : undefined,
+      }),
+    )
+  }
+
+  const onSubmit = handleSubmit(async ({ caution, ...input }) => {
     setFailed(null)
     const same = findSameName(foods, input.name, initial?.id)
     if (same && same === moveTarget) {
       // 이름은 기존 음식 그대로 두고, 메모를 비워 두었으면 기존 메모를 남긴다
-      await submit(same.id, { ...input, name: same.name, memo: input.memo ?? same.memo })
+      await saveFood(same.id, { ...input, name: same.name, memo: input.memo ?? same.memo })
       return
     }
     if (same) {
@@ -120,7 +181,8 @@ export function FoodForm({
       setFocus('name')
       return
     }
-    await submit(initial?.id, input)
+    if (initial && caution) await saveCautionFood(initial, input, caution)
+    else await saveFood(initial?.id, input)
   })
 
   const onDelete = async () => {
@@ -134,8 +196,23 @@ export function FoodForm({
     }
   }
 
+  const onRelease = async (food: Food, reason: string | null) => {
+    const released = await release.mutateAsync({ id: food.id, reason })
+    const target = released.status === 'tried' ? '먹어봄' : '아직 안 먹어봄'
+    notifyDone(`${withObjectParticle(released.name)} ${target}으로 옮겼어요`)
+    onDone()
+  }
+
+  const onClearTag = async (food: Food, reason: string | null) => {
+    await clearTag.mutateAsync({ id: food.id, reason })
+    notifyDone(`${food.name.trim()}의 "주의" 태그를 해제했어요`)
+    onDone()
+  }
+
   // 수정할 때 다른 상태로 옮기는 중인지 (저장해야 옮겨진다)
   const moving = initial !== undefined && initialTried !== null && tried !== initialTried
+  // "주의" 태그 음식은 식단 "먹음" 기록으로 먹어봄이 되었으므로(T-40) 안 먹어봄으로 옮기지 않는다
+  const canMove = initial !== undefined && initialTried !== null && !initial.cautionTag
 
   return (
     <form onSubmit={onSubmit} noValidate className="flex flex-col gap-4">
@@ -149,6 +226,9 @@ export function FoodForm({
           onRetry={() => void onDelete()}
           retrying={remove.isPending}
         />
+      )}
+      {initial?.cautionTag && (
+        <CautionTagInfo food={initial} onClear={() => setDialog('clearTag')} />
       )}
       {moving && (
         <Notice
@@ -179,6 +259,15 @@ export function FoodForm({
         )}
       </div>
       <GroupField control={control} />
+      {isCaution && (
+        <fieldset className="flex flex-col gap-4 rounded-card border border-line px-4 pt-2 pb-4">
+          <legend className="flex items-center gap-1.5 px-1.5 text-sm font-bold text-danger-text">
+            <TriangleAlert className="size-4" aria-hidden />
+            알러지·주의
+          </legend>
+          <CautionInfoFields control={control} birthDate={birthDate} />
+        </fieldset>
+      )}
       {tried === true && (
         <>
           <FirstTriedDateField control={control} birthDate={birthDate} />
@@ -199,11 +288,11 @@ export function FoodForm({
         <Button type="button" variant="soft" size="lg" onClick={onDone}>
           취소
         </Button>
-        <Button type="submit" size="lg" disabled={save.isPending}>
-          {save.isPending ? '저장하는 중…' : '저장'}
+        <Button type="submit" size="lg" disabled={saving}>
+          {saving ? '저장하는 중…' : '저장'}
         </Button>
       </div>
-      {initial && initialTried !== null && (
+      {canMove && (
         // 잘못 넣었을 때 다른 상태로 옮긴다 (R45, R47). 누르면 화면만 바뀌고 저장해야 옮겨진다
         <Button
           type="button"
@@ -224,6 +313,18 @@ export function FoodForm({
               : '먹어봄으로 옮기기'}
         </Button>
       )}
+      {initial && !isCaution && onDesignate && (
+        // 알러지·주의 지정 (FR-FOOD-11, R48). 시트가 지정 화면으로 바뀐다
+        <Button type="button" variant="outline" onClick={onDesignate}>
+          <TriangleAlert className="text-danger" aria-hidden />
+          알러지·주의로 지정
+        </Button>
+      )}
+      {initial && isCaution && (
+        <Button type="button" variant="outline" onClick={() => setDialog('release')}>
+          알러지·주의 해제
+        </Button>
+      )}
       {initial && (
         <DeleteRecordButton
           onConfirm={() => void onDelete()}
@@ -232,42 +333,80 @@ export function FoodForm({
           description="식단과 레시피에 적힌 이름은 그대로 남아요"
         />
       )}
+      {initial && (
+        <>
+          <ReasonDialog
+            open={dialog === 'release'}
+            onOpenChange={(open) => !open && setDialog(null)}
+            title="알러지·주의를 해제할까요?"
+            description={`${releaseTarget(initial)}으로 옮겨요. 반응 날짜와 증상·확인 메모는 이력에 남아요`}
+            confirmLabel="해제"
+            pending={release.isPending}
+            onConfirm={(reason) => onRelease(initial, reason)}
+          />
+          <ReasonDialog
+            open={dialog === 'clearTag'}
+            onOpenChange={(open) => !open && setDialog(null)}
+            title={'"주의" 태그를 해제할까요?'}
+            description="먹어봄은 그대로예요. 반응 날짜와 증상·확인 메모는 이력에 남아요"
+            confirmLabel="해제"
+            pending={clearTag.isPending}
+            onConfirm={(reason) => onClearTag(initial, reason)}
+          />
+        </>
+      )}
     </form>
   )
 }
 
-/** 연보라 안내 상자: 아이콘 + 제목 + 설명 (+ 버튼) */
-function Notice({
-  title,
-  detail,
-  action,
-}: {
-  title: string
-  detail: string
-  action?: { label: string; onClick: () => void }
-}) {
+/**
+ * 해제하면 옮겨 갈 목록 (FR-FOOD-12). 먹은 기록이 있으면 먹어봄, 없으면 아직 안 먹어봄.
+ * 먹은 기록: "이미 먹어 봤어요"(BR-17) 또는 식단 "먹음"으로 정해진 처음 먹은 날(T-40). 최종 판단은 DB가 한다
+ */
+function releaseTarget(food: Food): string {
+  return food.manualTried || food.firstTriedDate !== null
+    ? '먹은 기록이 있어 먹어봄'
+    : '먹은 기록이 없어 아직 안 먹어봄'
+}
+
+/**
+ * "주의" 태그 음식의 알러지·주의 정보와 태그 해제 버튼 (FR-FOOD-13~14).
+ * 알러지·주의 음식을 식단에서 먹으면 먹어봄 + "주의" 태그가 된다 (BR-11, T-40)
+ */
+function CautionTagInfo({ food, onClear }: { food: Food; onClear: () => void }) {
   return (
-    <div
-      role="status"
-      className="flex items-center gap-3 rounded-input bg-soft px-3.5 py-3 text-soft-text"
+    <section
+      aria-label="주의 정보"
+      className="flex flex-col gap-2 rounded-input bg-danger-soft px-3.5 py-3 text-sm text-danger-text"
     >
-      <Info className="size-5 shrink-0" aria-hidden />
-      <p className="min-w-0 flex-1 text-sm">
-        <strong className="block">{title}</strong>
-        {detail}
+      <p className="flex items-center gap-1.5 font-bold">
+        <TriangleAlert className="size-4 shrink-0" aria-hidden />
+        주의: 알러지·주의였던 음식을 먹었어요
       </p>
-      {action && (
-        <Button
-          type="button"
-          variant="outline"
-          size="sm"
-          className="shrink-0"
-          onClick={action.onClick}
-        >
-          {action.label}
-        </Button>
-      )}
-    </div>
+      <dl className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-1">
+        {food.reactionDate && (
+          <>
+            <dt>반응 날짜</dt>
+            <dd className="font-bold">{formatDateLabel(food.reactionDate)}</dd>
+          </>
+        )}
+        {food.symptomNote && (
+          <>
+            <dt>증상</dt>
+            <dd className="font-bold break-words whitespace-pre-line">{food.symptomNote}</dd>
+          </>
+        )}
+        {food.checkNote && (
+          <>
+            <dt>확인</dt>
+            <dd className="font-bold break-words whitespace-pre-line">{food.checkNote}</dd>
+          </>
+        )}
+      </dl>
+      <Button type="button" variant="outline" size="sm" className="self-start" onClick={onClear}>
+        &quot;주의&quot; 태그 해제
+      </Button>
+    </section>
   )
 }
 

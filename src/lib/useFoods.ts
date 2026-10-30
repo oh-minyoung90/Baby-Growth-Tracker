@@ -1,10 +1,14 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import {
+  clearCautionTag,
   createFood,
   deleteFood,
   fetchFoods,
+  releaseFoodCaution,
   seedDefaultFoods,
+  setFoodCaution,
   updateFood,
+  type CautionInput,
   type FoodInput,
 } from './foodApi'
 
@@ -38,6 +42,66 @@ export function useSeedDefaultFoods() {
   const queryClient = useQueryClient()
   return useMutation({
     mutationFn: seedDefaultFoods,
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: FOODS_QUERY_KEY }),
+  })
+}
+
+/**
+ * 알러지·주의 음식 수정 (FR-FOOD-04, 11): 이름·식품군·메모(input)와 알러지·주의 정보(caution) 중 넘긴 것만 저장한다.
+ * 두 번에 나눠 저장하므로 앞의 것만 저장되고 실패할 수 있어, 실패해도 목록을 다시 불러온다
+ */
+export function useSaveCautionFood() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: async ({
+      id,
+      input,
+      caution,
+    }: {
+      id: string
+      input?: FoodInput
+      caution?: CautionInput
+    }) => {
+      if (input) await updateFood(id, input)
+      if (caution) await setFoodCaution(id, caution)
+    },
+    onSettled: () => queryClient.invalidateQueries({ queryKey: FOODS_QUERY_KEY }),
+  })
+}
+
+/** 알러지·주의 지정 (FR-FOOD-11). 사유는 이력에 남는다 */
+export function useSetFoodCaution() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: ({
+      id,
+      input,
+      reason,
+    }: {
+      id: string
+      input: CautionInput
+      reason: string | null
+    }) => setFoodCaution(id, input, reason),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: FOODS_QUERY_KEY }),
+  })
+}
+
+/** 알러지·주의 해제 (FR-FOOD-12). 바뀐 음식을 돌려준다 (먹어봄 또는 아직 안 먹어봄) */
+export function useReleaseFoodCaution() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: ({ id, reason }: { id: string; reason: string | null }) =>
+      releaseFoodCaution(id, reason),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: FOODS_QUERY_KEY }),
+  })
+}
+
+/** "주의" 태그 해제 (FR-FOOD-13) */
+export function useClearCautionTag() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: ({ id, reason }: { id: string; reason: string | null }) =>
+      clearCautionTag(id, reason),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: FOODS_QUERY_KEY }),
   })
 }
