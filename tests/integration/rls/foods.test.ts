@@ -374,28 +374,29 @@ describe('알러지·주의 지정·해제 (FR-FOOD-11~13, BR-11, BR-13, D11, R4
         .eq('food_id', foodId)
         .order('changed_at')
     ).data ?? []
+  // 이름은 위 묶음들과 겹치지 않게 고른다 (계정당 같은 이름 하나, BR-18)
   // 화면은 기기의 오늘을 보낸다. 테스트는 UTC 날짜로 대신한다
   const today = utcDate(0)
-  let tofuId: string
+  let eggId: string
   let yogurtId: string
 
   beforeAll(async () => {
-    const tofu = await addFood(a.client, { name: '두부', food_group: 'etc' })
+    const egg = await addFood(a.client, { name: '메추리알', food_group: 'protein' })
     const yogurt = await addFood(a.client, {
-      name: '요거트',
+      name: '그릭요거트',
       food_group: 'dairy',
       already_tried: true,
       first_tried_date: '2026-07-01',
     })
-    if (tofu.error) throw tofu.error
+    if (egg.error) throw egg.error
     if (yogurt.error) throw yogurt.error
-    tofuId = tofu.data.id
+    eggId = egg.data.id
     yogurtId = yogurt.data.id
   })
 
   it('아직 안 먹어봄 음식을 지정하면 알러지·주의가 되고, 사유와 함께 이력이 남는다', async () => {
     const { data, error } = await setCaution(a.client, {
-      food_id: tofuId,
+      food_id: eggId,
       reaction_date: '2026-10-01',
       today,
       symptom_note: '두드러기',
@@ -410,7 +411,7 @@ describe('알러지·주의 지정·해제 (FR-FOOD-11~13, BR-11, BR-13, D11, R4
       symptom_note: '두드러기',
       check_note: null,
     })
-    expect(await history(tofuId)).toEqual([
+    expect(await history(eggId)).toEqual([
       expect.objectContaining({
         owner_id: a.userId,
         from_status: 'not_tried',
@@ -425,7 +426,7 @@ describe('알러지·주의 지정·해제 (FR-FOOD-11~13, BR-11, BR-13, D11, R4
 
   it('이미 알러지·주의면 반응 날짜·메모만 고치고, 지정한 날과 이력은 그대로다', async () => {
     const { data, error } = await setCaution(a.client, {
-      food_id: tofuId,
+      food_id: eggId,
       reaction_date: '2026-10-02',
       today,
       symptom_note: '두드러기 심함',
@@ -439,11 +440,11 @@ describe('알러지·주의 지정·해제 (FR-FOOD-11~13, BR-11, BR-13, D11, R4
       symptom_note: '두드러기 심함',
       check_note: '소아과 진료',
     })
-    expect(await history(tofuId)).toHaveLength(1)
+    expect(await history(eggId)).toHaveLength(1)
   })
 
   it('알러지·주의 음식은 update_food로 이름은 고칠 수 있지만 already_tried는 거부한다 (22023)', async () => {
-    const base = { food_id: tofuId, name: '두부', food_group: 'etc' }
+    const base = { food_id: eggId, name: '메추리알', food_group: 'protein' }
     const renamed = await a.client.rpc('update_food', { ...base, memo: '부침용' })
     expect(renamed.error).toBeNull()
     expect(renamed.data).toMatchObject({ status: 'caution', memo: '부침용' })
@@ -453,7 +454,7 @@ describe('알러지·주의 지정·해제 (FR-FOOD-11~13, BR-11, BR-13, D11, R4
   })
 
   it('반응 날짜는 미래·생년월일 이전·기기의 오늘 이후를 거부하고, 메모·사유는 500자까지다', async () => {
-    const base = { food_id: tofuId, today }
+    const base = { food_id: eggId, today }
     expect(
       (await setCaution(a.client, { ...base, reaction_date: utcDate(3), today: utcDate(3) })).error
         ?.code,
@@ -461,7 +462,7 @@ describe('알러지·주의 지정·해제 (FR-FOOD-11~13, BR-11, BR-13, D11, R4
     expect(
       (
         await setCaution(a.client, {
-          food_id: tofuId,
+          food_id: eggId,
           reaction_date: '2026-10-02',
           today: '2026-10-01',
         })
@@ -482,7 +483,7 @@ describe('알러지·주의 지정·해제 (FR-FOOD-11~13, BR-11, BR-13, D11, R4
   })
 
   it('해제하면 먹은 기록이 없는 음식은 아직 안 먹어봄이 되고, 알러지·주의 정보는 이력으로 옮긴다 (R49)', async () => {
-    const { data, error } = await release(a.client, tofuId, '괜찮다고 함')
+    const { data, error } = await release(a.client, eggId, '괜찮다고 함')
     expect(error).toBeNull()
     expect(data).toMatchObject({
       status: 'not_tried',
@@ -492,7 +493,7 @@ describe('알러지·주의 지정·해제 (FR-FOOD-11~13, BR-11, BR-13, D11, R4
       check_note: null,
       first_tried_date: null,
     })
-    expect((await history(tofuId)).at(-1)).toMatchObject({
+    expect((await history(eggId)).at(-1)).toMatchObject({
       from_status: 'caution',
       to_status: 'not_tried',
       trigger: 'manual',
@@ -529,23 +530,23 @@ describe('알러지·주의 지정·해제 (FR-FOOD-11~13, BR-11, BR-13, D11, R4
 
   it('알러지·주의가 아닌 음식은 해제할 수 없고, "주의" 태그가 없으면 태그 해제도 거부한다 (22023)', async () => {
     // 정상적인 "주의" 태그 해제는 식단으로 태그가 붙는 T-40에서 확인한다
-    expect((await release(a.client, tofuId)).error?.code).toBe('22023')
+    expect((await release(a.client, eggId)).error?.code).toBe('22023')
     expect((await a.client.rpc('clear_caution_tag', { food_id: yogurtId })).error?.code).toBe(
       '22023',
     )
   })
 
   it('해제 사유는 500자까지다', async () => {
-    await setCaution(a.client, { food_id: tofuId, reaction_date: '2026-10-01', today })
+    await setCaution(a.client, { food_id: eggId, reaction_date: '2026-10-01', today })
     try {
-      expect((await release(a.client, tofuId, '가'.repeat(501))).error?.code).toBe('23514')
+      expect((await release(a.client, eggId, '가'.repeat(501))).error?.code).toBe('23514')
     } finally {
-      await release(a.client, tofuId)
+      await release(a.client, eggId)
     }
   })
 
   it('다른 사람의 음식은 지정·해제할 수 없고(P0002), 로그인하지 않으면 호출할 수 없다 (42501)', async () => {
-    const args = { food_id: tofuId, reaction_date: '2026-10-01', today }
+    const args = { food_id: eggId, reaction_date: '2026-10-01', today }
     expect((await setCaution(b.client, args)).error?.code).toBe('P0002')
     expect((await release(b.client, yogurtId)).error?.code).toBe('P0002')
     expect((await b.client.rpc('clear_caution_tag', { food_id: yogurtId })).error?.code).toBe(
@@ -557,7 +558,7 @@ describe('알러지·주의 지정·해제 (FR-FOOD-11~13, BR-11, BR-13, D11, R4
     expect((await anon.rpc('clear_caution_tag', { food_id: yogurtId })).error?.code).toBe('42501')
     // 이력도 본인 것만 보인다
     expect(
-      (await b.client.from('food_status_history').select('*').eq('food_id', tofuId)).data,
+      (await b.client.from('food_status_history').select('*').eq('food_id', eggId)).data,
     ).toEqual([])
   })
 })
