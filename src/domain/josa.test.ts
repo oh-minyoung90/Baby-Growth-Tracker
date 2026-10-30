@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { hasFinalConsonant, withTopicParticle } from './josa'
+import { hasFinalConsonant, withObjectParticle, withTopicParticle } from './josa'
 
 describe('withTopicParticle (은/는)', () => {
   it.each([
@@ -14,6 +14,17 @@ describe('withTopicParticle (은/는)', () => {
 
   it('한글이 아니면 두 조사를 함께 쓴다', () => {
     expect(withTopicParticle('Leo')).toBe('Leo은(는)')
+  })
+})
+
+describe('withObjectParticle (을/를)', () => {
+  it.each([
+    ['달걀', '달걀을'],
+    ['우유', '우유를'],
+    [' 흰살생선 ', '흰살생선을'],
+    ['MCT oil', 'MCT oil을(를)'],
+  ])('%s → %s', (word, expected) => {
+    expect(withObjectParticle(word)).toBe(expected)
   })
 })
 

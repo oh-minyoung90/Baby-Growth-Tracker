@@ -1,4 +1,5 @@
 import type { PostgrestError } from '@supabase/supabase-js'
+import { todayString } from '@/domain/date'
 import type { Tables } from '@/lib/database.types'
 import { dateErrorReason, violatedCheck } from '@/lib/dbErrors'
 import {
@@ -27,9 +28,10 @@ export interface Food {
   manualFirstTriedDate: string | null
   preference: FoodPreference | null
   memo: string | null
-  /** 알러지·주의: 반응 날짜, 증상 메모 (FR-FOOD-11) */
+  /** 알러지·주의: 반응 날짜, 증상 메모, 확인 메모 (FR-FOOD-11). 알러지·주의이거나 "주의" 태그가 있는 동안에만 있다 (R49) */
   reactionDate: string | null
   symptomNote: string | null
+  checkNote: string | null
 }
 
 /** 음식 추가·수정 입력 (FR-FOOD-04~05, R45) */
@@ -45,6 +47,14 @@ export interface FoodInput {
   preference: FoodPreference | null
 }
 
+/** 알러지·주의 정보 입력 (FR-FOOD-11) */
+export interface CautionInput {
+  /** 반응 날짜 'YYYY-MM-DD' (필수, 오늘까지) */
+  reactionDate: string
+  symptomNote: string | null
+  checkNote: string | null
+}
+
 /** 저장 실패 이유. 화면은 이 값으로 안내 문구와 표시할 입력칸을 고른다 */
 export type FoodSaveErrorReason =
   'duplicateName' | 'nameLength' | 'memoLength' | 'futureDate' | 'beforeBirth' | 'network'
@@ -58,8 +68,21 @@ export class FoodSaveError extends Error {
   }
 }
 
+/** 알러지·주의 지정·해제 실패 이유 (FR-FOOD-11~13) */
+export type CautionSaveErrorReason =
+  'futureDate' | 'beforeBirth' | 'symptomLength' | 'checkNoteLength' | 'reasonLength' | 'network'
+
+export class CautionSaveError extends Error {
+  readonly reason: CautionSaveErrorReason
+
+  constructor(reason: CautionSaveErrorReason) {
+    super(reason)
+    this.reason = reason
+  }
+}
+
 const COLUMNS =
-  'id, name, food_group, status, caution_tag, first_tried_date, manual_tried, manual_first_tried_date, preference, memo, reaction_date, symptom_note'
+  'id, name, food_group, status, caution_tag, first_tried_date, manual_tried, manual_first_tried_date, preference, memo, reaction_date, symptom_note, check_note'
 
 type Row = Pick<
   Tables<'foods'>,
@@ -75,6 +98,7 @@ type Row = Pick<
   | 'memo'
   | 'reaction_date'
   | 'symptom_note'
+  | 'check_note'
 >
 
 function toFood(row: Row): Food {
@@ -94,6 +118,7 @@ function toFood(row: Row): Food {
     memo: row.memo,
     reactionDate: row.reaction_date,
     symptomNote: row.symptom_note,
+    checkNote: row.check_note,
   }
 }
 
@@ -110,6 +135,23 @@ function toSaveError(error: PostgrestError, input: FoodInput): FoodSaveError {
   if (error.code === '23505') return new FoodSaveError('duplicateName')
   const check = violatedCheck(error, Object.keys(CHECK_REASONS) as (keyof typeof CHECK_REASONS)[])
   return new FoodSaveError(check ? CHECK_REASONS[check] : 'network')
+}
+
+/** CHECK 제약 이름 → 실패 이유 (T-36·T-38 마이그레이션) */
+const CAUTION_CHECK_REASONS = {
+  foods_symptom_note_length: 'symptomLength',
+  foods_check_note_length: 'checkNoteLength',
+  food_status_history_reason_length: 'reasonLength',
+} as const satisfies Record<string, CautionSaveErrorReason>
+
+function toCautionError(error: PostgrestError, reactionDate?: string): CautionSaveError {
+  const dateReason = reactionDate ? dateErrorReason(error, reactionDate) : null
+  if (dateReason) return new CautionSaveError(dateReason)
+  const check = violatedCheck(
+    error,
+    Object.keys(CAUTION_CHECK_REASONS) as (keyof typeof CAUTION_CHECK_REASONS)[],
+  )
+  return new CautionSaveError(check ? CAUTION_CHECK_REASONS[check] : 'network')
 }
 
 /** 함수 인자: null은 보내지 않아 DB 기본값(null)을 쓴다 */
@@ -155,6 +197,51 @@ export async function updateFood(id: string, input: FoodInput): Promise<Food> {
 export async function deleteFood(id: string): Promise<void> {
   const { error } = await supabase.from('foods').delete().eq('id', id)
   if (error) throw error
+}
+
+/**
+ * 알러지·주의로 지정한다 (FR-FOOD-11, BR-11). 사유는 이력에 남는다.
+ * 이미 알러지·주의인 음식이면 반응 날짜·메모만 고친다 (이력은 남지 않음).
+ * 지정한 날은 기기의 오늘이다 (D11. 서버는 기기 시간대를 모름, D2)
+ */
+export async function setFoodCaution(
+  id: string,
+  input: CautionInput,
+  reason: string | null = null,
+): Promise<Food> {
+  const { data, error } = await supabase.rpc('set_food_caution', {
+    food_id: id,
+    reaction_date: input.reactionDate,
+    today: todayString(),
+    symptom_note: input.symptomNote ?? undefined,
+    check_note: input.checkNote ?? undefined,
+    reason: reason ?? undefined,
+  })
+  if (error) throw toCautionError(error, input.reactionDate)
+  return toFood(data)
+}
+
+/**
+ * 알러지·주의 해제 (FR-FOOD-12). 먹은 기록이 있으면 먹어봄, 없으면 아직 안 먹어봄이 된다.
+ * 알러지·주의 정보는 이력에 옮겨 적고 음식에서는 지운다 (R49). 바뀐 음식을 돌려준다
+ */
+export async function releaseFoodCaution(id: string, reason: string | null): Promise<Food> {
+  const { data, error } = await supabase.rpc('release_food_caution', {
+    food_id: id,
+    reason: reason ?? undefined,
+  })
+  if (error) throw toCautionError(error)
+  return toFood(data)
+}
+
+/** 먹어봄 음식의 "주의" 태그 해제 (FR-FOOD-13). 알러지·주의 정보는 이력으로 옮긴다 (R49) */
+export async function clearCautionTag(id: string, reason: string | null): Promise<Food> {
+  const { data, error } = await supabase.rpc('clear_caution_tag', {
+    food_id: id,
+    reason: reason ?? undefined,
+  })
+  if (error) throw toCautionError(error)
+  return toFood(data)
 }
 
 /** 기본 음식 목록(부록 B)을 아직 안 먹어봄으로 추가한다. 같은 이름은 건너뛰고, 추가한 수를 돌려준다 (FR-FOOD-07) */

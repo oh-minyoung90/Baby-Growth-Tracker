@@ -23,6 +23,7 @@ function food(values: Partial<Food> & Pick<Food, 'id' | 'name'>): Food {
     memo: null,
     reactionDate: null,
     symptomNote: null,
+    checkNote: null,
     ...values,
   }
 }

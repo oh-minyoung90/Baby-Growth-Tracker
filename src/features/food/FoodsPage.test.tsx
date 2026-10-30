@@ -5,17 +5,22 @@ import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } 
 import type { AuthState } from '@/lib/auth'
 import { fetchMyChild } from '@/lib/childApi'
 import {
+  CautionSaveError,
   FoodSaveError,
+  clearCautionTag,
   createFood,
   deleteFood,
   fetchFoods,
+  releaseFoodCaution,
   seedDefaultFoods,
+  setFoodCaution,
   updateFood,
   type Food,
 } from '@/lib/foodApi'
 import { renderApp } from '@/test/renderApp'
 
-// 음식 목록 (T-37, SCR-10, FR-FOOD-01~08, R45). 테스트 데이터는 가명이다.
+// 음식 목록 (T-37, SCR-10, FR-FOOD-01~08, R45)과 알러지·주의 지정·해제 (T-38, FR-FOOD-11~14, R48~49).
+// 테스트 데이터는 가명이다.
 // 서버 대신 메모리 목록(store)에 저장해, 저장 후 목록을 다시 불러오는 흐름까지 확인한다.
 
 vi.mock('@/lib/childApi', async (importOriginal) => ({
@@ -29,6 +34,9 @@ vi.mock('@/lib/foodApi', async (importOriginal) => ({
   updateFood: vi.fn(),
   deleteFood: vi.fn(),
   seedDefaultFoods: vi.fn(),
+  setFoodCaution: vi.fn(),
+  releaseFoodCaution: vi.fn(),
+  clearCautionTag: vi.fn(),
 }))
 
 // jsdom에는 ResizeObserver가 없다. Radix 체크박스가 폼 안에서 크기를 잴 때 쓰므로 이 파일에서만 빈 구현을 둔다
@@ -60,6 +68,7 @@ function food(values: Partial<Food> & Pick<Food, 'id' | 'name'>): Food {
     memo: null,
     reactionDate: null,
     symptomNote: null,
+    checkNote: null,
     ...values,
   }
 }
@@ -119,6 +128,28 @@ beforeEach(() => {
   vi.mocked(deleteFood).mockImplementation(async (id) => {
     store = store.filter((item) => item.id !== id)
   })
+  // 알러지·주의 함수: DB 함수(T-38 마이그레이션)와 같은 결과를 메모리 목록에 반영한다
+  const replace = (id: string, change: (current: Food) => Food) => {
+    const current = store.find((item) => item.id === id)
+    if (!current) throw new Error('없음')
+    const updated = change(current)
+    store = store.map((item) => (item.id === id ? updated : item))
+    return updated
+  }
+  const noInfo = { reactionDate: null, symptomNote: null, checkNote: null }
+  vi.mocked(setFoodCaution).mockImplementation(async (id, input) =>
+    replace(id, (current) => ({ ...current, ...input, status: 'caution', cautionTag: false })),
+  )
+  vi.mocked(releaseFoodCaution).mockImplementation(async (id) =>
+    replace(id, (current) => ({
+      ...current,
+      ...noInfo,
+      status: current.manualTried ? 'tried' : 'not_tried',
+    })),
+  )
+  vi.mocked(clearCautionTag).mockImplementation(async (id) =>
+    replace(id, (current) => ({ ...current, ...noInfo, cautionTag: false })),
+  )
   vi.mocked(seedDefaultFoods).mockImplementation(async () => {
     store.push(
       food({ id: 's1', name: '쌀', group: 'grain' }),
@@ -372,7 +403,7 @@ describe('음식 추가: 탭이 추가할 음식을 정한다 (FR-FOOD-04~05, R4
     expect(router.state.location.search).toBe('?status=not_tried')
   })
 
-  it('알러지·주의 탭에는 추가 버튼이 없다 (지정은 음식마다, T-38)', async () => {
+  it('알러지·주의 탭에는 추가 버튼이 없다 (지정은 음식마다, R48)', async () => {
     await renderFoods('/meals/foods?status=caution')
     await screen.findByText('알러지·주의 음식이 없어요')
     expect(screen.queryByRole('button', { name: /음식 추가$/ })).toBeNull()
@@ -621,5 +652,206 @@ describe('음식 수정·삭제: 음식의 상태가 수정 시트 모양을 정
     await waitForSheetClosed()
     expect(deleteFood).toHaveBeenCalledWith('a')
     expect(await screen.findByText('아직 안 먹어 본 음식이 없어요')).toBeInTheDocument()
+  })
+})
+
+describe('알러지·주의 지정·해제 (FR-FOOD-11~14, BR-11, R48~49)', () => {
+  beforeEach(() => {
+    store = [
+      food({ id: 'a', name: '달걀', group: 'protein' }),
+      food({
+        id: 'b',
+        name: '땅콩',
+        group: 'etc',
+        status: 'caution',
+        reactionDate: '2026-10-01',
+        symptomNote: '입 주변 두드러기',
+      }),
+      food({
+        id: 'c',
+        name: '우유',
+        group: 'dairy',
+        status: 'caution',
+        manualTried: true,
+        manualFirstTriedDate: '2026-08-01',
+        firstTriedDate: '2026-08-01',
+        reactionDate: '2026-10-05',
+      }),
+      // 알러지·주의 음식을 식단에서 먹어 "주의" 태그가 붙은 음식 (T-40)
+      food({
+        id: 'd',
+        name: '연어',
+        group: 'protein',
+        status: 'tried',
+        cautionTag: true,
+        firstTriedDate: '2026-10-10',
+        reactionDate: '2026-09-20',
+        symptomNote: '토함',
+        checkNote: '소아과 진료',
+      }),
+    ]
+  })
+
+  it('수정 시트에서 [알러지·주의로 지정]을 누르면 지정 화면으로 바뀌고, 지정해도 보던 탭에 남는다', async () => {
+    const { router } = await renderFoods('/meals/foods?status=not_tried')
+    await userEvent.click(await screen.findByRole('button', { name: /달걀/ }))
+    await userEvent.click(
+      within(await screen.findByRole('dialog', { name: '음식 수정' })).getByRole('button', {
+        name: '알러지·주의로 지정',
+      }),
+    )
+
+    const sheet = screen.getByRole('dialog', { name: '알러지·주의 지정' })
+    expect(within(sheet).getByRole('status')).toHaveTextContent('달걀을 알러지·주의로 옮겨요')
+    // 반응 날짜의 기본값은 오늘이다
+    expect(within(sheet).getByLabelText('반응 날짜')).toHaveValue('2026-10-22')
+    await userEvent.type(within(sheet).getByLabelText('증상 메모'), '입 주변이 빨개졌어요')
+    await userEvent.type(within(sheet).getByLabelText('지정 사유 (선택)'), '소아과 권유')
+    await userEvent.click(within(sheet).getByRole('button', { name: '지정' }))
+
+    expect(await screen.findByText('달걀을 알러지·주의로 지정했어요')).toBeInTheDocument()
+    expect(setFoodCaution).toHaveBeenCalledWith(
+      'a',
+      { reactionDate: '2026-10-22', symptomNote: '입 주변이 빨개졌어요', checkNote: null },
+      '소아과 권유',
+    )
+    await waitForSheetClosed()
+    expect(router.state.location.search).toBe('?status=not_tried')
+    // 목록은 시트가 닫힌 뒤 다시 불러오므로 기다린다
+    expect(await screen.findByText('아직 안 먹어 본 음식이 없어요')).toBeInTheDocument()
+    expect(statusTab(/^알러지·주의 3개/)).toBeInTheDocument()
+  })
+
+  it('지정 화면에서 [취소]를 누르면 수정 화면으로 돌아간다', async () => {
+    await renderFoods('/meals/foods?status=not_tried&record=a')
+    const edit = await screen.findByRole('dialog', { name: '음식 수정' })
+    await userEvent.click(within(edit).getByRole('button', { name: '알러지·주의로 지정' }))
+    const sheet = screen.getByRole('dialog', { name: '알러지·주의 지정' })
+    await userEvent.click(within(sheet).getByRole('button', { name: '취소' }))
+
+    const back = screen.getByRole('dialog', { name: '음식 수정' })
+    expect(within(back).getByLabelText('이름')).toHaveValue('달걀')
+    expect(setFoodCaution).not.toHaveBeenCalled()
+  })
+
+  it('반응 날짜는 필수이고, 서버가 날짜를 거부하면 같은 칸에 알린다', async () => {
+    await renderFoods('/meals/foods?status=not_tried&record=a')
+    await userEvent.click(
+      within(await screen.findByRole('dialog', { name: '음식 수정' })).getByRole('button', {
+        name: '알러지·주의로 지정',
+      }),
+    )
+    const sheet = screen.getByRole('dialog', { name: '알러지·주의 지정' })
+    const date = within(sheet).getByLabelText('반응 날짜')
+    fireEvent.change(date, { target: { value: '' } })
+    await userEvent.click(within(sheet).getByRole('button', { name: '지정' }))
+    // 빈 날짜칸에도 같은 안내가 보이므로 오류 문구만 찾는다
+    expect(
+      await within(sheet).findByText('날짜를 선택해 주세요', { selector: '[role=alert]' }),
+    ).toBeInTheDocument()
+    expect(setFoodCaution).not.toHaveBeenCalled()
+
+    vi.mocked(setFoodCaution).mockRejectedValueOnce(new CautionSaveError('beforeBirth'))
+    fireEvent.change(date, { target: { value: '2026-10-20' } })
+    await userEvent.click(within(sheet).getByRole('button', { name: '지정' }))
+    expect(
+      await within(sheet).findByText('생년월일 이전 날짜는 고를 수 없어요'),
+    ).toBeInTheDocument()
+    expect(date).toHaveAttribute('aria-invalid', 'true')
+  })
+
+  it('알러지·주의 음식: 알러지·주의 정보를 함께 고치고, 바뀐 것만 저장한다', async () => {
+    await renderFoods('/meals/foods?status=caution&record=b')
+    const sheet = await screen.findByRole('dialog', { name: '음식 수정' })
+    const info = within(sheet).getByRole('group', { name: '알러지·주의' })
+    expect(within(info).getByLabelText('반응 날짜')).toHaveValue('2026-10-01')
+    expect(within(info).getByLabelText('증상 메모')).toHaveValue('입 주변 두드러기')
+    expect(within(sheet).queryByRole('button', { name: '알러지·주의로 지정' })).toBeNull()
+
+    await userEvent.type(within(info).getByLabelText('확인 메모'), '소아과 진료')
+    await userEvent.click(within(sheet).getByRole('button', { name: '저장' }))
+    expect(await screen.findByText('저장했어요')).toBeInTheDocument()
+    expect(setFoodCaution).toHaveBeenCalledWith('b', {
+      reactionDate: '2026-10-01',
+      symptomNote: '입 주변 두드러기',
+      checkNote: '소아과 진료',
+    })
+    // 이름·식품군·메모는 그대로라 저장하지 않는다
+    expect(updateFood).not.toHaveBeenCalled()
+  })
+
+  it('알러지·주의 해제: 먹은 기록이 없으면 아직 안 먹어봄으로 옮기고 사유를 남긴다 (FR-FOOD-12)', async () => {
+    const { router } = await renderFoods('/meals/foods?status=caution&record=b')
+    const sheet = await screen.findByRole('dialog', { name: '음식 수정' })
+    await userEvent.click(within(sheet).getByRole('button', { name: '알러지·주의 해제' }))
+
+    const confirm = await screen.findByRole('alertdialog', { name: '알러지·주의를 해제할까요?' })
+    expect(confirm).toHaveTextContent('먹은 기록이 없어 아직 안 먹어봄으로 옮겨요')
+    expect(confirm).toHaveTextContent('반응 날짜와 증상·확인 메모는 이력에 남아요')
+    await userEvent.type(within(confirm).getByLabelText('사유 (선택)'), '다시 먹여 봐도 된대요')
+    await userEvent.click(within(confirm).getByRole('button', { name: '해제' }))
+
+    expect(await screen.findByText('땅콩을 아직 안 먹어봄으로 옮겼어요')).toBeInTheDocument()
+    expect(releaseFoodCaution).toHaveBeenCalledWith('b', '다시 먹여 봐도 된대요')
+    // 확인 창의 [해제]가 뒤의 수정 폼까지 저장하지 않는다
+    expect(updateFood).not.toHaveBeenCalled()
+    await waitForSheetClosed()
+    expect(router.state.location.search).toBe('?status=caution')
+    await waitFor(() => expect(statusTab(/^알러지·주의 1개/)).toBeInTheDocument())
+  })
+
+  it('먹은 기록이 있으면 먹어봄으로 옮긴다. 실패하면 창 안에서 알리고 다시 시도할 수 있다', async () => {
+    vi.mocked(releaseFoodCaution).mockRejectedValueOnce(new CautionSaveError('network'))
+    await renderFoods('/meals/foods?status=caution&record=c')
+    const sheet = await screen.findByRole('dialog', { name: '음식 수정' })
+    await userEvent.click(within(sheet).getByRole('button', { name: '알러지·주의 해제' }))
+
+    const confirm = await screen.findByRole('alertdialog', { name: '알러지·주의를 해제할까요?' })
+    expect(confirm).toHaveTextContent('먹은 기록이 있어 먹어봄으로 옮겨요')
+    await userEvent.click(within(confirm).getByRole('button', { name: '해제' }))
+    expect(await within(confirm).findByRole('alert')).toHaveTextContent('저장하지 못했어요')
+
+    await userEvent.click(within(confirm).getByRole('button', { name: '해제' }))
+    expect(await screen.findByText('우유를 먹어봄으로 옮겼어요')).toBeInTheDocument()
+    expect(releaseFoodCaution).toHaveBeenCalledTimes(2)
+    expect(releaseFoodCaution).toHaveBeenLastCalledWith('c', null)
+    expect(updateFood).not.toHaveBeenCalled()
+  })
+
+  it('"주의" 태그 음식: 알러지·주의 정보를 보여 주고, 태그를 해제할 수 있다 (FR-FOOD-13~14)', async () => {
+    await renderFoods('/meals/foods?record=d')
+    const sheet = await screen.findByRole('dialog', { name: '음식 수정' })
+    const info = within(sheet).getByRole('region', { name: '주의 정보' })
+    expect(info).toHaveTextContent('2026. 9. 20. (일)')
+    expect(info).toHaveTextContent('토함')
+    expect(info).toHaveTextContent('소아과 진료')
+    // 식단 기록으로 먹어봄이 된 음식이라 아직 안 먹어봄으로 옮기지 않는다
+    expect(within(sheet).queryByRole('button', { name: '아직 안 먹어봄으로 옮기기' })).toBeNull()
+
+    await userEvent.click(within(info).getByRole('button', { name: '"주의" 태그 해제' }))
+    const confirm = await screen.findByRole('alertdialog', { name: '"주의" 태그를 해제할까요?' })
+    expect(confirm).toHaveTextContent('먹어봄은 그대로예요')
+    await userEvent.click(within(confirm).getByRole('button', { name: '해제' }))
+
+    expect(await screen.findByText('연어의 "주의" 태그를 해제했어요')).toBeInTheDocument()
+    expect(clearCautionTag).toHaveBeenCalledWith('d', null)
+    expect(updateFood).not.toHaveBeenCalled()
+    await waitForSheetClosed()
+    await waitFor(() =>
+      expect(screen.getByRole('button', { name: /연어/ })).not.toHaveTextContent('주의'),
+    )
+  })
+
+  it('"주의" 태그 음식을 다시 지정하면 지금의 알러지·주의 정보를 이어서 쓴다', async () => {
+    await renderFoods('/meals/foods?record=d')
+    await userEvent.click(
+      within(await screen.findByRole('dialog', { name: '음식 수정' })).getByRole('button', {
+        name: '알러지·주의로 지정',
+      }),
+    )
+    const sheet = screen.getByRole('dialog', { name: '알러지·주의 지정' })
+    expect(within(sheet).getByLabelText('반응 날짜')).toHaveValue('2026-09-20')
+    expect(within(sheet).getByLabelText('증상 메모')).toHaveValue('토함')
+    expect(within(sheet).getByLabelText('확인 메모')).toHaveValue('소아과 진료')
   })
 })
