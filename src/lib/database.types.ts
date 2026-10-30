@@ -271,6 +271,7 @@ export type Database = {
           food_group: string
           memo?: string
           name: string
+          preference?: string
         }
         Returns: {
           caution_since: string | null
@@ -301,6 +302,44 @@ export type Database = {
         }
       }
       seed_default_foods: { Args: never; Returns: number }
+      update_food: {
+        Args: {
+          already_tried?: boolean
+          first_tried_date?: string
+          food_group: string
+          food_id: string
+          memo?: string
+          name: string
+          preference?: string
+        }
+        Returns: {
+          caution_since: string | null
+          caution_tag: boolean
+          check_note: string | null
+          created_at: string
+          first_tried_date: string | null
+          food_group: string
+          id: string
+          is_default: boolean
+          manual_first_tried_date: string | null
+          manual_tried: boolean
+          memo: string | null
+          name: string
+          name_key: string | null
+          owner_id: string
+          preference: string | null
+          reaction_date: string | null
+          status: string
+          symptom_note: string | null
+          updated_at: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "foods"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
     }
     Enums: {
       [_ in never]: never

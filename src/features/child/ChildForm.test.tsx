@@ -7,12 +7,17 @@ import { todayString } from '@/domain/date'
 import type { AuthState } from '@/lib/auth'
 import { renderApp } from '@/test/renderApp'
 import { ChildSaveError, fetchMyChild, saveChild, type Child } from '@/lib/childApi'
+import { seedDefaultFoods } from '@/lib/foodApi'
 
 // 아이 정보 등록·수정 (T-13, FR-CHILD-01~03). 테스트 데이터는 가명이다.
 vi.mock('@/lib/childApi', async (importOriginal) => ({
   ...(await importOriginal<typeof import('@/lib/childApi')>()),
   fetchMyChild: vi.fn(),
   saveChild: vi.fn(),
+}))
+vi.mock('@/lib/foodApi', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@/lib/foodApi')>()),
+  seedDefaultFoods: vi.fn(),
 }))
 const mockedFetchChild = vi.mocked(fetchMyChild)
 const mockedSaveChild = vi.mocked(saveChild)
@@ -24,6 +29,8 @@ beforeEach(() => {
   mockedFetchChild.mockReset()
   mockedSaveChild.mockReset()
   mockedSaveChild.mockImplementation(async (_ownerId, input) => ({ id: 'c1', ...input }))
+  vi.mocked(seedDefaultFoods).mockReset()
+  vi.mocked(seedDefaultFoods).mockResolvedValue(42)
 })
 
 function nameInput() {
@@ -104,6 +111,37 @@ describe('첫 등록 (SCR-02)', () => {
     expect(router.state.location.pathname).toBe('/')
   })
 
+  it('아이 정보를 저장한 뒤 기본 음식 목록을 추가한다 (FR-FOOD-07)', async () => {
+    await renderSetup()
+    await userEvent.type(nameInput(), '하늘이')
+    setBirth('2026-01-08')
+    await userEvent.click(screen.getByRole('button', { name: '시작하기' }))
+    expect(await screen.findByRole('heading', { level: 1, name: /^하늘이/ })).toBeInTheDocument()
+    expect(seedDefaultFoods).toHaveBeenCalledTimes(1)
+    expect(mockedSaveChild.mock.invocationCallOrder[0]).toBeLessThan(
+      vi.mocked(seedDefaultFoods).mock.invocationCallOrder[0],
+    )
+  })
+
+  it('기본 음식 추가에 실패하면 등록 화면에 남고, 다시 시도하면 이어서 추가한다', async () => {
+    vi.mocked(seedDefaultFoods).mockRejectedValueOnce(new Error('network'))
+    const { router } = await renderSetup()
+    await userEvent.type(nameInput(), '하늘이')
+    setBirth('2026-01-08')
+    await userEvent.click(screen.getByRole('button', { name: '시작하기' }))
+
+    const banner = await screen.findByRole('alert')
+    expect(banner).toHaveTextContent('저장하지 못했어요. 인터넷 연결을 확인해 주세요')
+    expect(router.state.location.pathname).toBe('/setup')
+
+    await userEvent.click(within(banner).getByRole('button', { name: '다시 시도' }))
+    expect(await screen.findByRole('heading', { level: 1, name: /^하늘이/ })).toBeInTheDocument()
+    // 아이 정보는 덮어쓰고(upsert), 기본 음식은 같은 이름을 건너뛰므로 다시 호출해도 된다
+    expect(mockedSaveChild).toHaveBeenCalledTimes(2)
+    expect(seedDefaultFoods).toHaveBeenCalledTimes(2)
+    expect(router.state.location.pathname).toBe('/')
+  })
+
   it.each([
     ['network', '저장하지 못했어요. 인터넷 연결을 확인해 주세요'],
     ['futureDate', '오늘 이후 날짜는 고를 수 없어요'],
@@ -174,6 +212,8 @@ describe('설정에서 수정 (FR-CHILD-03)', () => {
       birthDate: '2026-01-08',
     })
     expect(router.state.location.pathname).toBe('/settings')
+    // 기본 음식은 첫 등록 때만 추가한다
+    expect(seedDefaultFoods).not.toHaveBeenCalled()
   })
 
   it('생년월일을 바꾸면 한 번 더 묻고, 취소하면 저장하지 않는다', async () => {

@@ -4,11 +4,12 @@ import { toContentKey } from '../../../src/domain/text'
 import type { Database } from '../../../src/lib/database.types'
 import { createAnonClient, createUserClient, ensureChild, utcDate } from '../supabase'
 
-// foods·food_status_history 접근 제어, 이름 중복, 상태 컬럼 보호, add_food·seed_default_foods
-// (T-36, 기술요구사항서 5.3·8.2, D10, FR-FOOD-04~07, BR-17~18, 부록 B)
+// foods·food_status_history 접근 제어, 이름 중복, 상태 컬럼 보호, add_food·update_food·seed_default_foods
+// (T-36·T-37, 기술요구사항서 5.3·8.2, D10, FR-FOOD-04~07, BR-17~18, R45, 부록 B)
 
 type Client = SupabaseClient<Database>
 type AddFoodArgs = Database['public']['Functions']['add_food']['Args']
+type UpdateFoodArgs = Database['public']['Functions']['update_food']['Args']
 type FoodUpdate = Database['public']['Tables']['foods']['Update']
 let a: { client: Client; userId: string }
 let b: { client: Client; userId: string }
@@ -80,12 +81,14 @@ describe('add_food: 음식 추가 (FR-FOOD-04~05, BR-17)', () => {
       food_group: 'grain',
       already_tried: true,
       first_tried_date: '2026-07-01',
+      preference: 'love',
     })
     expect(withDate.data).toMatchObject({
       status: 'tried',
       manual_tried: true,
       manual_first_tried_date: '2026-07-01',
       first_tried_date: '2026-07-01',
+      preference: 'love',
     })
     // 처음 먹은 날은 선택 항목이다
     const withoutDate = await addFood(a.client, {
@@ -210,8 +213,9 @@ describe('상태 컬럼 보호 (D10, FR-FOOD-06)', () => {
     })
   })
 
-  it('반응은 좋아함·보통·거부만 허용된다', async () => {
-    expect((await update(aFoodId, { preference: 'love' })).error?.code).toBe('23514')
+  it('반응은 매우 좋아함·좋아함·보통·거부만 허용된다 (R46)', async () => {
+    expect((await update(aFoodId, { preference: 'love' })).data?.preference).toBe('love')
+    expect((await update(aFoodId, { preference: 'hate' })).error?.code).toBe('23514')
   })
 
   it('상태 이력은 화면에서 추가할 수 없다', async () => {
@@ -223,6 +227,138 @@ describe('상태 컬럼 보호 (D10, FR-FOOD-06)', () => {
     })
     expect(error?.code).toBe('42501')
   })
+})
+
+describe('update_food: 음식 수정과 "이미 먹어 봤어요" (FR-FOOD-04~05, BR-17, R45)', () => {
+  const updateFood = (c: Client, args: UpdateFoodArgs) => c.rpc('update_food', args)
+  let foodId: string
+
+  beforeAll(async () => {
+    const { data, error } = await addFood(a.client, { name: '양배추', food_group: 'vegetable' })
+    if (error) throw error
+    foodId = data.id
+  })
+
+  it('이름·식품군·메모를 고치고, already_tried를 주지 않으면 상태는 그대로다', async () => {
+    const { data, error } = await updateFood(a.client, {
+      food_id: foodId,
+      name: '양배추 ',
+      food_group: 'etc',
+      memo: '쪄서 갈기',
+    })
+    expect(error).toBeNull()
+    expect(data).toMatchObject({
+      name: '양배추 ',
+      food_group: 'etc',
+      memo: '쪄서 갈기',
+      status: 'not_tried',
+      manual_tried: false,
+    })
+  })
+
+  it('아직 안 먹어봄 음식을 "이미 먹어 봤어요"로 바꾸고, 다시 되돌릴 수 있다', async () => {
+    const base = { food_id: foodId, name: '양배추', food_group: 'vegetable' }
+    const tried = await updateFood(a.client, {
+      ...base,
+      already_tried: true,
+      first_tried_date: '2026-07-01',
+    })
+    expect(tried.data).toMatchObject({
+      status: 'tried',
+      manual_tried: true,
+      manual_first_tried_date: '2026-07-01',
+      first_tried_date: '2026-07-01',
+    })
+
+    const untried = await updateFood(a.client, { ...base, already_tried: false })
+    expect(untried.data).toMatchObject({
+      status: 'not_tried',
+      manual_tried: false,
+      manual_first_tried_date: null,
+      first_tried_date: null,
+    })
+  })
+
+  it('반응을 함께 저장하고, 주지 않으면 지운다 (R46)', async () => {
+    const base = { food_id: foodId, name: '양배추', food_group: 'vegetable' }
+    const set = await updateFood(a.client, { ...base, preference: 'refuse' })
+    expect(set.data?.preference).toBe('refuse')
+    expect((await updateFood(a.client, base)).data?.preference).toBeNull()
+    expect((await updateFood(a.client, { ...base, preference: 'hate' })).error?.code).toBe('23514')
+  })
+
+  it('먹어 보지 않은 음식에 처음 먹은 날을 넣으면 거부된다', async () => {
+    const base = { food_id: foodId, name: '양배추', food_group: 'vegetable' }
+    expect(
+      (await updateFood(a.client, { ...base, first_tried_date: '2026-07-01' })).error?.code,
+    ).toBe('22023')
+    expect(
+      (
+        await updateFood(a.client, {
+          ...base,
+          already_tried: false,
+          first_tried_date: '2026-07-01',
+        })
+      ).error?.code,
+    ).toBe('22023')
+  })
+
+  it('처음 먹은 날이 미래이거나 생년월일 이전이면 거부된다', async () => {
+    const base = { food_id: foodId, name: '양배추', food_group: 'vegetable', already_tried: true }
+    expect(
+      (await updateFood(a.client, { ...base, first_tried_date: utcDate(2) })).error?.code,
+    ).toBe('22007')
+    expect(
+      (await updateFood(a.client, { ...base, first_tried_date: '2026-01-07' })).error?.code,
+    ).toBe('22007')
+  })
+
+  it('생년월일을 고친 뒤에도, 처음 먹은 날을 그대로 두면 이름은 고칠 수 있다', async () => {
+    const base = {
+      food_id: foodId,
+      food_group: 'vegetable',
+      already_tried: true,
+      first_tried_date: '2026-07-01',
+    }
+    expect((await updateFood(a.client, { ...base, name: '양배추' })).error).toBeNull()
+    await ensureChild(a.client, a.userId, '2026-08-01')
+    try {
+      const { data, error } = await updateFood(a.client, { ...base, name: '양배추 찜' })
+      expect(error).toBeNull()
+      expect(data).toMatchObject({ name: '양배추 찜', manual_first_tried_date: '2026-07-01' })
+      // 처음 먹은 날을 바꾸면 새 생년월일로 검사한다
+      expect(
+        (await updateFood(a.client, { ...base, name: '양배추', first_tried_date: '2026-07-02' }))
+          .error?.code,
+      ).toBe('22007')
+    } finally {
+      await ensureChild(a.client, a.userId)
+    }
+  })
+
+  it('같은 이름, 정해지지 않은 식품군, 21자 이름은 거부된다', async () => {
+    // beforeAll에서 "애호박"을 추가했다
+    const base = { food_id: foodId, food_group: 'vegetable' }
+    expect((await updateFood(a.client, { ...base, name: ' 애호박' })).error?.code).toBe('23505')
+    expect(
+      (await updateFood(a.client, { ...base, name: '양배추', food_group: 'meat' })).error?.code,
+    ).toBe('23514')
+    expect((await updateFood(a.client, { ...base, name: '가'.repeat(21) })).error?.code).toBe(
+      '23514',
+    )
+  })
+
+  it('다른 사람의 음식은 고칠 수 없고(P0002), 로그인하지 않으면 호출할 수 없다', async () => {
+    const read = async () =>
+      (await a.client.from('foods').select('*').eq('id', foodId).single()).data
+    const before = await read()
+    const args = { food_id: foodId, name: '침범', food_group: 'etc', already_tried: false }
+    expect((await updateFood(b.client, args)).error?.code).toBe('P0002')
+    expect((await updateFood(createAnonClient(), args)).error?.code).toBe('42501')
+    expect(await read()).toEqual(before)
+  })
+
+  // 알러지·주의 음식에 already_tried를 주면 22023으로 거부된다. 지정 함수가 생기는 T-38에서 확인한다
 })
 
 describe('seed_default_foods: 기본 음식 목록 (FR-FOOD-07, 부록 B)', () => {
