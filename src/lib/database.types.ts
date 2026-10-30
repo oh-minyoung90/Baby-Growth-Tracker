@@ -311,10 +311,7 @@ export type Database = {
         }
       }
       clear_caution_tag: {
-        Args: {
-          food_id: string
-          reason?: string
-        }
+        Args: { food_id: string; reason?: string }
         Returns: {
           caution_since: string | null
           caution_tag: boolean
@@ -344,10 +341,7 @@ export type Database = {
         }
       }
       release_food_caution: {
-        Args: {
-          food_id: string
-          reason?: string
-        }
+        Args: { food_id: string; reason?: string }
         Returns: {
           caution_since: string | null
           caution_tag: boolean
