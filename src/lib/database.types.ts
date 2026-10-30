@@ -128,6 +128,13 @@ export type Database = {
             referencedRelation: "foods"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "food_status_history_meal_entry_id_fkey"
+            columns: ["meal_entry_id"]
+            isOneToOne: false
+            referencedRelation: "meal_entries"
+            referencedColumns: ["id"]
+          },
         ]
       }
       foods: {
@@ -195,6 +202,119 @@ export type Database = {
           updated_at?: string
         }
         Relationships: []
+      }
+      meal_entries: {
+        Row: {
+          created_at: string
+          date: string
+          eaten: boolean
+          id: string
+          intake: string | null
+          meal_type: string
+          memo: string | null
+          owner_id: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          date: string
+          eaten: boolean
+          id?: string
+          intake?: string | null
+          meal_type: string
+          memo?: string | null
+          owner_id?: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          date?: string
+          eaten?: boolean
+          id?: string
+          intake?: string | null
+          meal_type?: string
+          memo?: string | null
+          owner_id?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      meal_entry_foods: {
+        Row: {
+          food_id: string | null
+          food_name: string
+          id: string
+          meal_entry_id: string
+          owner_id: string
+          position: number
+        }
+        Insert: {
+          food_id?: string | null
+          food_name: string
+          id?: string
+          meal_entry_id: string
+          owner_id?: string
+          position: number
+        }
+        Update: {
+          food_id?: string | null
+          food_name?: string
+          id?: string
+          meal_entry_id?: string
+          owner_id?: string
+          position?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "meal_entry_foods_food_fkey"
+            columns: ["food_id", "owner_id"]
+            isOneToOne: false
+            referencedRelation: "foods"
+            referencedColumns: ["id", "owner_id"]
+          },
+          {
+            foreignKeyName: "meal_entry_foods_meal_entry_fkey"
+            columns: ["meal_entry_id", "owner_id"]
+            isOneToOne: false
+            referencedRelation: "meal_entries"
+            referencedColumns: ["id", "owner_id"]
+          },
+        ]
+      }
+      meal_entry_recipes: {
+        Row: {
+          id: string
+          meal_entry_id: string
+          owner_id: string
+          position: number
+          recipe_id: string | null
+          recipe_name: string
+        }
+        Insert: {
+          id?: string
+          meal_entry_id: string
+          owner_id?: string
+          position: number
+          recipe_id?: string | null
+          recipe_name: string
+        }
+        Update: {
+          id?: string
+          meal_entry_id?: string
+          owner_id?: string
+          position?: number
+          recipe_id?: string | null
+          recipe_name?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "meal_entry_recipes_meal_entry_fkey"
+            columns: ["meal_entry_id", "owner_id"]
+            isOneToOne: false
+            referencedRelation: "meal_entries"
+            referencedColumns: ["id", "owner_id"]
+          },
+        ]
       }
       milestones: {
         Row: {
