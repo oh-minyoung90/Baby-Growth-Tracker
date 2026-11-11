@@ -737,3 +737,56 @@ describe('식단 칸 이동 (T-41)', () => {
     expect((await food(id)).first_tried_date).toBe(earlier)
   })
 })
+
+describe('음식 상세의 먹은 횟수 집계 (T-46)', () => {
+  it('먹음으로 체크한 직접 음식만 세고 계획·레시피·직접 먹어봄 설정은 제외한다', async () => {
+    const rice = await addFood()
+    const manual = await addFood('보리', { already_tried: true })
+    await meal([rice])
+    await meal([rice], { date: '2026-10-16' })
+    await meal([rice], { date: '2026-10-17', eaten: false })
+    await meal([], { date: '2026-10-18', recipes: [{ recipe_name: '쌀죽' }] })
+    const { data, error } = await clientA().rpc('food_meal_counts')
+    expect(error).toBeNull()
+    expect(data).toEqual([{ food_id: rice, eaten_count: 2 }])
+    expect(data?.find((row) => row.food_id === manual)).toBeUndefined()
+  })
+  it('체크·이동의 체크 해제·삭제 후 횟수도 즉시 다시 집계한다', async () => {
+    const id = await addFood()
+    const entry = await meal([id], { eaten: false })
+    expect((await clientA().rpc('food_meal_counts')).data).toEqual([])
+    await clientA().rpc('set_meal_eaten', { id: entry.id, eaten: true })
+    expect((await clientA().rpc('food_meal_counts')).data).toEqual([
+      { food_id: id, eaten_count: 1 },
+    ])
+    await clientA().rpc('move_meal_entry', {
+      id: entry.id,
+      date: '2026-10-16',
+      meal_type: 'dinner',
+      uncheck: true,
+    })
+    expect((await clientA().rpc('food_meal_counts')).data).toEqual([])
+    await clientA().rpc('set_meal_eaten', { id: entry.id, eaten: true })
+    await remove(entry.id)
+    expect((await clientA().rpc('food_meal_counts')).data).toEqual([])
+  })
+  it('타인 집계는 보이지 않고 비로그인 호출도 거부한다', async () => {
+    const own = await addFood()
+    const other = await addFood('비밀음식', {}, clientB())
+    await meal([own])
+    await meal([other], {}, clientB())
+    expect((await clientA().rpc('food_meal_counts')).data).toEqual([
+      { food_id: own, eaten_count: 1 },
+    ])
+    expect((await clientB().rpc('food_meal_counts')).data).toEqual([
+      { food_id: other, eaten_count: 1 },
+    ])
+    expect((await createAnonClient().rpc('food_meal_counts')).error?.code).toBe('42501')
+  })
+  it('음식을 삭제하면 보존된 식단 이름을 횟수에 포함하지 않는다', async () => {
+    const id = await addFood()
+    await meal([id])
+    expect((await clientA().from('foods').delete().eq('id', id)).error).toBeNull()
+    expect((await clientA().rpc('food_meal_counts')).data).toEqual([])
+  })
+})

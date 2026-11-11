@@ -8,16 +8,18 @@ import { cn } from '@/lib/utils'
 import { firstLine } from './foodFilter'
 
 /**
- * 음식 목록, 이름 가나다순 (FR-FOOD-03). 누르면 수정 시트가 열린다.
+ * 음식 목록, 이름 가나다순 (FR-FOOD-03). 누르면 음식 상세로 이동한다.
  * 탭별 표시: 먹어봄 = 식품군·처음 먹은 날·반응·"주의" 태그 / 아직 안 먹어봄 = 식품군·메모 /
- * 알러지·주의 = 반응 날짜·증상 메모 첫 줄. 먹은 횟수는 식단 기록이 생기는 T-46에서 더한다.
+ * 알러지·주의 = 반응 날짜·증상 메모 첫 줄. 먹은 횟수는 먹음 체크된 직접 음식 식단만 센다.
  */
 export function FoodList({
   foods,
   onSelect,
+  counts,
 }: {
   foods: readonly Food[]
   onSelect: (id: string) => void
+  counts?: Record<string, number>
 }) {
   return (
     <ul aria-label="음식" className="divide-y overflow-hidden rounded-card border bg-surface">
@@ -39,7 +41,7 @@ export function FoodList({
                   </Badge>
                 )}
               </span>
-              <FoodDetails food={food} />
+              <FoodDetails food={food} count={counts?.[food.id] ?? (counts ? 0 : undefined)} />
             </span>
             {food.status === 'tried' && <Preference value={food.preference} />}
           </button>
@@ -49,7 +51,7 @@ export function FoodList({
   )
 }
 
-function FoodDetails({ food }: { food: Food }) {
+function FoodDetails({ food, count }: { food: Food; count?: number }) {
   if (food.status === 'caution') {
     const symptom = firstLine(food.symptomNote)
     return (
@@ -69,12 +71,17 @@ function FoodDetails({ food }: { food: Food }) {
     <span className="flex min-w-0 flex-wrap items-center gap-x-3 gap-y-1">
       <GroupLabel food={food} />
       {food.status === 'tried' ? (
-        <Detail
-          icon={CalendarCheck}
-          label="처음 먹은 날"
-          value={food.firstTriedDate ? formatDateLabel(food.firstTriedDate) : '모름'}
-          known={food.firstTriedDate !== null}
-        />
+        <>
+          <span className="text-[13px] text-muted-foreground">
+            {count === undefined ? '먹은 횟수 확인 중' : `${count}번 먹음`}
+          </span>
+          <Detail
+            icon={CalendarCheck}
+            label="처음 먹은 날"
+            value={food.firstTriedDate ? formatDateLabel(food.firstTriedDate) : '모름'}
+            known={food.firstTriedDate !== null}
+          />
+        </>
       ) : (
         food.memo && <Note icon={NotebookPen} text={firstLine(food.memo) ?? ''} />
       )}

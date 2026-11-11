@@ -25,7 +25,14 @@ export interface MealSaveResult {
   firstTriedFoods: { id: string; name: string }[]
 }
 export type MealSaveErrorReason =
-  'duplicate' | 'futureDate' | 'memoLength' | 'selection' | 'staleItem' | 'notFound' | 'network'
+  | 'duplicate'
+  | 'beforeBirth'
+  | 'futureDate'
+  | 'memoLength'
+  | 'selection'
+  | 'staleItem'
+  | 'notFound'
+  | 'network'
 export class MealSaveError extends Error {
   readonly reason: MealSaveErrorReason
   constructor(reason: MealSaveErrorReason) {
@@ -75,7 +82,8 @@ export async function fetchMealEntry(id: string): Promise<MealEntry | null> {
 
 function toSaveError(error: PostgrestError): MealSaveError {
   if (error.code === '23505') return new MealSaveError('duplicate')
-  if (error.code === '22007') return new MealSaveError('futureDate')
+  if (error.code === '22007')
+    return new MealSaveError(error.message.includes('생년월일') ? 'beforeBirth' : 'futureDate')
   if (error.code === '23503') return new MealSaveError('staleItem')
   if (error.code === 'P0002') return new MealSaveError('notFound')
   if (error.code === '22023') return new MealSaveError('selection')

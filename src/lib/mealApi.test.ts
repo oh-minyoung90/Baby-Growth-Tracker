@@ -174,3 +174,13 @@ it('이동 API는 날짜·끼니·명시적 체크 해제를 전용 RPC로 보�
     moveMealEntry('m1', { date: '2026-11-11', type: 'lunch' }, false),
   ).rejects.toMatchObject({ reason: 'duplicate' })
 })
+
+it('서버의 생년월일 이전 오류를 미래 날짜 오류와 구분한다', async () => {
+  mock.rpc.mockResolvedValueOnce({
+    data: null,
+    error: { code: '22007', message: 'date는 생년월일보다 이를 수 없습니다' },
+  })
+  await expect(
+    moveMealEntry('m1', { date: '2026-01-01', type: 'lunch' }, false),
+  ).rejects.toMatchObject({ reason: 'beforeBirth' })
+})

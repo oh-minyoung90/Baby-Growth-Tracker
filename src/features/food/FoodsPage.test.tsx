@@ -1,4 +1,4 @@
-import { fireEvent, screen, waitFor, within } from '@testing-library/react'
+import { act, fireEvent, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import type { Session } from '@supabase/supabase-js'
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest'
@@ -17,12 +17,14 @@ import {
   updateFood,
   type Food,
 } from '@/lib/foodApi'
+import { fetchFoodMealCounts } from '@/lib/foodDetailApi'
 import { renderApp } from '@/test/renderApp'
 
 // 음식 목록 (T-37, SCR-10, FR-FOOD-01~08, R45)과 알러지·주의 지정·해제 (T-38, FR-FOOD-11~14, R48~49).
 // 테스트 데이터는 가명이다.
 // 서버 대신 메모리 목록(store)에 저장해, 저장 후 목록을 다시 불러오는 흐름까지 확인한다.
 
+vi.mock('@/lib/foodDetailApi', () => ({ fetchFoodMealCounts: vi.fn() }))
 vi.mock('@/lib/childApi', async (importOriginal) => ({
   ...(await importOriginal<typeof import('@/lib/childApi')>()),
   fetchMyChild: vi.fn(),
@@ -79,6 +81,7 @@ beforeEach(() => {
   vi.setSystemTime(new Date(2026, 9, 22, 9, 0))
   vi.resetAllMocks()
   store = []
+  vi.mocked(fetchFoodMealCounts).mockResolvedValue({})
   vi.mocked(fetchMyChild).mockResolvedValue({
     id: 'c1',
     nickname: '하늘이',
@@ -530,9 +533,8 @@ describe('음식 수정·삭제: 음식의 상태가 수정 시트 모양을 정
     ]
   })
 
-  it('안 먹어봄 음식: 누르면 날짜·반응 없이 열리고, 고친 내용을 저장한다', async () => {
-    const { router } = await renderFoods('/meals/foods?status=not_tried')
-    await userEvent.click(await screen.findByRole('button', { name: /애호박/ }))
+  it('안 먹어봄 음식: 수정 시트는 날짜·반응 없이 열리고, 고친 내용을 저장한다', async () => {
+    const { router } = await renderFoods('/meals/foods?status=not_tried&record=a')
     const sheet = await screen.findByRole('dialog', { name: '음식 수정' })
     expect(router.state.location.search).toBe('?status=not_tried&record=a')
     expect(within(sheet).getByLabelText('이름')).toHaveValue('애호박')
@@ -694,7 +696,9 @@ describe('알러지·주의 지정·해제 (FR-FOOD-11~14, BR-11, R48~49)', () =
 
   it('수정 시트에서 [알러지·주의로 지정]을 누르면 지정 화면으로 바뀌고, 지정해도 보던 탭에 남는다', async () => {
     const { router } = await renderFoods('/meals/foods?status=not_tried')
-    await userEvent.click(await screen.findByRole('button', { name: /달걀/ }))
+    await act(async () => {
+      await router.navigate('/meals/foods?status=not_tried&record=a')
+    })
     await userEvent.click(
       within(await screen.findByRole('dialog', { name: '음식 수정' })).getByRole('button', {
         name: '알러지·주의로 지정',

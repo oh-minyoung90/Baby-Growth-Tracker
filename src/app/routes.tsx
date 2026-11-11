@@ -5,6 +5,7 @@ import { BodyPage } from '@/features/body/BodyPage'
 import { ChildEditPage } from '@/features/child/ChildEditPage'
 import { ChildSetupPage } from '@/features/child/ChildSetupPage'
 import { RequireChild } from '@/features/child/RequireChild'
+import { FoodDetailPage } from '@/features/food/FoodDetailPage'
 import { FoodsPage } from '@/features/food/FoodsPage'
 import { GrowthLayout } from '@/features/growth/GrowthLayout'
 import { HomePage } from '@/features/home/HomePage'
@@ -95,6 +96,7 @@ export const routes: RouteObject[] = [
                       { index: true, element: <Navigate to="week" replace /> },
                       { path: 'week', element: <MealWeekPage /> },
                       { path: 'foods', element: <FoodsPage /> },
+                      { path: 'foods/:id', element: <FoodDetailPage /> },
                       { path: 'recipes', element: <RecipesPage /> },
                     ],
                   },

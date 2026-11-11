@@ -8,6 +8,7 @@ export function futureMoveDescription(target: MealMoveTarget) {
 }
 export function mealMoveError(error: unknown): string {
   if (error instanceof MealSaveError) {
+    if (error.reason === 'beforeBirth') return '생년월일 이전 날짜는 고를 수 없어요'
     if (error.reason === 'duplicate') return '그 끼니에는 이미 기록이 있어요'
     if (error.reason === 'notFound') return '식단을 찾을 수 없어요. 목록을 다시 확인해 주세요'
     if (error.reason === 'futureDate')

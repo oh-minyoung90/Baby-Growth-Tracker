@@ -256,3 +256,17 @@ describe('식단 이동 화면 (T-45)', () => {
     expect(moveMealEntry).toHaveBeenCalledTimes(1)
   })
 })
+
+it('생년월일 이전 칸으로 드래그하면 이동하지 않고 이유를 안내한다', async () => {
+  desktop()
+  vi.mocked(fetchMyChild).mockResolvedValue({
+    id: 'c1',
+    nickname: '하늘이',
+    birthDate: '2026-11-11',
+  })
+  renderApp('/meals/week', auth)
+  await screen.findByRole('button', { name: '점심 식단 이동' })
+  drag()
+  expect(await screen.findByRole('alert')).toHaveTextContent('생년월일 이전 날짜는 고를 수 없어요')
+  expect(moveMealEntry).not.toHaveBeenCalled()
+})

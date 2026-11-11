@@ -108,7 +108,10 @@ export function MealWeekPage() {
   }
   const dropMove = (entry: MealEntry, target: MealMoveTarget) => {
     if (move.isPending || setEaten.isPending) return
-    if (child.data?.birthDate && target.date < child.data.birthDate) return
+    if (child.data?.birthDate && target.date < child.data.birthDate) {
+      setFailedMove({ entry, target, error: new MealSaveError('beforeBirth') })
+      return
+    }
     setFailedMove(null)
     if (entry.eaten && target.date > todayString()) setFutureDrop({ entry, target })
     else

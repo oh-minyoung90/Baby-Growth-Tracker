@@ -250,3 +250,27 @@ export async function seedDefaultFoods(): Promise<number> {
   if (error) throw error
   return data
 }
+
+/** 상세 주소로 직접 진입할 때도 RLS가 적용된 한 건만 읽는다. */
+export async function fetchFood(id: string): Promise<Food | null> {
+  const { data, error } = await supabase.from('foods').select(COLUMNS).eq('id', id).maybeSingle()
+  if (error) throw error
+  return data ? toFood(data) : null
+}
+
+/** 반응만 고친다. 다른 필드나 직접 먹어봄 설정을 덮어쓰지 않으며 현재 먹어봄인 행에만 쓴다. */
+export async function setFoodPreference(
+  id: string,
+  preference: FoodPreference | null,
+): Promise<Food> {
+  const { data, error } = await supabase
+    .from('foods')
+    .update({ preference })
+    .eq('id', id)
+    .eq('status', 'tried')
+    .select(COLUMNS)
+    .maybeSingle()
+  if (error) throw error
+  if (!data) throw new Error('음식 상태가 바뀌었거나 음식을 찾을 수 없습니다')
+  return toFood(data)
+}

@@ -264,7 +264,7 @@ function MealCell({
       onDragOver={onDragOver}
       onDrop={onDrop}
       className={cn(
-        'flex min-h-28 w-full flex-col rounded-button border md:min-h-36',
+        'flex min-h-28 w-full flex-col rounded-button border md:min-h-44',
         !entry || !entry.eaten ? 'border-dashed bg-muted/40' : 'bg-surface',
         dropActive && 'ring-2 ring-primary bg-soft',
       )}
@@ -288,6 +288,22 @@ function MealCell({
             <Square className="mr-2 size-4 text-muted-foreground" aria-label="계획" />
           )}
         </div>
+      )}
+      {onSelect ? (
+        <button
+          type="button"
+          disabled={editingDisabled}
+          aria-label={`${label} ${entry ? `식단 수정: ${names}` : '식단 추가'}`}
+          className={cn(
+            contentClass,
+            'outline-none transition-colors hover:bg-soft focus-visible:ring-2 focus-visible:ring-ring',
+          )}
+          onClick={onSelect}
+        >
+          {content}
+        </button>
+      ) : (
+        <div className={contentClass}>{content}</div>
       )}
       {entry && onMove && (
         <div className="flex items-center justify-between gap-1 px-2">
@@ -320,22 +336,6 @@ function MealCell({
             이동
           </Button>
         </div>
-      )}
-      {onSelect ? (
-        <button
-          type="button"
-          disabled={editingDisabled}
-          aria-label={`${label} ${entry ? `식단 수정: ${names}` : '식단 추가'}`}
-          className={cn(
-            contentClass,
-            'outline-none transition-colors hover:bg-soft focus-visible:ring-2 focus-visible:ring-ring',
-          )}
-          onClick={onSelect}
-        >
-          {content}
-        </button>
-      ) : (
-        <div className={contentClass}>{content}</div>
       )}
     </div>
   )

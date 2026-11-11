@@ -4,6 +4,7 @@ import { MEAL_INTAKES } from '@/lib/mealTypes'
 import { optionalText, recordDate, requiredText } from '@/lib/validation'
 
 export const MEAL_MESSAGES = {
+  beforeBirth: '생년월일 이전 날짜는 고를 수 없어요',
   selection: '음식이나 레시피를 하나 이상 선택해 주세요',
   futureEaten: '내일 이후 식단은 먹음으로 기록할 수 없어요',
   duplicate: '그 끼니에는 이미 식단이 있어요. 창을 닫고 해당 기록을 다시 열어 주세요',
