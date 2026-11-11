@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useController, useForm, useWatch } from 'react-hook-form'
+import { ConfirmDialog } from '@/components/ConfirmDialog'
 import { ChoiceChips } from '@/components/ChoiceChips'
 import { DeleteRecordButton } from '@/components/DeleteRecordButton'
 import { ErrorBanner } from '@/components/ErrorBanner'
@@ -9,16 +10,19 @@ import { TextField } from '@/components/form/TextField'
 import { Button } from '@/components/ui/button'
 import { Checkbox } from '@/components/ui/checkbox'
 import { formatDateLabel, todayString } from '@/domain/date'
-import { MealSaveError, type MealEntry, type MealItem } from '@/lib/mealApi'
+import { MealSaveError, type MealEntry } from '@/lib/mealApi'
 import { MEAL_INTAKES, mealTypeLabel, type MealType } from '@/lib/mealTypes'
 import { NETWORK_ERROR_MESSAGES } from '@/lib/messages'
-import { notifySaved } from '@/lib/notify'
+import { mealCautionFoods, mealCautionMessage, type MealRecipeOption } from '@/lib/mealCaution'
+import { notifyMealSaved } from '@/lib/mealNotify'
+import { useFoods } from '@/lib/useFoods'
 import { useDeleteMeal, useSaveMeal } from '@/lib/useMeals'
 import { MEAL_MESSAGES, mealSchema, type MealFormOutput, type MealFormValues } from './mealSchema'
+import { MealCautionNotice } from './MealCautionNotice'
 import { MealFoodPicker } from './MealFoodPicker'
 import { MealRecipePicker } from './MealRecipePicker'
 
-const NO_RECIPES: readonly MealItem[] = []
+const NO_RECIPES: readonly MealRecipeOption[] = []
 
 export function MealForm({
   date,
@@ -33,10 +37,12 @@ export function MealForm({
   type: MealType
   initial?: MealEntry
   birthDate?: string
-  recipeOptions?: readonly MealItem[]
+  recipeOptions?: readonly MealRecipeOption[]
   onDone: () => void
   onPendingChange: (pending: boolean) => void
 }) {
+  const catalog = useFoods()
+  const [confirmedValues, setConfirmedValues] = useState<MealFormOutput | null>(null)
   const save = useSaveMeal()
   const remove = useDeleteMeal()
   const [failed, setFailed] = useState<'save' | 'delete' | null>(null)
@@ -63,6 +69,8 @@ export function MealForm({
   const recipes = useWatch({ control, name: 'recipes' })
   const eaten = useController({ control, name: 'eaten' })
   const intake = useController({ control, name: 'intake' })
+  const cautionFoods = mealCautionFoods(foods, recipes, catalog.data ?? [], recipeOptions)
+  const warningsReady = catalog.isSuccess && !catalog.isFetching
   const busy = save.isPending || remove.isPending || creatingFood
   const future = date > todayString()
   const onError = (error: unknown, action: 'save' | 'delete') => {
@@ -77,19 +85,25 @@ export function MealForm({
       setError('foods', { message: MEAL_MESSAGES[reason] })
     else setError('root', { message: MEAL_MESSAGES[reason] })
   }
-  const submit = handleSubmit(async (values) => {
+  const persist = async (values: MealFormOutput) => {
+    if (busy || !warningsReady) return
     clearErrors('root')
     setFailed(null)
     onPendingChange(true)
     try {
-      await save.mutateAsync({ id: initial?.id, input: { ...values, type } })
-      notifySaved()
+      const result = await save.mutateAsync({ id: initial?.id, input: { ...values, type } })
+      notifyMealSaved(result)
       onDone()
     } catch (error) {
       onError(error, 'save')
     } finally {
       onPendingChange(false)
     }
+  }
+  const submit = handleSubmit(async (values) => {
+    if (busy || !warningsReady) return
+    if (cautionFoods.length > 0) setConfirmedValues(values)
+    else await persist(values)
   })
   const onDelete = async () => {
     if (!initial) return
@@ -109,6 +123,7 @@ export function MealForm({
       <p className="rounded-button bg-soft px-3.5 py-3 text-sm font-bold text-soft-text">
         {formatDateLabel(date)} · {mealTypeLabel(type)}
       </p>
+      <MealCautionNotice foods={cautionFoods} />
       {errors.date?.message && <FieldError>{errors.date.message}</FieldError>}
       {errors.root?.message && <FieldError>{errors.root.message}</FieldError>}
       {failed && (
@@ -186,7 +201,7 @@ export function MealForm({
           <Button type="button" size="lg" variant="soft" onClick={onDone}>
             취소
           </Button>
-          <Button type="submit" size="lg">
+          <Button type="submit" size="lg" disabled={!warningsReady}>
             {save.isPending ? '저장하는 중…' : '저장'}
           </Button>
         </div>
@@ -199,6 +214,18 @@ export function MealForm({
           />
         )}
       </fieldset>
+      <ConfirmDialog
+        open={confirmedValues !== null}
+        onOpenChange={(open) => {
+          if (!open) setConfirmedValues(null)
+        }}
+        title={mealCautionMessage(cautionFoods)}
+        description="음식을 확인한 후 저장해 주세요. 계획으로 저장할 때도 주의가 필요해요."
+        confirmLabel="그래도 저장"
+        onConfirm={() => {
+          if (confirmedValues) void persist(confirmedValues)
+        }}
+      />
     </form>
   )
 }

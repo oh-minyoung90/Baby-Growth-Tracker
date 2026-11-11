@@ -461,6 +461,10 @@ export type Database = {
         }
       }
       delete_meal_entry: { Args: { id: string }; Returns: undefined }
+      move_meal_entry: {
+        Args: { date: string; id: string; meal_type: string; uncheck: boolean }
+        Returns: Json
+      }
       recalc_food: {
         Args: { food_id: string; meal_entry_id?: string }
         Returns: {

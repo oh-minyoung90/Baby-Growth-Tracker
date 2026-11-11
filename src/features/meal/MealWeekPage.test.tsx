@@ -2,6 +2,7 @@ import { act, fireEvent, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import type { Session } from '@supabase/supabase-js'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { fetchFoods } from '@/lib/foodApi'
 import { fetchMyChild } from '@/lib/childApi'
 import { fetchMealWeek, type MealEntry } from '@/lib/mealApi'
 import { renderApp } from '@/test/renderApp'
@@ -9,6 +10,10 @@ import { renderApp } from '@/test/renderApp'
 vi.mock('@/lib/childApi', async (original) => ({
   ...(await original<typeof import('@/lib/childApi')>()),
   fetchMyChild: vi.fn(),
+}))
+vi.mock('@/lib/foodApi', async (original) => ({
+  ...(await original<typeof import('@/lib/foodApi')>()),
+  fetchFoods: vi.fn(),
 }))
 vi.mock('@/lib/mealApi', async (original) => ({
   ...(await original<typeof import('@/lib/mealApi')>()),
@@ -32,6 +37,7 @@ beforeEach(() => {
   vi.setSystemTime(new Date(2026, 10, 11, 9))
   vi.resetAllMocks()
   store = []
+  vi.mocked(fetchFoods).mockResolvedValue([])
   vi.mocked(fetchMyChild).mockResolvedValue({
     id: 'c1',
     nickname: '하늘이',

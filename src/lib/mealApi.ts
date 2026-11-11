@@ -1,5 +1,6 @@
 import type { PostgrestError, QueryData } from '@supabase/supabase-js'
 import { supabase } from './supabase'
+import type { Json } from './database.types'
 import { isMealIntake, isMealType, type MealIntake, type MealType } from './mealTypes'
 
 /** ID가 null인 항목은 삭제된 음식·레시피다. 저장 당시 이름으로 계속 표시한다 (D7). */
@@ -96,6 +97,10 @@ export async function saveMealEntry(input: MealInput, id?: string): Promise<Meal
     memo: input.memo ?? undefined,
   })
   if (error) throw toSaveError(error)
+  return parseMealResult(data)
+}
+
+function parseMealResult(data: Json): MealSaveResult {
   if (
     !data ||
     typeof data !== 'object' ||
@@ -121,4 +126,11 @@ export async function saveMealEntry(input: MealInput, id?: string): Promise<Meal
 export async function deleteMealEntry(id: string): Promise<void> {
   const { error } = await supabase.rpc('delete_meal_entry', { id })
   if (error) throw toSaveError(error)
+}
+
+/** 먹음 체크와 음식 상태 재계산은 한 번의 RPC로 처리한다. */
+export async function setMealEaten(id: string, eaten: boolean): Promise<MealSaveResult> {
+  const { data, error } = await supabase.rpc('set_meal_eaten', { id, eaten })
+  if (error) throw toSaveError(error)
+  return parseMealResult(data)
 }

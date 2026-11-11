@@ -562,3 +562,178 @@ describe('알러지·주의 자동 전환·되돌림 (BR-11, BR-13, D11, R49)', 
     })
   })
 })
+
+// 이동은 내용과 ID를 보존하고 날짜·끼니·먹음만 바꾼다.
+describe('식단 칸 이동 (T-41)', () => {
+  const move = (
+    id: string,
+    date = '2026-10-16',
+    meal_type = 'dinner',
+    uncheck = false,
+    client = clientA(),
+  ) => client.rpc('move_meal_entry', { id, date, meal_type, uncheck })
+  const read = async (id: string) => {
+    const { data, error } = await clientA().from('meal_entries').select('*').eq('id', id).single()
+    if (error) throw error
+    return data
+  }
+
+  it('날짜·끼니를 바꾸고 내용·ID와 연결 항목을 보존하며 처음 먹은 날을 재계산한다', async () => {
+    const id = await addFood()
+    const entry = await meal([id], {
+      memo: '이동할 메모',
+      intake: 'good',
+      recipes: [{ recipe_name: '쌀죽' }],
+    })
+    const { data, error } = await move(entry.id)
+    expect(error).toBeNull()
+    expect(result(data)).toEqual({ id: entry.id, first_tried_foods: [] })
+    expect(await read(entry.id)).toMatchObject({
+      date: '2026-10-16',
+      meal_type: 'dinner',
+      eaten: true,
+      memo: '이동할 메모',
+      intake: 'good',
+    })
+    expect((await food(id)).first_tried_date).toBe('2026-10-16')
+    expect(
+      (await clientA().from('meal_entry_foods').select('food_id').eq('meal_entry_id', entry.id))
+        .data,
+    ).toEqual([{ food_id: id }])
+    expect(
+      (
+        await clientA()
+          .from('meal_entry_recipes')
+          .select('recipe_name')
+          .eq('meal_entry_id', entry.id)
+      ).data,
+    ).toEqual([{ recipe_name: '쌀죽' }])
+  })
+
+  it('과거로 이동하면 다른 기록과 직접 입력 날짜 중 가장 이른 날을 쓴다', async () => {
+    const id = await addFood('보리', { already_tried: true, first_tried_date: '2026-10-12' })
+    const entry = await meal([id])
+    await meal([id], { date: '2026-10-14' })
+    expect((await move(entry.id, '2026-10-11')).error).toBeNull()
+    expect((await food(id)).first_tried_date).toBe('2026-10-11')
+    await move(entry.id, '2026-10-16')
+    expect((await food(id)).first_tried_date).toBe('2026-10-12')
+  })
+
+  it('같은 칸 이동은 허용하고 상태 이력과 첫 시도 알림을 중복 생성하지 않는다', async () => {
+    const id = await addFood()
+    await caution(id)
+    const entry = await meal([id])
+    const before = await history(id)
+    const { data, error } = await move(entry.id, '2026-10-15', 'lunch')
+    expect(error).toBeNull()
+    expect(result(data).first_tried_foods).toEqual([])
+    expect(await history(id)).toEqual(before)
+  })
+
+  it('대상 칸 충돌은 원본·대상·체크·음식 상태를 모두 보존한다', async () => {
+    const id = await addFood()
+    const entry = await meal([id])
+    const target = await meal([], {
+      date: '2026-10-16',
+      meal_type: 'dinner',
+      eaten: false,
+      recipes: [{ recipe_name: '기존 계획' }],
+    })
+    expect((await move(entry.id, '2026-10-16', 'dinner', true)).error?.code).toBe('23505')
+    expect(await read(entry.id)).toMatchObject({
+      date: '2026-10-15',
+      meal_type: 'lunch',
+      eaten: true,
+    })
+    expect(await read(target.id)).toMatchObject({ date: '2026-10-16', eaten: false })
+    expect((await food(id)).first_tried_date).toBe('2026-10-15')
+  })
+
+  it('미래로 먹음 이동은 거부하고 체크 해제를 명시하면 계획으로 이동한다', async () => {
+    const id = await addFood()
+    const entry = await meal([id])
+    const future = utcDate(3)
+    expect((await move(entry.id, future)).error?.code).toBe('22007')
+    expect((await read(entry.id)).date).toBe('2026-10-15')
+    expect((await move(entry.id, future, 'dinner', true)).error).toBeNull()
+    expect(await read(entry.id)).toMatchObject({ date: future, eaten: false })
+    expect(await food(id)).toMatchObject({ status: 'not_tried', first_tried_date: null })
+  })
+
+  it('계획을 미래·과거로 옮겨도 자동으로 먹음 처리하지 않는다', async () => {
+    const id = await addFood()
+    const entry = await meal([id], { eaten: false })
+    expect((await move(entry.id, utcDate(3))).error).toBeNull()
+    expect((await move(entry.id, '2026-10-10')).error).toBeNull()
+    expect((await read(entry.id)).eaten).toBe(false)
+    expect((await food(id)).status).toBe('not_tried')
+  })
+
+  it('주의 지정일 전후로 이동하면 태그·주의 상태와 이력을 다시 계산한다', async () => {
+    const id = await addFood()
+    await caution(id)
+    const entry = await meal([id])
+    expect((await move(entry.id, '2026-10-09')).error).toBeNull()
+    expect(await food(id)).toMatchObject({
+      status: 'caution',
+      caution_tag: false,
+      first_tried_date: '2026-10-09',
+    })
+    expect((await move(entry.id, '2026-10-10')).error).toBeNull()
+    expect(await food(id)).toMatchObject({
+      status: 'tried',
+      caution_tag: true,
+      first_tried_date: '2026-10-10',
+    })
+    expect((await history(id)).map((row) => row.trigger)).toEqual([
+      'manual',
+      'meal_entry',
+      'revert',
+      'meal_entry',
+    ])
+  })
+
+  it('타인·없는 ID와 비로그인 이동을 거부한다', async () => {
+    const id = await addFood()
+    const entry = await meal([id])
+    expect((await move(entry.id, undefined, undefined, false, clientB())).error?.code).toBe('P0002')
+    expect((await move('00000000-0000-4000-8000-000000000000')).error?.code).toBe('P0002')
+    expect(
+      (await move(entry.id, undefined, undefined, false, createAnonClient())).error?.code,
+    ).toBe('42501')
+    expect((await read(entry.id)).date).toBe('2026-10-15')
+  })
+
+  it('잘못된 끼니는 거부하고 삭제된 음식 이름은 이동 후에도 보존한다', async () => {
+    const id = await addFood()
+    const entry = await meal([id])
+    expect((await move(entry.id, '2026-10-16', 'invalid')).error?.code).toBe('23514')
+    expect((await clientA().from('foods').delete().eq('id', id)).error).toBeNull()
+    expect((await move(entry.id)).error).toBeNull()
+    expect(
+      (
+        await clientA()
+          .from('meal_entry_foods')
+          .select('food_id, food_name')
+          .eq('meal_entry_id', entry.id)
+      ).data,
+    ).toEqual([{ food_id: null, food_name: '쌀' }])
+  })
+
+  it('동시에 같은 빈 칸으로 이동하면 하나만 성공하고 다른 원본은 남는다', async () => {
+    const id = await addFood()
+    const first = await meal([id])
+    const second = await meal([id], { date: '2026-10-14' })
+    const results = await Promise.all([move(first.id), move(second.id)])
+    expect(results.filter((row) => !row.error)).toHaveLength(1)
+    expect(results.find((row) => row.error)?.error?.code).toBe('23505')
+    const rows = (await clientA().from('meal_entries').select('id, date, meal_type')).data!
+    expect(rows).toHaveLength(2)
+    expect(
+      rows.filter((row) => row.date === '2026-10-16' && row.meal_type === 'dinner'),
+    ).toHaveLength(1)
+    const earlier = rows.map((row) => row.date).sort()[0]
+    expect((await food(id)).first_tried_date).toBe(earlier)
+  })
+})
