@@ -1,4 +1,4 @@
-# Baby Growth Tracker 태스크 분해 (MVP-1) v1.6
+# Baby Growth Tracker 태스크 분해 (MVP-1) v1.7
 
 Oct 20, 2026 · @오민영 · 상태: 확정
 
@@ -15,6 +15,7 @@ Oct 20, 2026 · @오민영 · 상태: 확정
 | v1.4 | 2026-10-29 | T-37에 음식 수정 함수 `update_food`와 빈 목록의 기본 음식 추가, 탭별 추가 시트, 반응 선택, 같은 이름 안내를 포함 (기능요구사항서 R45~R47). 음식 목록의 먹은 횟수는 식단 기록이 생긴 뒤 T-46에서 표시. T-40의 재계산에 `update_food` 포함 |
 | v1.5 | 2026-10-30 | T-38 함수를 `set_food_caution`(지정·정보 수정)·`release_food_caution`(해제)·`clear_caution_tag`로 정리하고, 지정은 음식 수정 시트에서 시작(R48), 해제 정보는 이력에 남김(R49). T-40에 해제의 재계산과 "주의" 태그 해제 통합 테스트, T-46에 이력의 알러지·주의 정보 표시 추가 |
 | v1.6 | 2026-10-30 | T-39는 테이블·제약·RLS까지 두고 화면이 직접 쓸 수 있게 함. 식단 테이블 직접 쓰기를 막고 함수로만 쓰게 하는 일을 T-40에, `meal_entry_recipes.recipe_id` 외래 키를 T-47에 추가 |
+| v1.7 | 2026-11-11 | T-40 구현·dev DB 적용 완료. 음식 상태 재계산, 식단 저장·먹음 체크·삭제, 직접 쓰기 차단. DB 통합 테스트 130개·단위/컴포넌트 테스트 405개 통과 |
 
 ## 1. 기준
 
@@ -27,6 +28,8 @@ Oct 20, 2026 · @오민영 · 상태: 확정
 | 브랜치 이름 | `종류/태스크ID-짧은설명` (예: `feat/T-16-body-form`, `design/D-03-home`) |
 | 진행 관리 | 태스크마다 GitHub Issue(마일스톤 MVP-1, 단계 라벨). PR 본문에 `Closes #번호`를 적어 병합 시 Issue를 닫는다 |
 | 공통 완료 기준 | CI 통과, 관련 단위 테스트 추가, 새 테이블은 RLS 테스트 추가, dev 환경에서 직접 확인, 설계와 달라진 점은 설계 문서에 반영 |
+
+**현재 구현 진행 (2026-11-11)**: T-40 구현 및 dev DB 검증 완료. 다음 작업은 T-41(식단 칸 이동 함수). GitHub Issue·PR 상태와 별개로 로컬 구현 상태를 표시한다.
 
 **표기**
 
@@ -127,7 +130,7 @@ Oct 20, 2026 · @오민영 · 상태: 확정
 | T-37 [#46](https://github.com/oh-minyoung90/Baby-Growth-Tracker/issues/46) | 음식 목록 화면 | SCR-10, FR-FOOD-01~08 | 상태별 탭·개수, 식품군 필터, 이름 검색, 탭별 추가(먹어봄은 처음 먹은 날·반응 포함)·수정(상태 옮기기, `update_food()`)·삭제, 같은 이름 입력 중 안내와 안 먹어봄 음식 옮기기, 아이 정보 등록 시와 빈 목록에서 기본 음식 추가 (R45~R47) | 탭별 표시 정보가 맞음, 삭제 확인 창 | T-14, T-36 | M |
 | T-38 [#47](https://github.com/oh-minyoung90/Baby-Growth-Tracker/issues/47) | 알러지·주의 관리 | FR-FOOD-11~14, BR-11, BR-13, R48~49 | `set_food_caution()`(지정, 이미 알러지·주의면 정보 수정), `release_food_caution()`, `clear_caution_tag()`, 수정 시트에서 바뀌는 지정 화면, 알러지·주의 음식의 정보 수정, 해제·태그 해제 확인 창(사유). 해제 때 알러지·주의 정보를 이력에 남김 | 지정·해제·태그 해제마다 이력이 남고 상태가 BR-11과 같음 | T-37 | M |
 | T-39 [#48](https://github.com/oh-minyoung90/Baby-Growth-Tracker/issues/48) | 식단 DB | F-15 | `meal_entries`, `meal_entry_foods`, `meal_entry_recipes` 테이블, 날짜·끼니 unique, 미래 "먹음" 제약, RLS, RLS 테스트 | 같은 날짜·끼니 2건 거부 | T-36 | S |
-| T-40 [#49](https://github.com/oh-minyoung90/Baby-Growth-Tracker/issues/49) | 음식 상태 재계산 | BR-11~13, BR-15, BR-17, D11 | `recalc_food`, `save_meal_entry()`, `set_meal_eaten()`, `delete_meal_entry()`, `update_food()`·`release_food_caution()`의 상태 계산을 `recalc_food`로 교체. 식단 테이블 직접 쓰기를 막고 함수로만 쓰게 함(T-39 통합 테스트도 함수로 바꿈). 통합 테스트(기술요구사항서 9.1.1, 식단으로 붙은 "주의" 태그의 해제 포함) | BR-11 전환표 모든 행과 재계산 케이스 통과 | T-39 | M |
+| T-40 ✅ [#49](https://github.com/oh-minyoung90/Baby-Growth-Tracker/issues/49) | 음식 상태 재계산 | BR-11~13, BR-15, BR-17, D11 | `recalc_food`, `save_meal_entry()`, `set_meal_eaten()`, `delete_meal_entry()`, `update_food()`·`release_food_caution()`의 상태 계산을 `recalc_food`로 교체. 식단 테이블 직접 쓰기를 막고 함수로만 쓰게 함(T-39 통합 테스트도 함수로 바꿈). 통합 테스트(기술요구사항서 9.1.1, 식단으로 붙은 "주의" 태그의 해제 포함) | BR-11 전환표 모든 행과 재계산 케이스 통과 | T-39 | M |
 | T-41 [#50](https://github.com/oh-minyoung90/Baby-Growth-Tracker/issues/50) | 칸 이동 함수 | FR-MEAL-10~12 | `move_meal_entry()`(충돌 거부, 미래 이동 시 체크 해제) + 재계산, 통합 테스트 | 충돌·미래 이동·재계산 테스트 통과 | T-40 | S |
 | T-42 [#51](https://github.com/oh-minyoung90/Baby-Growth-Tracker/issues/51) | 주간 식단 화면 | SCR-11, FR-MEAL-01~03, 15 | 주 이동·이번 주, 7일 카드(PC 한 줄·최대 폭 1,280px, 모바일 좌우 넘김·요일 칩), 칸 표시(계획 배지·점선), 빈 주 안내 | 월요일 시작, 화면 폭에 따라 배치 전환, 열면 오늘 카드 표시 | T-14, T-39 | M |
 | T-43 [#52](https://github.com/oh-minyoung90/Baby-Growth-Tracker/issues/52) | 식단 칸 입력 | FR-MEAL-04~07, 13 | 입력 시트, 음식·레시피 검색 선택, 새 음식 바로 추가, 먹은 정도·메모·먹음 체크, 저장·삭제 | 음식·레시피 없이 저장 불가, 미래 날짜 체크 불가 | T-40, T-42 | M |

@@ -460,6 +460,41 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      delete_meal_entry: { Args: { id: string }; Returns: undefined }
+      recalc_food: {
+        Args: { food_id: string; meal_entry_id?: string }
+        Returns: {
+          caution_since: string | null
+          caution_tag: boolean
+          check_note: string | null
+          created_at: string
+          first_tried_date: string | null
+          food_group: string
+          id: string
+          is_default: boolean
+          manual_first_tried_date: string | null
+          manual_tried: boolean
+          memo: string | null
+          name: string
+          name_key: string | null
+          owner_id: string
+          preference: string | null
+          reaction_date: string | null
+          status: string
+          symptom_note: string | null
+          updated_at: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "foods"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      recalc_meal_foods: {
+        Args: { food_ids: string[]; meal_entry_id?: string }
+        Returns: Json
+      }
       release_food_caution: {
         Args: { food_id: string; reason?: string }
         Returns: {
@@ -489,6 +524,19 @@ export type Database = {
           isOneToOne: true
           isSetofReturn: false
         }
+      }
+      save_meal_entry: {
+        Args: {
+          date?: string
+          eaten?: boolean
+          foods?: Json
+          id?: string
+          intake?: string
+          meal_type?: string
+          memo?: string
+          recipes?: Json
+        }
+        Returns: Json
       }
       seed_default_foods: { Args: never; Returns: number }
       set_food_caution: {
@@ -528,6 +576,7 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      set_meal_eaten: { Args: { eaten: boolean; id: string }; Returns: Json }
       update_food: {
         Args: {
           already_tried?: boolean
