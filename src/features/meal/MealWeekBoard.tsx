@@ -89,7 +89,7 @@ export function MealWeekBoard({
           >
             <header
               className={cn(
-                'flex min-h-14 items-center justify-center gap-2 border-b px-2 py-3 md:flex-col md:gap-1',
+                'flex min-h-14 shrink-0 items-center justify-center gap-2 border-b px-2 py-3 md:h-20 md:flex-col md:gap-1',
                 date === today && 'bg-soft',
               )}
             >
