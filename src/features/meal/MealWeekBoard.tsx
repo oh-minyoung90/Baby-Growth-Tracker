@@ -1,7 +1,8 @@
 import { useEffect, useRef, useState } from 'react'
 import { format } from 'date-fns'
 import { ko } from 'date-fns/locale'
-import { Check, MessageSquare, Plus, Square } from 'lucide-react'
+import { Check, MessageSquare, Plus, Square, TriangleAlert } from 'lucide-react'
+import { Checkbox } from '@/components/ui/checkbox'
 import { Badge } from '@/components/ui/badge'
 import { formatDateLabel, parseDate } from '@/domain/date'
 import type { MealEntry } from '@/lib/mealApi'
@@ -14,11 +15,19 @@ export function MealWeekBoard({
   today,
   entries,
   onSelect,
+  onEatenChange,
+  pendingId,
+  warningsReady = true,
+  cautionIds = new Set<string>(),
 }: {
   days: string[]
   today: string
   entries: MealEntry[]
   onSelect?: (date: string, type: MealType, entry?: MealEntry) => void
+  onEatenChange?: (entry: MealEntry, eaten: boolean) => void
+  pendingId?: string
+  warningsReady?: boolean
+  cautionIds?: ReadonlySet<string>
 }) {
   const initialDay = days.includes(today) ? today : days[0]
   const [active, setActive] = useState(initialDay)
@@ -73,7 +82,7 @@ export function MealWeekBoard({
           )
           setActive(days[nearest])
         }}
-        className="relative flex snap-x snap-mandatory gap-3 overflow-x-auto overscroll-x-contain pb-2 md:grid md:grid-cols-7 md:gap-2 md:overflow-visible md:pb-0"
+        className="relative flex snap-x snap-mandatory gap-3 overflow-x-auto overscroll-x-contain pb-2 md:grid md:grid-cols-[repeat(7,minmax(8rem,1fr))] md:gap-2"
       >
         {days.map((date, index) => (
           <section
@@ -106,6 +115,14 @@ export function MealWeekBoard({
                     key={type.value}
                     entry={entry}
                     label={type.label}
+                    checkLabel={`${formatDateLabel(date)} ${type.label} 먹음`}
+                    onEatenChange={
+                      entry && onEatenChange ? (eaten) => onEatenChange(entry, eaten) : undefined
+                    }
+                    disabled={!!pendingId || date > today || (!entry?.eaten && !warningsReady)}
+                    editingDisabled={!!pendingId}
+                    pending={!!entry && entry.id === pendingId}
+                    caution={!!entry && cautionIds.has(entry.id)}
                     onSelect={onSelect ? () => onSelect(date, type.value, entry) : undefined}
                   />
                 )
@@ -125,61 +142,97 @@ function MealCell({
   entry,
   label,
   onSelect,
+  onEatenChange,
+  checkLabel,
+  disabled,
+  pending,
+  editingDisabled,
+  caution,
 }: {
   entry?: MealEntry
   label: string
   onSelect?: () => void
+  onEatenChange?: (eaten: boolean) => void
+  checkLabel: string
+  disabled: boolean
+  pending: boolean
+  editingDisabled: boolean
+  caution: boolean
 }) {
   const names = entry ? [...entry.foods, ...entry.recipes].map((item) => item.name).join(', ') : ''
-  const content = (
+  const content = entry ? (
     <>
-      <span className="flex items-center justify-between gap-1">
-        <span className="text-sm font-bold">{label}</span>
-        {entry &&
-          (entry.eaten ? (
-            <Check className="size-4 text-tried-text" aria-label="먹음" />
-          ) : (
-            <Square className="size-4 text-muted-foreground" aria-label="계획" />
-          ))}
+      <span className="text-[15px] leading-relaxed break-words md:text-sm">{names}</span>
+      <span className="flex flex-wrap items-center gap-1.5">
+        {!entry.eaten && <Badge variant="plan">계획</Badge>}
+        {caution && (
+          <Badge variant="caution">
+            <TriangleAlert aria-hidden />
+            주의
+          </Badge>
+        )}
+        {entry.intake && (
+          <span className="text-xs text-muted-foreground">{mealIntakeLabel(entry.intake)}</span>
+        )}
+        {entry.memo && (
+          <MessageSquare className="size-3.5 text-muted-foreground" aria-label="메모 있음" />
+        )}
       </span>
-      {entry ? (
-        <>
-          <span className="text-[15px] leading-relaxed break-words md:text-sm">{names}</span>
-          <span className="flex flex-wrap items-center gap-1.5">
-            {!entry.eaten && <Badge variant="plan">계획</Badge>}
-            {entry.intake && (
-              <span className="text-xs text-muted-foreground">{mealIntakeLabel(entry.intake)}</span>
-            )}
-            {entry.memo && (
-              <MessageSquare className="size-3.5 text-muted-foreground" aria-label="메모 있음" />
-            )}
-          </span>
-        </>
-      ) : (
-        <span className="flex items-center gap-1 text-sm text-muted-foreground">
-          <Plus className="size-4" aria-hidden />
-          추가
-        </span>
-      )}
+    </>
+  ) : (
+    <>
+      <span className="text-sm font-bold">{label}</span>
+      <span className="flex items-center gap-1 text-sm text-muted-foreground">
+        <Plus className="size-4" aria-hidden />
+        추가
+      </span>
     </>
   )
-  const className = cn(
-    'flex min-h-28 w-full flex-col gap-2 rounded-button border p-3 text-left md:min-h-36 md:p-2',
-    !entry || !entry.eaten ? 'border-dashed bg-muted/40' : 'bg-surface',
-  )
-  return onSelect ? (
-    <button
-      type="button"
-      aria-label={`${label} ${entry ? `식단 수정: ${names}` : '식단 추가'}`}
+  const contentClass =
+    'flex w-full min-w-0 flex-1 flex-col gap-2 rounded-button p-3 text-left md:p-2'
+  return (
+    <div
       className={cn(
-        className,
-        'outline-none transition-colors hover:bg-soft focus-visible:ring-2 focus-visible:ring-ring',
+        'flex min-h-28 w-full flex-col rounded-button border md:min-h-36',
+        !entry || !entry.eaten ? 'border-dashed bg-muted/40' : 'bg-surface',
       )}
-      onClick={onSelect}
     >
-      {content}
-    </button>
-  ) : (
-    <div className={className}>{content}</div>
+      {entry && (
+        <div className="flex min-h-11 items-center justify-between gap-1 pl-3 md:pl-2">
+          <span className="text-sm font-bold">{label}</span>
+          {onEatenChange ? (
+            <span className="grid size-11 shrink-0 place-items-center">
+              <Checkbox
+                checked={entry.eaten}
+                disabled={disabled}
+                aria-label={checkLabel}
+                aria-busy={pending}
+                onCheckedChange={(checked) => onEatenChange(checked === true)}
+              />
+            </span>
+          ) : entry.eaten ? (
+            <Check className="mr-2 size-4 text-tried-text" aria-label="먹음" />
+          ) : (
+            <Square className="mr-2 size-4 text-muted-foreground" aria-label="계획" />
+          )}
+        </div>
+      )}
+      {onSelect ? (
+        <button
+          type="button"
+          disabled={editingDisabled}
+          aria-label={`${label} ${entry ? `식단 수정: ${names}` : '식단 추가'}`}
+          className={cn(
+            contentClass,
+            'outline-none transition-colors hover:bg-soft focus-visible:ring-2 focus-visible:ring-ring',
+          )}
+          onClick={onSelect}
+        >
+          {content}
+        </button>
+      ) : (
+        <div className={contentClass}>{content}</div>
+      )}
+    </div>
   )
 }

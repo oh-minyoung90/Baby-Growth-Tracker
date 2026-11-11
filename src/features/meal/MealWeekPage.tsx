@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react'
 import { ChevronLeft, ChevronRight, Utensils } from 'lucide-react'
 import { useSearchParams } from 'react-router'
+import { ConfirmDialog } from '@/components/ConfirmDialog'
 import { EmptyState } from '@/components/EmptyState'
 import { ErrorBanner } from '@/components/ErrorBanner'
 import { ListLoading } from '@/components/ListLoading'
@@ -8,10 +9,15 @@ import { Button } from '@/components/ui/button'
 import { isValidDateString, todayString } from '@/domain/date'
 import { shiftMealWeek, weekFromParam } from '@/domain/mealWeek'
 import { NETWORK_ERROR_MESSAGES } from '@/lib/messages'
+import { mealCautionFoods, mealCautionMessage } from '@/lib/mealCaution'
+import { MealSaveError, type MealEntry } from '@/lib/mealApi'
+import { notifyMealSaved } from '@/lib/mealNotify'
+import { useFoods } from '@/lib/useFoods'
 import { isMealType } from '@/lib/mealTypes'
 import { useChild } from '@/lib/useChild'
-import { useMealEntry, useMealWeek } from '@/lib/useMeals'
+import { useMealEntry, useMealWeek, useSetMealEaten } from '@/lib/useMeals'
 import { useSheetParam } from '@/lib/useSheetParam'
+import { MEAL_MESSAGES } from './mealSchema'
 import { MealWeekBoard } from './MealWeekBoard'
 import { MealSheet, type MealEditor } from './MealSheet'
 
@@ -19,6 +25,37 @@ export function MealWeekPage() {
   const [params, setParams] = useSearchParams()
   const sheet = useSheetParam('record', ['date', 'meal'])
   const child = useChild()
+  const foods = useFoods()
+  const setEaten = useSetMealEaten()
+  const [confirmation, setConfirmation] = useState<MealEntry | null>(null)
+  const [failedCheck, setFailedCheck] = useState<{
+    entry: MealEntry
+    eaten: boolean
+    message: string
+    retryable: boolean
+  } | null>(null)
+  const warningsReady = foods.isSuccess && !foods.isFetching
+  const changeEaten = async (entry: MealEntry, eaten: boolean) => {
+    if (setEaten.isPending || (eaten && !warningsReady)) return
+    setFailedCheck(null)
+    try {
+      const result = await setEaten.mutateAsync({ id: entry.id, eaten })
+      notifyMealSaved(result)
+    } catch (error) {
+      const message =
+        error instanceof MealSaveError && error.reason === 'futureDate'
+          ? MEAL_MESSAGES.futureEaten
+          : error instanceof MealSaveError && error.reason === 'notFound'
+            ? MEAL_MESSAGES.notFound
+            : NETWORK_ERROR_MESSAGES.save
+      setFailedCheck({
+        entry,
+        eaten,
+        message,
+        retryable: !(error instanceof MealSaveError) || error.reason === 'network',
+      })
+    }
+  }
   const today = todayString()
   const editing = sheet.value !== null && sheet.value !== 'new'
   const single = useMealEntry(editing && sheet.value ? sheet.value : undefined)
@@ -27,6 +64,13 @@ export function MealWeekPage() {
   const newType = isMealType(typeParam) ? typeParam : null
   const week = weekFromParam(params.get('week') ?? single.data?.date ?? params.get('date'), today)
   const meals = useMealWeek(week.start, week.end)
+  const requestEatenChange = (entry: MealEntry, eaten: boolean) => {
+    if (setEaten.isPending || (eaten && !warningsReady)) return
+    const current = meals.data?.find((item) => item.id === entry.id) ?? entry
+    if (eaten && mealCautionFoods(current.foods, current.recipes, foods.data ?? []).length > 0)
+      setConfirmation(current)
+    else void changeEaten(current, eaten)
+  }
   const editor = useMemo<MealEditor | null>(() => {
     if (sheet.value === 'new')
       return isValidDateString(newDate) && newType ? { date: newDate, type: newType } : null
@@ -74,6 +118,24 @@ export function MealWeekPage() {
           이번 주
         </Button>
       </div>
+      {foods.isError && (
+        <ErrorBanner
+          message="주의 음식 정보를 불러오지 못했어요. 다시 시도해 주세요."
+          onRetry={() => void foods.refetch()}
+          retrying={foods.isFetching}
+        />
+      )}
+      {failedCheck && (
+        <ErrorBanner
+          message={failedCheck.message}
+          onRetry={
+            failedCheck.retryable
+              ? () => requestEatenChange(failedCheck.entry, failedCheck.eaten)
+              : undefined
+          }
+          retrying={setEaten.isPending || (failedCheck.eaten && !warningsReady)}
+        />
+      )}
       {meals.isPending ? (
         <ListLoading />
       ) : meals.isError ? (
@@ -96,12 +158,41 @@ export function MealWeekPage() {
             days={week.days}
             today={today}
             entries={meals.data}
+            pendingId={setEaten.isPending ? setEaten.variables.id : undefined}
+            warningsReady={warningsReady}
+            cautionIds={
+              new Set(
+                meals.data
+                  .filter(
+                    (entry) =>
+                      mealCautionFoods(entry.foods, entry.recipes, foods.data ?? []).length > 0,
+                  )
+                  .map((entry) => entry.id),
+              )
+            }
+            onEatenChange={requestEatenChange}
             onSelect={(date, type, entry) =>
               sheet.open(entry?.id ?? 'new', entry ? {} : { params: { date, meal: type } })
             }
           />
         </>
       )}
+      <ConfirmDialog
+        open={confirmation !== null}
+        onOpenChange={(open) => {
+          if (!open) setConfirmation(null)
+        }}
+        title={mealCautionMessage(
+          confirmation
+            ? mealCautionFoods(confirmation.foods, confirmation.recipes, foods.data ?? [])
+            : [],
+        )}
+        description="음식을 확인한 후 먹음으로 저장해 주세요."
+        confirmLabel="그래도 저장"
+        onConfirm={() => {
+          if (confirmation) void changeEaten(confirmation, true)
+        }}
+      />
       <MealSheet
         open={sheet.value !== null}
         editor={editor}
