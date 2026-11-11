@@ -135,7 +135,7 @@ export function MealFoodPicker({
                 setQuery(event.target.value)
                 setFailed(null)
               }}
-              className="pl-10"
+              className="pl-10 focus-visible:pl-[39px] aria-invalid:pl-[39px]"
             />
           </div>
           {foods.isPending ? (
