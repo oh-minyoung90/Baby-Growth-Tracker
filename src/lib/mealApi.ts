@@ -134,3 +134,24 @@ export async function setMealEaten(id: string, eaten: boolean): Promise<MealSave
   if (error) throw toSaveError(error)
   return parseMealResult(data)
 }
+
+export interface MealMoveTarget {
+  date: string
+  type: MealType
+}
+
+/** 날짜·끼니 이동과 먹음 해제·재계산은 T-41 RPC에서 한 번에 처리한다. */
+export async function moveMealEntry(
+  id: string,
+  target: MealMoveTarget,
+  uncheck: boolean,
+): Promise<MealSaveResult> {
+  const { data, error } = await supabase.rpc('move_meal_entry', {
+    id,
+    date: target.date,
+    meal_type: target.type,
+    uncheck,
+  })
+  if (error) throw toSaveError(error)
+  return parseMealResult(data)
+}

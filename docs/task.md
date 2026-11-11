@@ -1,4 +1,4 @@
-# Baby Growth Tracker 태스크 분해 (MVP-1) v1.11
+# Baby Growth Tracker 태스크 분해 (MVP-1) v1.12
 
 Oct 20, 2026 · @오민영 · 상태: 확정
 
@@ -20,6 +20,7 @@ Oct 20, 2026 · @오민영 · 상태: 확정
 | v1.9 | 2026-11-11 | T-43 식단 입력·수정·삭제 시트, 음식 검색·바로 추가, 미래 먹음 제한, 서버 오류·재시도·주소 진입 구현. 레시피 선택 UI와 이름 보존을 준비하고 실제 목록 연결은 T-51에서 완성. 테스트 451개·모바일/PC 레이아웃·실제 dev DB 화면 생성/수정/삭제 검증 통과 |
 | v1.10 | 2026-11-11 | T-41 식단 이동 함수·dev DB 적용, 충돌·미래 체크 해제·날짜/주의 재계산·소유권·동시 이동 통합 테스트 추가. 이동 화면은 T-45에서 연결 |
 | v1.11 | 2026-11-11 | T-44: 표 먹음 체크, 직접 선택 음식의 주의 배너·계획/먹음 저장 확인, 첫 시도 알림과 오류 재시도 구현. 레시피 재료 경고 계산 준비, 실제 레시피·타임라인 연동은 T-51에 남음. 단위/컴포넌트 467개·DB 통합 140개·모바일/PC 화면과 실제 dev DB 왕복 검증 통과 |
+| v1.12 | 2026-11-11 | T-45: PC 드래그·공통 이동 메뉴, 미래 체크 해제 확인, 충돌·오류 재시도, 이동한 주·요일 표시 구현 |
 
 ## 1. 기준
 
@@ -33,7 +34,7 @@ Oct 20, 2026 · @오민영 · 상태: 확정
 | 진행 관리 | 태스크마다 GitHub Issue(마일스톤 MVP-1, 단계 라벨). PR 본문에 `Closes #번호`를 적어 병합 시 Issue를 닫는다 |
 | 공통 완료 기준 | CI 통과, 관련 단위 테스트 추가, 새 테이블은 RLS 테스트 추가, dev 환경에서 직접 확인, 설계와 달라진 점은 설계 문서에 반영 |
 
-**현재 구현 진행 (2026-11-11)**: T-40·T-41·T-42·T-43 구현 완료. 레시피 선택 UI는 준비되었으며 실제 레시피 목록은 T-47 DB·T-49 목록 이후 T-51에서 연결한다. T-44의 직접 음식 경고·표 먹음 체크·첫 시도 알림을 구현했다. 레시피 재료 경고 계산은 준비했으며 실제 레시피 선택·재료 조회 및 타임라인 연결은 T-51에 남아 있다. 다음 화면 작업은 T-45(칸 이동)다. GitHub Issue·PR 상태와 별개로 로컬 구현 상태를 표시한다.
+**현재 구현 진행 (2026-11-11)**: T-40·T-41·T-42·T-43 구현 완료. 레시피 선택 UI는 준비되었으며 실제 레시피 목록은 T-47 DB·T-49 목록 이후 T-51에서 연결한다. T-44의 직접 음식 경고·표 먹음 체크·첫 시도 알림을 구현했다. 레시피 재료 경고 계산은 준비했으며 실제 레시피 선택·재료 조회 및 타임라인 연결은 T-51에 남아 있다. T-45 이동 화면을 구현했으며 다음 작업은 T-46 음식 상세다. GitHub Issue·PR 상태와 별개로 로컬 구현 상태를 표시한다.
 
 **표기**
 
@@ -135,11 +136,11 @@ Oct 20, 2026 · @오민영 · 상태: 확정
 | T-38 [#47](https://github.com/oh-minyoung90/Baby-Growth-Tracker/issues/47) | 알러지·주의 관리 | FR-FOOD-11~14, BR-11, BR-13, R48~49 | `set_food_caution()`(지정, 이미 알러지·주의면 정보 수정), `release_food_caution()`, `clear_caution_tag()`, 수정 시트에서 바뀌는 지정 화면, 알러지·주의 음식의 정보 수정, 해제·태그 해제 확인 창(사유). 해제 때 알러지·주의 정보를 이력에 남김 | 지정·해제·태그 해제마다 이력이 남고 상태가 BR-11과 같음 | T-37 | M |
 | T-39 [#48](https://github.com/oh-minyoung90/Baby-Growth-Tracker/issues/48) | 식단 DB | F-15 | `meal_entries`, `meal_entry_foods`, `meal_entry_recipes` 테이블, 날짜·끼니 unique, 미래 "먹음" 제약, RLS, RLS 테스트 | 같은 날짜·끼니 2건 거부 | T-36 | S |
 | T-40 ✅ [#49](https://github.com/oh-minyoung90/Baby-Growth-Tracker/issues/49) | 음식 상태 재계산 | BR-11~13, BR-15, BR-17, D11 | `recalc_food`, `save_meal_entry()`, `set_meal_eaten()`, `delete_meal_entry()`, `update_food()`·`release_food_caution()`의 상태 계산을 `recalc_food`로 교체. 식단 테이블 직접 쓰기를 막고 함수로만 쓰게 함(T-39 통합 테스트도 함수로 바꿈). 통합 테스트(기술요구사항서 9.1.1, 식단으로 붙은 "주의" 태그의 해제 포함) | BR-11 전환표 모든 행과 재계산 케이스 통과 | T-39 | M |
-| T-41 [#50](https://github.com/oh-minyoung90/Baby-Growth-Tracker/issues/50) | 칸 이동 함수 | FR-MEAL-10~12 | `move_meal_entry()`(충돌 거부, 미래 이동 시 체크 해제) + 재계산, 통합 테스트 | 충돌·미래 이동·재계산 테스트 통과 | T-40 | S |
+| T-41 ✅ [#50](https://github.com/oh-minyoung90/Baby-Growth-Tracker/issues/50) | 칸 이동 함수 | FR-MEAL-10~12 | `move_meal_entry()`(충돌 거부, 미래 이동 시 체크 해제) + 재계산, 통합 테스트 | 충돌·미래 이동·재계산 테스트 통과 | T-40 | S |
 | T-42 ✅ [#51](https://github.com/oh-minyoung90/Baby-Growth-Tracker/issues/51) | 주간 식단 화면 | SCR-11, FR-MEAL-01~03, 15 | 주 이동·이번 주, 7일 카드(PC 한 줄·최대 폭 1,280px, 모바일 좌우 넘김·요일 칩), 칸 표시(계획 배지·점선), 빈 주 안내 | 월요일 시작, 화면 폭에 따라 배치 전환, 열면 오늘 카드 표시 | T-14, T-39 | M |
 | T-43 ✅ [#52](https://github.com/oh-minyoung90/Baby-Growth-Tracker/issues/52) | 식단 칸 입력 | FR-MEAL-04~07, 13 | 입력 시트, 음식·레시피 검색 선택, 새 음식 바로 추가, 먹은 정도·메모·먹음 체크, 저장·삭제 | 음식·레시피 없이 저장 불가, 미래 날짜 체크 불가 | T-40, T-42 | M |
 | T-44 [#53](https://github.com/oh-minyoung90/Baby-Growth-Tracker/issues/53) | 경고·먹음 체크·첫 시도 알림 | FR-MEAL-08~09, 14 | 주의 음식·재료 경고 배너와 저장 확인 창, 표에서 바로 먹음 체크, "처음 먹었어요" 알림 | 계획 칸에도 경고, 첫 시도 알림 표시 | T-43 | S |
-| T-45 [#54](https://github.com/oh-minyoung90/Baby-Growth-Tracker/issues/54) | 칸 이동 화면 | FR-MEAL-10~12 | PC 드래그, "이동" 메뉴(날짜·끼니 선택), 충돌 안내, 미래 이동 확인 창 | PC 드래그·모바일 메뉴 모두 이동됨 | T-41, T-43 | M |
+| T-45 ✅ [#54](https://github.com/oh-minyoung90/Baby-Growth-Tracker/issues/54) | 칸 이동 화면 | FR-MEAL-10~12 | PC 드래그, "이동" 메뉴(날짜·끼니 선택), 충돌 안내, 미래 이동 확인 창 | PC 드래그·모바일 메뉴 모두 이동됨 | T-41, T-43 | M |
 | T-46 [#55](https://github.com/oh-minyoung90/Baby-Growth-Tracker/issues/55) | 음식 상세 | FR-FOOD-09~10 | 음식 정보, 반응 선택, 먹은 식단 목록, 알러지·주의 정보, 이력 목록(해제 이력의 알러지·주의 정보 포함, R49), 음식 목록의 먹은 횟수 표시와 목록에서 상세로 연결 | 식단·이력이 최신순으로 표시 | T-38, T-40 | S |
 | T-47 [#56](https://github.com/oh-minyoung90/Baby-Growth-Tracker/issues/56) | 레시피 DB | F-17 | `recipes`, `recipe_ingredients`, `photos` 테이블, RLS, RLS 테스트, `meal_entry_recipes.recipe_id` 외래 키(레시피 삭제 시 null, T-39에서 미룸) | 레시피 삭제 시 재료 함께 삭제, 음식 삭제 시 재료 이름 유지 | T-36 | S |
 | T-48 [#57](https://github.com/oh-minyoung90/Baby-Growth-Tracker/issues/57) | 사진 저장소 | F-11, 기술요구사항서 6.3 | 비공개 버킷·Storage 정책(마이그레이션), 리사이즈·압축·업로드·서명 URL·삭제 유틸, 확인 항목 C8(HEIC) | 다른 계정 사진 접근 불가, 1,280px 이하로 저장 | T-07 | M |

@@ -5,6 +5,8 @@ import {
   fetchMealWeek,
   saveMealEntry,
   setMealEaten,
+  moveMealEntry,
+  type MealMoveTarget,
   MealSaveError,
   type MealInput,
 } from './mealApi'
@@ -72,5 +74,29 @@ export function useSetMealEaten() {
         client.invalidateQueries({ queryKey: MEALS_QUERY_KEY }),
         client.invalidateQueries({ queryKey: FOODS_QUERY_KEY }),
       ]),
+  })
+}
+
+export function useMoveMeal() {
+  const client = useQueryClient()
+  return useMutation({
+    mutationFn: ({
+      id,
+      target,
+      uncheck,
+    }: {
+      id: string
+      target: MealMoveTarget
+      uncheck: boolean
+    }) => moveMealEntry(id, target, uncheck),
+    onSuccess: () =>
+      Promise.all([
+        client.invalidateQueries({ queryKey: MEALS_QUERY_KEY }),
+        client.invalidateQueries({ queryKey: FOODS_QUERY_KEY }),
+      ]),
+    onError: (error) => {
+      if (error instanceof MealSaveError && ['duplicate', 'notFound'].includes(error.reason))
+        return client.invalidateQueries({ queryKey: MEALS_QUERY_KEY })
+    },
   })
 }

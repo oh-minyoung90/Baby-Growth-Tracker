@@ -6,6 +6,7 @@ import {
   MealSaveError,
   saveMealEntry,
   setMealEaten,
+  moveMealEntry,
   type MealInput,
 } from './mealApi'
 
@@ -155,4 +156,21 @@ describe('먹음 체크 API (T-44)', () => {
     })
     await expect(setMealEaten('m1', false)).rejects.toMatchObject({ reason: 'network' })
   })
+})
+
+it('이동 API는 날짜·끼니·명시적 체크 해제를 전용 RPC로 보낸다', async () => {
+  expect(await moveMealEntry('m1', { date: '2026-11-20', type: 'dinner' }, true)).toEqual({
+    id: 'm1',
+    firstTriedFoods: [{ id: 'f1', name: '쌀' }],
+  })
+  expect(mock.rpc).toHaveBeenCalledExactlyOnceWith('move_meal_entry', {
+    id: 'm1',
+    date: '2026-11-20',
+    meal_type: 'dinner',
+    uncheck: true,
+  })
+  mock.rpc.mockResolvedValueOnce({ data: null, error: { code: '23505', message: '' } })
+  await expect(
+    moveMealEntry('m1', { date: '2026-11-11', type: 'lunch' }, false),
+  ).rejects.toMatchObject({ reason: 'duplicate' })
 })
