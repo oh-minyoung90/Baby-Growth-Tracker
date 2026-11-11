@@ -1,4 +1,4 @@
-import { Outlet, useLocation } from 'react-router'
+import { Outlet } from 'react-router'
 import { Page } from '@/components/Page'
 import { SubTabs } from '@/components/SubTabs'
 
@@ -10,10 +10,9 @@ const TABS = [
 ]
 
 export function MealsLayout() {
-  // 주간 식단만 본문 최대 폭 1,280px (docs/디자인.md 5장)
-  const wide = useLocation().pathname.startsWith('/meals/week')
+  // 식사 안의 세 탭은 같은 폭과 시작 위치를 쓴다 (docs/디자인.md 5장).
   return (
-    <Page title="식사" wide={wide}>
+    <Page title="식사" wide>
       <SubTabs label="식사 화면" items={TABS} />
       <Outlet />
     </Page>

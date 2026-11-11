@@ -3,7 +3,7 @@ import { usePageTitle } from '@/lib/usePageTitle'
 import { cn } from '@/lib/utils'
 
 /**
- * 화면 본문 틀: 제목 + 내용. 본문 최대 폭은 960px, 주간 식단처럼 넓은 화면은 wide(1,280px) (docs/디자인.md 5장)
+ * 화면 본문 틀: 제목 + 내용. 본문 최대 폭은 960px, 식사 화면은 wide(1,280px) (docs/디자인.md 5장)
  */
 export function Page({
   title,
