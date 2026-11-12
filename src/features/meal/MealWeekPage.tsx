@@ -6,18 +6,21 @@ import { EmptyState } from '@/components/EmptyState'
 import { ErrorBanner } from '@/components/ErrorBanner'
 import { ListLoading } from '@/components/ListLoading'
 import { Button } from '@/components/ui/button'
-import { isValidDateString, todayString } from '@/domain/date'
+import { formatDateLabel, isValidDateString, todayString } from '@/domain/date'
 import { shiftMealWeek, weekFromParam } from '@/domain/mealWeek'
 import { NETWORK_ERROR_MESSAGES } from '@/lib/messages'
 import { mealCautionFoods, mealCautionMessage } from '@/lib/mealCaution'
-import { MealSaveError, type MealEntry } from '@/lib/mealApi'
+import { MealSaveError, type MealEntry, type MealMoveTarget } from '@/lib/mealApi'
+import { notifyDone } from '@/lib/notify'
 import { notifyMealSaved } from '@/lib/mealNotify'
 import { useFoods } from '@/lib/useFoods'
-import { isMealType } from '@/lib/mealTypes'
+import { isMealType, mealTypeLabel } from '@/lib/mealTypes'
 import { useChild } from '@/lib/useChild'
-import { useMealEntry, useMealWeek, useSetMealEaten } from '@/lib/useMeals'
+import { useMealEntry, useMealWeek, useSetMealEaten, useMoveMeal } from '@/lib/useMeals'
 import { useSheetParam } from '@/lib/useSheetParam'
 import { MEAL_MESSAGES } from './mealSchema'
+import { MealMoveSheet } from './MealMoveSheet'
+import { FUTURE_MOVE_TITLE, futureMoveDescription, mealMoveError } from './mealMove'
 import { MealWeekBoard } from './MealWeekBoard'
 import { MealSheet, type MealEditor } from './MealSheet'
 
@@ -27,6 +30,17 @@ export function MealWeekPage() {
   const child = useChild()
   const foods = useFoods()
   const setEaten = useSetMealEaten()
+  const move = useMoveMeal()
+  const [moving, setMoving] = useState<MealEntry | null>(null)
+  const [futureDrop, setFutureDrop] = useState<{ entry: MealEntry; target: MealMoveTarget } | null>(
+    null,
+  )
+  const [failedMove, setFailedMove] = useState<{
+    entry: MealEntry
+    target: MealMoveTarget
+    error: unknown
+  } | null>(null)
+  const [focusDate, setFocusDate] = useState<string>()
   const [confirmation, setConfirmation] = useState<MealEntry | null>(null)
   const [failedCheck, setFailedCheck] = useState<{
     entry: MealEntry
@@ -36,7 +50,7 @@ export function MealWeekPage() {
   } | null>(null)
   const warningsReady = foods.isSuccess && !foods.isFetching
   const changeEaten = async (entry: MealEntry, eaten: boolean) => {
-    if (setEaten.isPending || (eaten && !warningsReady)) return
+    if (move.isPending || setEaten.isPending || (eaten && !warningsReady)) return
     setFailedCheck(null)
     try {
       const result = await setEaten.mutateAsync({ id: entry.id, eaten })
@@ -65,7 +79,7 @@ export function MealWeekPage() {
   const week = weekFromParam(params.get('week') ?? single.data?.date ?? params.get('date'), today)
   const meals = useMealWeek(week.start, week.end)
   const requestEatenChange = (entry: MealEntry, eaten: boolean) => {
-    if (setEaten.isPending || (eaten && !warningsReady)) return
+    if (move.isPending || setEaten.isPending || (eaten && !warningsReady)) return
     const current = meals.data?.find((item) => item.id === entry.id) ?? entry
     if (eaten && mealCautionFoods(current.foods, current.recipes, foods.data ?? []).length > 0)
       setConfirmation(current)
@@ -79,7 +93,34 @@ export function MealWeekPage() {
       : null
   }, [sheet.value, newDate, newType, single.data])
   const [view, setView] = useState(0)
+  const performMove = async (entry: MealEntry, target: MealMoveTarget, uncheck: boolean) => {
+    if (move.isPending || setEaten.isPending) return
+    await move.mutateAsync({ id: entry.id, target, uncheck })
+    setMoving(null)
+    setFailedMove(null)
+    const next = new URLSearchParams(params)
+    next.set('week', weekFromParam(target.date, today).start)
+    next.delete('record')
+    setParams(next, { replace: true })
+    setFocusDate(target.date)
+    setView((value) => value + 1)
+    notifyDone(`${formatDateLabel(target.date)} ${mealTypeLabel(target.type)}으로 식단을 옮겼어요`)
+  }
+  const dropMove = (entry: MealEntry, target: MealMoveTarget) => {
+    if (move.isPending || setEaten.isPending) return
+    if (child.data?.birthDate && target.date < child.data.birthDate) {
+      setFailedMove({ entry, target, error: new MealSaveError('beforeBirth') })
+      return
+    }
+    setFailedMove(null)
+    if (entry.eaten && target.date > todayString()) setFutureDrop({ entry, target })
+    else
+      void performMove(entry, target, false).catch((error) =>
+        setFailedMove({ entry, target, error }),
+      )
+  }
   const changeWeek = (date: string) => {
+    setFocusDate(undefined)
     const next = new URLSearchParams(params)
     next.set('week', date)
     next.delete('record')
@@ -118,6 +159,17 @@ export function MealWeekPage() {
           이번 주
         </Button>
       </div>
+      {failedMove && (
+        <ErrorBanner
+          message={mealMoveError(failedMove.error)}
+          onRetry={
+            !(failedMove.error instanceof MealSaveError) || failedMove.error.reason === 'network'
+              ? () => dropMove(failedMove.entry, failedMove.target)
+              : undefined
+          }
+          retrying={move.isPending}
+        />
+      )}
       {foods.isError && (
         <ErrorBanner
           message="주의 음식 정보를 불러오지 못했어요. 다시 시도해 주세요."
@@ -158,7 +210,16 @@ export function MealWeekPage() {
             days={week.days}
             today={today}
             entries={meals.data}
-            pendingId={setEaten.isPending ? setEaten.variables.id : undefined}
+            pendingId={
+              move.isPending
+                ? move.variables.id
+                : setEaten.isPending
+                  ? setEaten.variables.id
+                  : undefined
+            }
+            focusDate={focusDate}
+            onMove={(entry) => setMoving(entry)}
+            onDropMove={(entry, date, type) => dropMove(entry, { date, type })}
             warningsReady={warningsReady}
             cautionIds={
               new Set(
@@ -193,6 +254,31 @@ export function MealWeekPage() {
           if (confirmation) void changeEaten(confirmation, true)
         }}
       />
+      <ConfirmDialog
+        open={futureDrop !== null}
+        onOpenChange={(open) => {
+          if (!open) setFutureDrop(null)
+        }}
+        title={FUTURE_MOVE_TITLE}
+        description={futureDrop ? futureMoveDescription(futureDrop.target) : undefined}
+        confirmLabel="체크 해제하고 이동"
+        onConfirm={() => {
+          if (futureDrop)
+            void performMove(futureDrop.entry, futureDrop.target, true).catch((error) =>
+              setFailedMove({ ...futureDrop, error }),
+            )
+        }}
+      />
+      {moving && (
+        <MealMoveSheet
+          key={moving.id}
+          entry={moving}
+          birthDate={child.data?.birthDate}
+          pending={move.isPending}
+          onMove={performMove}
+          onClose={() => setMoving(null)}
+        />
+      )}
       <MealSheet
         open={sheet.value !== null}
         editor={editor}

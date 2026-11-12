@@ -79,7 +79,8 @@ export function MealForm({
       return
     }
     const reason = error.reason
-    if (reason === 'futureDate') setError('eaten', { message: MEAL_MESSAGES.futureEaten })
+    if (reason === 'beforeBirth') setError('date', { message: MEAL_MESSAGES.beforeBirth })
+    else if (reason === 'futureDate') setError('eaten', { message: MEAL_MESSAGES.futureEaten })
     else if (reason === 'memoLength') setError('memo', { message: '500자까지 입력할 수 있어요' })
     else if (reason === 'selection' || reason === 'staleItem')
       setError('foods', { message: MEAL_MESSAGES[reason] })

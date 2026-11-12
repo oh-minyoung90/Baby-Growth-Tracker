@@ -461,6 +461,13 @@ export type Database = {
         }
       }
       delete_meal_entry: { Args: { id: string }; Returns: undefined }
+      food_meal_counts: {
+        Args: never
+        Returns: {
+          eaten_count: number
+          food_id: string
+        }[]
+      }
       move_meal_entry: {
         Args: { date: string; id: string; meal_type: string; uncheck: boolean }
         Returns: Json

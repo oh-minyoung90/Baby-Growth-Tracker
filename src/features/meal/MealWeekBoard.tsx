@@ -1,8 +1,17 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState, type DragEventHandler } from 'react'
 import { format } from 'date-fns'
 import { ko } from 'date-fns/locale'
-import { Check, MessageSquare, Plus, Square, TriangleAlert } from 'lucide-react'
+import {
+  Check,
+  MessageSquare,
+  Plus,
+  Square,
+  TriangleAlert,
+  GripVertical,
+  MoveRight,
+} from 'lucide-react'
 import { Checkbox } from '@/components/ui/checkbox'
+import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { formatDateLabel, parseDate } from '@/domain/date'
 import type { MealEntry } from '@/lib/mealApi'
@@ -19,6 +28,9 @@ export function MealWeekBoard({
   pendingId,
   warningsReady = true,
   cautionIds = new Set<string>(),
+  onMove,
+  onDropMove,
+  focusDate,
 }: {
   days: string[]
   today: string
@@ -27,9 +39,15 @@ export function MealWeekBoard({
   onEatenChange?: (entry: MealEntry, eaten: boolean) => void
   pendingId?: string
   warningsReady?: boolean
+  onMove?: (entry: MealEntry) => void
+  onDropMove?: (entry: MealEntry, date: string, type: MealType) => void
+  focusDate?: string
   cautionIds?: ReadonlySet<string>
 }) {
-  const initialDay = days.includes(today) ? today : days[0]
+  const [dragging, setDragging] = useState<MealEntry | null>(null)
+  const [dropTarget, setDropTarget] = useState<string | null>(null)
+  const initialDay =
+    focusDate && days.includes(focusDate) ? focusDate : days.includes(today) ? today : days[0]
   const [active, setActive] = useState(initialDay)
   const initialIndex = days.indexOf(initialDay)
   const scroller = useRef<HTMLDivElement>(null)
@@ -114,6 +132,45 @@ export function MealWeekBoard({
                   <MealCell
                     key={type.value}
                     entry={entry}
+                    onMove={entry && onMove ? () => onMove(entry) : undefined}
+                    onDragStart={
+                      entry && onDropMove
+                        ? (event) => {
+                            if (pendingId || !window.matchMedia('(min-width: 768px)').matches) {
+                              event.preventDefault()
+                              return
+                            }
+                            event.dataTransfer.setData('application/x-baby-growth-meal', entry.id)
+                            event.dataTransfer.effectAllowed = 'move'
+                            setDragging(entry)
+                          }
+                        : undefined
+                    }
+                    onDragEnd={() => {
+                      setDragging(null)
+                      setDropTarget(null)
+                    }}
+                    onDragOver={(event) => {
+                      if (!dragging || pendingId) return
+                      event.preventDefault()
+                      event.dataTransfer.dropEffect = 'move'
+                      setDropTarget(`${date}:${type.value}`)
+                    }}
+                    onDrop={(event) => {
+                      if (!dragging || pendingId) return
+                      event.preventDefault()
+                      const source = entries.find((item) => item.id === dragging.id)
+                      if (
+                        source &&
+                        event.dataTransfer.getData('application/x-baby-growth-meal') ===
+                          source.id &&
+                        (source.date !== date || source.type !== type.value)
+                      )
+                        onDropMove?.(source, date, type.value)
+                      setDragging(null)
+                      setDropTarget(null)
+                    }}
+                    dropActive={dropTarget === `${date}:${type.value}`}
                     label={type.label}
                     checkLabel={`${formatDateLabel(date)} ${type.label} 먹음`}
                     onEatenChange={
@@ -148,6 +205,12 @@ function MealCell({
   pending,
   editingDisabled,
   caution,
+  onMove,
+  onDragStart,
+  onDragEnd,
+  onDragOver,
+  onDrop,
+  dropActive,
 }: {
   entry?: MealEntry
   label: string
@@ -158,6 +221,12 @@ function MealCell({
   pending: boolean
   editingDisabled: boolean
   caution: boolean
+  onMove?: () => void
+  onDragStart?: DragEventHandler<HTMLButtonElement>
+  onDragEnd: DragEventHandler<HTMLButtonElement>
+  onDragOver: DragEventHandler<HTMLDivElement>
+  onDrop: DragEventHandler<HTMLDivElement>
+  dropActive: boolean
 }) {
   const names = entry ? [...entry.foods, ...entry.recipes].map((item) => item.name).join(', ') : ''
   const content = entry ? (
@@ -192,9 +261,12 @@ function MealCell({
     'flex w-full min-w-0 flex-1 flex-col gap-2 rounded-button p-3 text-left md:p-2'
   return (
     <div
+      onDragOver={onDragOver}
+      onDrop={onDrop}
       className={cn(
-        'flex min-h-28 w-full flex-col rounded-button border md:min-h-36',
+        'flex min-h-28 w-full flex-col rounded-button border md:min-h-44',
         !entry || !entry.eaten ? 'border-dashed bg-muted/40' : 'bg-surface',
+        dropActive && 'ring-2 ring-primary bg-soft',
       )}
     >
       {entry && (
@@ -232,6 +304,38 @@ function MealCell({
         </button>
       ) : (
         <div className={contentClass}>{content}</div>
+      )}
+      {entry && onMove && (
+        <div className="flex items-center justify-between gap-1 px-2">
+          {onDragStart && (
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon"
+              className="hidden w-7 cursor-grab md:inline-flex active:cursor-grabbing"
+              draggable={!editingDisabled}
+              disabled={editingDisabled}
+              aria-label={`${label} 식단 드래그로 이동`}
+              title="다른 날짜·끼니로 끌어 이동"
+              onDragStart={onDragStart}
+              onDragEnd={onDragEnd}
+            >
+              <GripVertical className="size-4" aria-hidden />
+            </Button>
+          )}
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            className="ml-auto"
+            disabled={editingDisabled}
+            aria-label={`${label} 식단 이동`}
+            onClick={onMove}
+          >
+            <MoveRight className="size-4" aria-hidden />
+            이동
+          </Button>
+        </div>
       )}
     </div>
   )

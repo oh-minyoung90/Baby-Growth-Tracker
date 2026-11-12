@@ -70,6 +70,7 @@ export function FoodForm({
   onDone,
   onEditExisting,
   onDesignate,
+  onDeleted,
 }: {
   /** 수정할 음식. 없으면 새 음식 */
   initial?: Food
@@ -84,6 +85,7 @@ export function FoodForm({
   onEditExisting: (id: string) => void
   /** 시트를 알러지·주의 지정 화면으로 바꾼다 (R48) */
   onDesignate?: () => void
+  onDeleted?: () => void
 }) {
   const save = useSaveFood()
   const saveCaution = useSaveCautionFood()
@@ -190,7 +192,8 @@ export function FoodForm({
     setFailed(null)
     try {
       await remove.mutateAsync(initial.id)
-      onDone()
+      if (onDeleted) onDeleted()
+      else onDone()
     } catch {
       setFailed('delete')
     }

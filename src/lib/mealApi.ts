@@ -25,7 +25,14 @@ export interface MealSaveResult {
   firstTriedFoods: { id: string; name: string }[]
 }
 export type MealSaveErrorReason =
-  'duplicate' | 'futureDate' | 'memoLength' | 'selection' | 'staleItem' | 'notFound' | 'network'
+  | 'duplicate'
+  | 'beforeBirth'
+  | 'futureDate'
+  | 'memoLength'
+  | 'selection'
+  | 'staleItem'
+  | 'notFound'
+  | 'network'
 export class MealSaveError extends Error {
   readonly reason: MealSaveErrorReason
   constructor(reason: MealSaveErrorReason) {
@@ -75,7 +82,8 @@ export async function fetchMealEntry(id: string): Promise<MealEntry | null> {
 
 function toSaveError(error: PostgrestError): MealSaveError {
   if (error.code === '23505') return new MealSaveError('duplicate')
-  if (error.code === '22007') return new MealSaveError('futureDate')
+  if (error.code === '22007')
+    return new MealSaveError(error.message.includes('생년월일') ? 'beforeBirth' : 'futureDate')
   if (error.code === '23503') return new MealSaveError('staleItem')
   if (error.code === 'P0002') return new MealSaveError('notFound')
   if (error.code === '22023') return new MealSaveError('selection')
@@ -131,6 +139,27 @@ export async function deleteMealEntry(id: string): Promise<void> {
 /** 먹음 체크와 음식 상태 재계산은 한 번의 RPC로 처리한다. */
 export async function setMealEaten(id: string, eaten: boolean): Promise<MealSaveResult> {
   const { data, error } = await supabase.rpc('set_meal_eaten', { id, eaten })
+  if (error) throw toSaveError(error)
+  return parseMealResult(data)
+}
+
+export interface MealMoveTarget {
+  date: string
+  type: MealType
+}
+
+/** 날짜·끼니 이동과 먹음 해제·재계산은 T-41 RPC에서 한 번에 처리한다. */
+export async function moveMealEntry(
+  id: string,
+  target: MealMoveTarget,
+  uncheck: boolean,
+): Promise<MealSaveResult> {
+  const { data, error } = await supabase.rpc('move_meal_entry', {
+    id,
+    date: target.date,
+    meal_type: target.type,
+    uncheck,
+  })
   if (error) throw toSaveError(error)
   return parseMealResult(data)
 }

@@ -1,13 +1,11 @@
-import { useRef, useState } from 'react'
 import { Carrot, Search, TriangleAlert } from 'lucide-react'
-import { useSearchParams } from 'react-router'
+import { useNavigate, useSearchParams } from 'react-router'
 import { AddRecordButton } from '@/components/AddRecordButton'
 import { ChoiceChips } from '@/components/ChoiceChips'
 import { EmptyState } from '@/components/EmptyState'
 import { ErrorBanner } from '@/components/ErrorBanner'
 import { ListLoading } from '@/components/ListLoading'
 import { Input } from '@/components/ui/input'
-import { Sheet, SheetContent, SheetTitle } from '@/components/ui/sheet'
 import type { Food } from '@/lib/foodApi'
 import { FOOD_GROUPS, FOOD_STATUSES, type FoodStatus } from '@/lib/foodTypes'
 import { NETWORK_ERROR_MESSAGES } from '@/lib/messages'
@@ -15,8 +13,8 @@ import { notifyDone } from '@/lib/notify'
 import { useChild } from '@/lib/useChild'
 import { useFoods, useSeedDefaultFoods } from '@/lib/useFoods'
 import { useSheetParam } from '@/lib/useSheetParam'
-import { CautionForm } from './CautionForm'
-import { FoodForm } from './FoodForm'
+import { FoodSheet } from './FoodSheet'
+import { useFoodMealCounts } from '@/lib/useFoodDetails'
 import { FoodList } from './FoodList'
 import {
   countByStatus,
@@ -60,11 +58,19 @@ const EMPTY_TAB_MESSAGES: Record<FoodStatus, { title: string; description?: stri
 export function FoodsPage() {
   const { data: child } = useChild()
   const foods = useFoods()
+  const counts = useFoodMealCounts()
+  const navigate = useNavigate()
   const seed = useSeedDefaultFoods()
   const sheet = useSheetParam()
   const [params, setParams] = useSearchParams()
   const { status, group } = filterFromParams(params)
-  const [query, setQuery] = useState('')
+  const query = params.get('q') ?? ''
+  const setQuery = (value: string) => {
+    const next = new URLSearchParams(params)
+    if (value) next.set('q', value)
+    else next.delete('q')
+    setParams(next, { replace: true })
+  }
 
   const all = foods.data ?? []
   const hasFoods = all.length > 0
@@ -112,6 +118,13 @@ export function FoodsPage() {
         )}
       </div>
 
+      {counts.isError && (
+        <ErrorBanner
+          message="먹은 횟수를 불러오지 못했어요"
+          onRetry={() => void counts.refetch()}
+          retrying={counts.isFetching}
+        />
+      )}
       {seed.isError && (
         <ErrorBanner
           message={NETWORK_ERROR_MESSAGES.save}
@@ -144,7 +157,8 @@ export function FoodsPage() {
           status={status}
           group={group}
           query={query}
-          onSelect={(id) => sheet.open(id)}
+          counts={counts.data}
+          onSelect={(id) => void navigate(`/meals/foods/${id}`)}
         />
       )}
 
@@ -171,15 +185,17 @@ function FilteredList({
   group,
   query,
   onSelect,
+  counts,
 }: {
   foods: readonly Food[]
   status: FoodStatus
   group: FoodGroupFilter
   query: string
   onSelect: (id: string) => void
+  counts?: Record<string, number>
 }) {
   const visible = filterFoods(foods, { status, group, query })
-  if (visible.length > 0) return <FoodList foods={visible} onSelect={onSelect} />
+  if (visible.length > 0) return <FoodList foods={visible} onSelect={onSelect} counts={counts} />
 
   // 탭에 음식이 있는데 식품군·검색어에 맞는 것이 없으면 조건을 바꾸도록 안내한다
   const tabEmpty = !foods.some((food) => food.status === status)
@@ -238,105 +254,5 @@ function SearchInput({ value, onChange }: { value: string; onChange: (value: str
         className="pl-11 focus-visible:pl-[43px]"
       />
     </div>
-  )
-}
-
-/** 추가·수정 바텀 시트. 수정 중에 알러지·주의 지정 화면으로 바뀔 수 있다 (R48) */
-function FoodSheet({
-  open,
-  initial,
-  birthDate,
-  foods,
-  addTried,
-  onClose,
-  onEditExisting,
-}: {
-  open: boolean
-  initial: Food | undefined
-  birthDate: string
-  foods: readonly Food[]
-  addTried: boolean
-  onClose: () => void
-  onEditExisting: (id: string) => void
-}) {
-  // 닫히는 동안(애니메이션)에도 열려 있던 내용을 유지한다. 수정 시트가 닫히며 빈 입력 화면으로 바뀌어 보이지 않게
-  const [shown, setShown] = useState(initial)
-  if (open && shown !== initial) setShown(initial)
-
-  return (
-    <Sheet open={open} onOpenChange={(next) => !next && onClose()}>
-      {/* 설명 문구가 없는 창이라 aria-describedby를 비운다 (Radix 경고 방지) */}
-      <SheetContent aria-describedby={undefined}>
-        <FoodSheetBody
-          // 다른 음식을 열면 수정 화면부터 다시 시작한다
-          key={shown?.id ?? 'new'}
-          initial={shown}
-          addTried={addTried}
-          birthDate={birthDate}
-          foods={foods}
-          onClose={onClose}
-          onEditExisting={onEditExisting}
-        />
-      </SheetContent>
-    </Sheet>
-  )
-}
-
-function FoodSheetBody({
-  initial,
-  addTried,
-  birthDate,
-  foods,
-  onClose,
-  onEditExisting,
-}: {
-  initial: Food | undefined
-  addTried: boolean
-  birthDate: string
-  foods: readonly Food[]
-  onClose: () => void
-  onEditExisting: (id: string) => void
-}) {
-  const [designating, setDesignating] = useState(false)
-  const titleRef = useRef<HTMLHeadingElement>(null)
-
-  // 화면이 바뀌면 시트 맨 위로 올리고 시트에 초점을 둔다 (누른 버튼이 사라지므로)
-  const switchTo = (next: boolean) => {
-    setDesignating(next)
-    const content = titleRef.current?.closest<HTMLElement>('[data-slot="sheet-content"]')
-    if (content) {
-      content.scrollTop = 0
-      content.focus()
-    }
-  }
-
-  if (initial && designating) {
-    return (
-      <>
-        <SheetTitle ref={titleRef}>알러지·주의 지정</SheetTitle>
-        <CautionForm
-          food={initial}
-          birthDate={birthDate}
-          onCancel={() => switchTo(false)}
-          onDone={onClose}
-        />
-      </>
-    )
-  }
-
-  const title = initial ? '음식 수정' : addTried ? '먹어 본 음식 추가' : '안 먹어 본 음식 추가'
-  return (
-    <>
-      <SheetTitle ref={titleRef}>{title}</SheetTitle>
-      <FoodForm
-        initial={initial}
-        addTried={addTried}
-        birthDate={birthDate}
-        foods={foods}
-        onDone={onClose}
-        onEditExisting={onEditExisting}
-        onDesignate={() => switchTo(true)}
-      />
-    </>
   )
 }
