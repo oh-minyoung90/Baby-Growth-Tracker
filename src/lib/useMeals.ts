@@ -6,6 +6,7 @@ import {
   saveMealEntry,
   setMealEaten,
   moveMealEntry,
+  copyMealEntry,
   type MealMoveTarget,
   MealSaveError,
   type MealInput,
@@ -97,6 +98,29 @@ export function useMoveMeal() {
     onError: (error) => {
       if (error instanceof MealSaveError && ['duplicate', 'notFound'].includes(error.reason))
         return client.invalidateQueries({ queryKey: MEALS_QUERY_KEY })
+    },
+  })
+}
+
+export function useCopyMeal() {
+  const client = useQueryClient()
+  return useMutation({
+    mutationFn: ({ id, target }: { id: string; target: MealMoveTarget }) =>
+      copyMealEntry(id, target),
+    onSuccess: () =>
+      Promise.all([
+        client.invalidateQueries({ queryKey: MEALS_QUERY_KEY }),
+        client.invalidateQueries({ queryKey: FOODS_QUERY_KEY }),
+      ]),
+    onError: (error) => {
+      if (
+        error instanceof MealSaveError &&
+        ['duplicate', 'notFound', 'staleItem'].includes(error.reason)
+      )
+        return Promise.all([
+          client.invalidateQueries({ queryKey: MEALS_QUERY_KEY }),
+          client.invalidateQueries({ queryKey: FOODS_QUERY_KEY }),
+        ])
     },
   })
 }

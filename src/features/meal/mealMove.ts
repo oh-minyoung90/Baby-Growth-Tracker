@@ -16,3 +16,14 @@ export function mealMoveError(error: unknown): string {
   }
   return '식단을 옮기지 못했어요. 다시 시도해 주세요'
 }
+
+export function mealCopyError(error: unknown): string {
+  if (error instanceof MealSaveError) {
+    if (error.reason === 'duplicate') return '그 끼니에는 이미 기록이 있어요'
+    if (error.reason === 'beforeBirth') return '생년월일 이전 날짜는 고를 수 없어요'
+    if (error.reason === 'notFound') return '복사할 원본 식단을 찾을 수 없어요'
+    if (error.reason === 'staleItem')
+      return '음식이나 레시피가 바뀌었어요. 창을 닫고 원본 식단을 다시 확인해 주세요'
+  }
+  return '식단을 복사하지 못했어요. 다시 시도해 주세요'
+}

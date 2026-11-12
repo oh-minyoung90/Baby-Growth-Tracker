@@ -4,7 +4,13 @@ import type { Session } from '@supabase/supabase-js'
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest'
 import { fetchMyChild } from '@/lib/childApi'
 import { fetchFoods } from '@/lib/foodApi'
-import { fetchMealWeek, moveMealEntry, MealSaveError, type MealEntry } from '@/lib/mealApi'
+import {
+  fetchMealWeek,
+  moveMealEntry,
+  copyMealEntry,
+  MealSaveError,
+  type MealEntry,
+} from '@/lib/mealApi'
 import { renderApp } from '@/test/renderApp'
 
 vi.mock('@/lib/childApi', async (original) => ({
@@ -19,6 +25,7 @@ vi.mock('@/lib/mealApi', async (original) => ({
   ...(await original<typeof import('@/lib/mealApi')>()),
   fetchMealWeek: vi.fn(),
   moveMealEntry: vi.fn(),
+  copyMealEntry: vi.fn(),
 }))
 const auth = { status: 'signedIn' as const, session: { user: { id: 'u1' } } as Session }
 let entries: MealEntry[]
@@ -58,6 +65,23 @@ beforeEach(() => {
   vi.mocked(fetchMealWeek).mockImplementation(async (start, end) =>
     entries.filter((entry) => entry.date >= start && entry.date <= end),
   )
+  vi.mocked(copyMealEntry).mockImplementation(async (id, target) => {
+    const source = entries.find((entry) => entry.id === id)
+    if (!source) throw new MealSaveError('notFound')
+    if (entries.some((entry) => entry.date === target.date && entry.type === target.type))
+      throw new MealSaveError('duplicate')
+    const copy = {
+      ...source,
+      ...target,
+      id: `copy${entries.length}`,
+      eaten: false,
+      intake: null,
+      foods: source.foods.map((item) => ({ ...item })),
+      recipes: source.recipes.map((item) => ({ ...item })),
+    }
+    entries = [...entries, copy]
+    return { id: copy.id, firstTriedFoods: [] }
+  })
   vi.mocked(moveMealEntry).mockImplementation(async (id, target, uncheck) => {
     if (
       entries.some(
@@ -269,4 +293,135 @@ it('생년월일 이전 칸으로 드래그하면 이동하지 않고 이유를 
   drag()
   expect(await screen.findByRole('alert')).toHaveTextContent('생년월일 이전 날짜는 고를 수 없어요')
   expect(moveMealEntry).not.toHaveBeenCalled()
+})
+
+async function openCopy() {
+  const state = renderApp('/meals/week', auth)
+  const button = await screen.findByRole('button', { name: '점심 식단 복사' })
+  await waitFor(() => expect(button).toBeEnabled())
+  await userEvent.click(button)
+  await screen.findByRole('dialog', { name: '식단 복사' })
+  return state
+}
+describe('식단 복사 (T-53)', () => {
+  it('다음 날짜를 기본으로 음식·레시피·메모를 새 계획으로 복사하고 원본은 유지한다', async () => {
+    entries[0].recipes = [{ id: null, name: '죽' }]
+    const before = { ...entries[0] }
+    await openCopy()
+    expect(screen.getByLabelText('복사할 날짜')).toHaveValue('2026-11-12')
+    expect(screen.getByRole('dialog')).toHaveTextContent('먹음 체크와 먹은 정도는 비워요')
+    await userEvent.click(screen.getByRole('radio', { name: '아침' }))
+    await userEvent.click(within(screen.getByRole('dialog')).getByRole('button', { name: '복사' }))
+    await closed()
+    expect(copyMealEntry).toHaveBeenCalledExactlyOnceWith('m1', {
+      date: '2026-11-12',
+      type: 'breakfast',
+    })
+    expect(moveMealEntry).not.toHaveBeenCalled()
+    expect(entries[0]).toEqual(before)
+    expect(entries[1]).toMatchObject({
+      date: '2026-11-12',
+      type: 'breakfast',
+      eaten: false,
+      intake: null,
+      memo: '원래 메모',
+      foods: before.foods,
+      recipes: before.recipes,
+    })
+    expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument()
+  })
+  it('다른 주로 복사하면 해당 주·요일을 보여 주고 원본은 원래 날짜에 남는다', async () => {
+    const { router } = await openCopy()
+    fireEvent.change(screen.getByLabelText('복사할 날짜'), { target: { value: '2026-11-20' } })
+    await userEvent.click(within(screen.getByRole('dialog')).getByRole('button', { name: '복사' }))
+    await closed()
+    expect(router.state.location.search).toBe('?week=2026-11-16')
+    expect(
+      await screen.findByRole('button', { name: '2026. 11. 20. (금) · 기록 있음' }),
+    ).toHaveAttribute('aria-pressed', 'true')
+    expect(entries[0].date).toBe('2026-11-11')
+  })
+  it('원본과 같은 칸은 덮어쓰지 않고 대상 날짜를 다시 고를 수 있다', async () => {
+    await openCopy()
+    fireEvent.change(screen.getByLabelText('복사할 날짜'), { target: { value: '2026-11-11' } })
+    await userEvent.click(within(screen.getByRole('dialog')).getByRole('button', { name: '복사' }))
+    expect(await screen.findByRole('alert')).toHaveTextContent('그 끼니에는 이미 기록이 있어요')
+    expect(entries).toHaveLength(1)
+    fireEvent.change(screen.getByLabelText('복사할 날짜'), { target: { value: '2026-11-12' } })
+    await userEvent.click(within(screen.getByRole('dialog')).getByRole('button', { name: '복사' }))
+    await closed()
+    expect(entries).toHaveLength(2)
+  })
+  it('주의 음식이 포함되면 계획 복사도 확인받고 취소 시 선택을 유지한다', async () => {
+    vi.mocked(fetchFoods).mockResolvedValue([
+      {
+        id: 'f1',
+        name: '쌀',
+        group: 'grain',
+        status: 'caution',
+        cautionTag: false,
+        firstTriedDate: null,
+        manualTried: false,
+        manualFirstTriedDate: null,
+        preference: null,
+        memo: null,
+        reactionDate: '2026-10-01',
+        symptomNote: null,
+        checkNote: null,
+      },
+    ])
+    await openCopy()
+    expect(within(screen.getByRole('dialog')).getByRole('status')).toHaveTextContent(
+      '주의가 필요한 음식이 있어요: 쌀',
+    )
+    await userEvent.click(within(screen.getByRole('dialog')).getByRole('button', { name: '복사' }))
+    const confirmation = await screen.findByRole('alertdialog')
+    expect(copyMealEntry).not.toHaveBeenCalled()
+    await userEvent.click(within(confirmation).getByRole('button', { name: '취소' }))
+    expect(screen.getByLabelText('복사할 날짜')).toHaveValue('2026-11-12')
+    await userEvent.click(within(screen.getByRole('dialog')).getByRole('button', { name: '복사' }))
+    await userEvent.click(
+      within(await screen.findByRole('alertdialog')).getByRole('button', { name: '그래도 복사' }),
+    )
+    await closed()
+    expect(entries[1].eaten).toBe(false)
+  })
+  it('네트워크 오류 후 같은 입력으로 다시 시도하고 없는 원본도 안내한다', async () => {
+    vi.mocked(copyMealEntry)
+      .mockRejectedValueOnce(new MealSaveError('network'))
+      .mockRejectedValueOnce(new MealSaveError('notFound'))
+    await openCopy()
+    await userEvent.click(within(screen.getByRole('dialog')).getByRole('button', { name: '복사' }))
+    expect(await screen.findByRole('alert')).toHaveTextContent('식단을 복사하지 못했어요')
+    expect(screen.getByLabelText('복사할 날짜')).toHaveValue('2026-11-12')
+    await userEvent.click(screen.getByRole('button', { name: '다시 시도' }))
+    expect(await screen.findByRole('alert')).toHaveTextContent('복사할 원본 식단을 찾을 수 없어요')
+    expect(entries).toHaveLength(1)
+  })
+  it('처리 중 닫기·중복 복사와 식단 편집을 막는다', async () => {
+    let finish!: () => void
+    vi.mocked(copyMealEntry).mockImplementationOnce(
+      async () =>
+        new Promise((resolve) => {
+          finish = () => resolve({ id: 'new', firstTriedFoods: [] })
+        }),
+    )
+    await openCopy()
+    await userEvent.click(within(screen.getByRole('dialog')).getByRole('button', { name: '복사' }))
+    expect(screen.getByRole('button', { name: '복사하는 중…' })).toBeDisabled()
+    await userEvent.keyboard('{Escape}')
+    expect(screen.getByRole('dialog')).toBeInTheDocument()
+    await act(async () => finish())
+    await closed()
+    expect(copyMealEntry).toHaveBeenCalledTimes(1)
+  })
+  it('주의 정보를 못 읽으면 복사 진입을 막고 재조회 후 사용할 수 있다', async () => {
+    vi.mocked(fetchFoods).mockRejectedValueOnce(new Error('network'))
+    renderApp('/meals/week', auth)
+    const copy = await screen.findByRole('button', { name: '점심 식단 복사' })
+    expect(await screen.findByRole('alert')).toHaveTextContent('주의 음식 정보')
+    expect(copy).toBeDisabled()
+    await userEvent.click(screen.getByRole('button', { name: '다시 시도' }))
+    await waitFor(() => expect(copy).toBeEnabled())
+  })
 })

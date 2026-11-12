@@ -586,6 +586,10 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      copy_meal_entry: {
+        Args: { date: string; id: string; meal_type: string }
+        Returns: Json
+      }
       delete_meal_entry: { Args: { id: string }; Returns: undefined }
       food_meal_counts: {
         Args: never

@@ -163,3 +163,14 @@ export async function moveMealEntry(
   if (error) throw toSaveError(error)
   return parseMealResult(data)
 }
+
+/** 원본을 유지하고 음식·레시피·메모만 새 계획으로 복사한다. */
+export async function copyMealEntry(id: string, target: MealMoveTarget): Promise<MealSaveResult> {
+  const { data, error } = await supabase.rpc('copy_meal_entry', {
+    id,
+    date: target.date,
+    meal_type: target.type,
+  })
+  if (error) throw toSaveError(error)
+  return parseMealResult(data)
+}
