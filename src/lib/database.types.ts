@@ -598,6 +598,7 @@ export type Database = {
         Args: { date: string; id: string; meal_type: string; uncheck: boolean }
         Returns: Json
       }
+      owns_recipe_photo_path: { Args: { path: string }; Returns: boolean }
       recalc_food: {
         Args: { food_id: string; meal_entry_id?: string }
         Returns: {
