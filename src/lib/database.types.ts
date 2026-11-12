@@ -314,6 +314,13 @@ export type Database = {
             referencedRelation: "meal_entries"
             referencedColumns: ["id", "owner_id"]
           },
+          {
+            foreignKeyName: "meal_entry_recipes_recipe_fkey"
+            columns: ["recipe_id", "owner_id"]
+            isOneToOne: false
+            referencedRelation: "recipes"
+            referencedColumns: ["id", "owner_id"]
+          },
         ]
       }
       milestones: {
@@ -351,6 +358,125 @@ export type Database = {
           updated_at?: string
         }
         Relationships: []
+      }
+      photos: {
+        Row: {
+          created_at: string
+          id: string
+          owner_id: string
+          storage_path: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          owner_id?: string
+          storage_path: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          owner_id?: string
+          storage_path?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      recipe_ingredients: {
+        Row: {
+          amount: string | null
+          created_at: string
+          food_id: string | null
+          id: string
+          name: string
+          owner_id: string
+          position: number
+          recipe_id: string
+          updated_at: string
+        }
+        Insert: {
+          amount?: string | null
+          created_at?: string
+          food_id?: string | null
+          id?: string
+          name: string
+          owner_id?: string
+          position: number
+          recipe_id: string
+          updated_at?: string
+        }
+        Update: {
+          amount?: string | null
+          created_at?: string
+          food_id?: string | null
+          id?: string
+          name?: string
+          owner_id?: string
+          position?: number
+          recipe_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "recipe_ingredients_food_fkey"
+            columns: ["food_id", "owner_id"]
+            isOneToOne: false
+            referencedRelation: "foods"
+            referencedColumns: ["id", "owner_id"]
+          },
+          {
+            foreignKeyName: "recipe_ingredients_recipe_fkey"
+            columns: ["recipe_id", "owner_id"]
+            isOneToOne: false
+            referencedRelation: "recipes"
+            referencedColumns: ["id", "owner_id"]
+          },
+        ]
+      }
+      recipes: {
+        Row: {
+          created_at: string
+          id: string
+          name: string
+          note: string | null
+          owner_id: string
+          photo_id: string | null
+          servings: string | null
+          steps: Json
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          name: string
+          note?: string | null
+          owner_id?: string
+          photo_id?: string | null
+          servings?: string | null
+          steps: Json
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          name?: string
+          note?: string | null
+          owner_id?: string
+          photo_id?: string | null
+          servings?: string | null
+          steps?: Json
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "recipes_photo_fkey"
+            columns: ["photo_id", "owner_id"]
+            isOneToOne: false
+            referencedRelation: "photos"
+            referencedColumns: ["id", "owner_id"]
+          },
+        ]
       }
       sleep_logs: {
         Row: {
@@ -626,6 +752,7 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      valid_recipe_steps: { Args: { steps: Json }; Returns: boolean }
     }
     Enums: {
       [_ in never]: never
