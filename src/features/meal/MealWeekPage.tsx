@@ -16,7 +16,13 @@ import { notifyMealSaved } from '@/lib/mealNotify'
 import { useFoods } from '@/lib/useFoods'
 import { isMealType, mealTypeLabel } from '@/lib/mealTypes'
 import { useChild } from '@/lib/useChild'
-import { useMealEntry, useMealWeek, useSetMealEaten, useMoveMeal } from '@/lib/useMeals'
+import {
+  useMealEntry,
+  useMealWeek,
+  useSetMealEaten,
+  useMoveMeal,
+  useCopyMeal,
+} from '@/lib/useMeals'
 import { useSheetParam } from '@/lib/useSheetParam'
 import { MEAL_MESSAGES } from './mealSchema'
 import { MealMoveSheet } from './MealMoveSheet'
@@ -31,6 +37,8 @@ export function MealWeekPage() {
   const foods = useFoods()
   const setEaten = useSetMealEaten()
   const move = useMoveMeal()
+  const copy = useCopyMeal()
+  const [copying, setCopying] = useState<MealEntry | null>(null)
   const [moving, setMoving] = useState<MealEntry | null>(null)
   const [futureDrop, setFutureDrop] = useState<{ entry: MealEntry; target: MealMoveTarget } | null>(
     null,
@@ -50,7 +58,7 @@ export function MealWeekPage() {
   } | null>(null)
   const warningsReady = foods.isSuccess && !foods.isFetching
   const changeEaten = async (entry: MealEntry, eaten: boolean) => {
-    if (move.isPending || setEaten.isPending || (eaten && !warningsReady)) return
+    if (copy.isPending || move.isPending || setEaten.isPending || (eaten && !warningsReady)) return
     setFailedCheck(null)
     try {
       const result = await setEaten.mutateAsync({ id: entry.id, eaten })
@@ -79,7 +87,7 @@ export function MealWeekPage() {
   const week = weekFromParam(params.get('week') ?? single.data?.date ?? params.get('date'), today)
   const meals = useMealWeek(week.start, week.end)
   const requestEatenChange = (entry: MealEntry, eaten: boolean) => {
-    if (move.isPending || setEaten.isPending || (eaten && !warningsReady)) return
+    if (copy.isPending || move.isPending || setEaten.isPending || (eaten && !warningsReady)) return
     const current = meals.data?.find((item) => item.id === entry.id) ?? entry
     if (eaten && mealCautionFoods(current.foods, current.recipes, foods.data ?? []).length > 0)
       setConfirmation(current)
@@ -93,21 +101,33 @@ export function MealWeekPage() {
       : null
   }, [sheet.value, newDate, newType, single.data])
   const [view, setView] = useState(0)
-  const performMove = async (entry: MealEntry, target: MealMoveTarget, uncheck: boolean) => {
-    if (move.isPending || setEaten.isPending) return
-    await move.mutateAsync({ id: entry.id, target, uncheck })
-    setMoving(null)
-    setFailedMove(null)
+  const showTarget = (target: MealMoveTarget) => {
     const next = new URLSearchParams(params)
     next.set('week', weekFromParam(target.date, today).start)
     next.delete('record')
     setParams(next, { replace: true })
     setFocusDate(target.date)
     setView((value) => value + 1)
+  }
+  const performCopy = async (entry: MealEntry, target: MealMoveTarget) => {
+    if (copy.isPending || move.isPending || setEaten.isPending || !warningsReady) return
+    await copy.mutateAsync({ id: entry.id, target })
+    setCopying(null)
+    showTarget(target)
+    notifyDone(
+      `${formatDateLabel(target.date)} ${mealTypeLabel(target.type)}에 새 계획으로 복사했어요`,
+    )
+  }
+  const performMove = async (entry: MealEntry, target: MealMoveTarget, uncheck: boolean) => {
+    if (copy.isPending || move.isPending || setEaten.isPending) return
+    await move.mutateAsync({ id: entry.id, target, uncheck })
+    setMoving(null)
+    setFailedMove(null)
+    showTarget(target)
     notifyDone(`${formatDateLabel(target.date)} ${mealTypeLabel(target.type)}으로 식단을 옮겼어요`)
   }
   const dropMove = (entry: MealEntry, target: MealMoveTarget) => {
-    if (move.isPending || setEaten.isPending) return
+    if (copy.isPending || move.isPending || setEaten.isPending) return
     if (child.data?.birthDate && target.date < child.data.birthDate) {
       setFailedMove({ entry, target, error: new MealSaveError('beforeBirth') })
       return
@@ -211,14 +231,19 @@ export function MealWeekPage() {
             today={today}
             entries={meals.data}
             pendingId={
-              move.isPending
-                ? move.variables.id
-                : setEaten.isPending
-                  ? setEaten.variables.id
-                  : undefined
+              copy.isPending
+                ? copy.variables.id
+                : move.isPending
+                  ? move.variables.id
+                  : setEaten.isPending
+                    ? setEaten.variables.id
+                    : undefined
             }
             focusDate={focusDate}
             onMove={(entry) => setMoving(entry)}
+            onCopy={(entry) => {
+              if (warningsReady) setCopying(entry)
+            }}
             onDropMove={(entry, date, type) => dropMove(entry, { date, type })}
             warningsReady={warningsReady}
             cautionIds={
@@ -277,6 +302,21 @@ export function MealWeekPage() {
           pending={move.isPending}
           onMove={performMove}
           onClose={() => setMoving(null)}
+        />
+      )}
+      {copying && (
+        <MealMoveSheet
+          key={`copy:${copying.id}`}
+          mode="copy"
+          entry={copying}
+          birthDate={child.data?.birthDate}
+          pending={copy.isPending}
+          onMove={performCopy}
+          onClose={() => setCopying(null)}
+          cautionFoods={mealCautionFoods(copying.foods, copying.recipes, foods.data ?? [])}
+          warningsReady={warningsReady}
+          cautionFailed={foods.isError}
+          onRetryCaution={() => void foods.refetch()}
         />
       )}
       <MealSheet

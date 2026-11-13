@@ -790,3 +790,130 @@ describe('음식 상세의 먹은 횟수 집계 (T-46)', () => {
     expect((await clientA().rpc('food_meal_counts')).data).toEqual([])
   })
 })
+
+describe('식단을 새 계획으로 복사 (T-53)', () => {
+  const copy = (id: string, date = '2026-10-16', meal_type = 'dinner', client = clientA()) =>
+    client.rpc('copy_meal_entry', { id, date, meal_type })
+  const readEntry = async (id: string) => {
+    const { data, error } = await clientA().from('meal_entries').select('*').eq('id', id).single()
+    if (error) throw error
+    return data
+  }
+  it('음식·레시피·메모를 새 ID로 복사하고 먹음·섭취량·원본·음식 상태는 보존한다', async () => {
+    const rice = await addFood()
+    const barley = await addFood('보리')
+    const entry = await meal([barley, rice], {
+      intake: 'good',
+      memo: '반 공기 준비\n물 충분히',
+      recipes: [{ recipe_name: '삭제된 죽' }],
+    })
+    const before = await readEntry(entry.id)
+    const { data, error } = await copy(entry.id)
+    expect(error).toBeNull()
+    const created = result(data)
+    expect(created.id).not.toBe(entry.id)
+    expect(created.first_tried_foods).toEqual([])
+    expect(await readEntry(entry.id)).toEqual(before)
+    expect(await readEntry(created.id)).toMatchObject({
+      date: '2026-10-16',
+      meal_type: 'dinner',
+      eaten: false,
+      intake: null,
+      memo: before.memo,
+    })
+    expect(
+      (
+        await clientA()
+          .from('meal_entry_foods')
+          .select('food_id,food_name,position')
+          .eq('meal_entry_id', created.id)
+          .order('position')
+      ).data,
+    ).toEqual([
+      { food_id: barley, food_name: '보리', position: 0 },
+      { food_id: rice, food_name: '쌀', position: 1 },
+    ])
+    expect(
+      (
+        await clientA()
+          .from('meal_entry_recipes')
+          .select('recipe_id,recipe_name')
+          .eq('meal_entry_id', created.id)
+      ).data,
+    ).toEqual([{ recipe_id: null, recipe_name: '삭제된 죽' }])
+    expect(await food(rice)).toMatchObject({ status: 'tried', first_tried_date: '2026-10-15' })
+    expect(
+      (await clientA().rpc('food_meal_counts')).data?.every((row) => row.eaten_count === 1),
+    ).toBe(true)
+  })
+  it.each(['2026-10-01', utcDate(3)])(
+    '계획을 %s로 복사해도 먹음이 되거나 첫 시도 날짜가 생기지 않는다',
+    async (date) => {
+      const id = await addFood()
+      const source = await meal([id], { eaten: false })
+      const copied = await copy(source.id, date)
+      expect(copied.error).toBeNull()
+      expect((await readEntry(result(copied.data).id)).eaten).toBe(false)
+      expect(await food(id)).toMatchObject({ status: 'not_tried', first_tried_date: null })
+    },
+  )
+  it('대상 칸과 원본 칸 충돌은 거부하고 어느 기록도 덮어쓰지 않는다', async () => {
+    const id = await addFood()
+    const source = await meal([id], { memo: '원본' })
+    const target = await meal([id], {
+      date: '2026-10-16',
+      meal_type: 'dinner',
+      eaten: false,
+      memo: '대상',
+    })
+    expect((await copy(source.id)).error?.code).toBe('23505')
+    expect((await copy(source.id, '2026-10-15', 'lunch')).error?.code).toBe('23505')
+    expect((await readEntry(source.id)).memo).toBe('원본')
+    expect((await readEntry(target.id)).memo).toBe('대상')
+    expect((await clientA().from('meal_entries').select('id')).data).toHaveLength(2)
+  })
+  it('타인·없는 원본과 비로그인 복사를 거부한다', async () => {
+    const id = await addFood()
+    const source = await meal([id])
+    expect((await copy(source.id, undefined, undefined, clientB())).error?.code).toBe('P0002')
+    expect((await copy('00000000-0000-4000-8000-000000000000')).error?.code).toBe('P0002')
+    expect((await copy(source.id, undefined, undefined, createAnonClient())).error?.code).toBe(
+      '42501',
+    )
+    expect((await clientA().from('meal_entries').select('id')).data).toHaveLength(1)
+  })
+  it('삭제된 음식 이름을 유지하고 주의 이력을 중복 생성하지 않는다', async () => {
+    const id = await addFood()
+    await caution(id)
+    const source = await meal([id])
+    const before = await history(id)
+    expect((await copy(source.id)).error).toBeNull()
+    expect(await history(id)).toEqual(before)
+    await clientA().from('foods').delete().eq('id', id)
+    const copied = await copy(source.id, '2026-10-17')
+    expect(copied.error).toBeNull()
+    expect(
+      (
+        await clientA()
+          .from('meal_entry_foods')
+          .select('food_id,food_name')
+          .eq('meal_entry_id', result(copied.data).id)
+      ).data,
+    ).toEqual([{ food_id: null, food_name: '쌀' }])
+  })
+  it('생년월일 이전 날짜·잘못된 끼니를 거부한다', async () => {
+    const id = await addFood()
+    const source = await meal([id])
+    expect((await copy(source.id, '2026-01-07')).error?.code).toBe('22007')
+    expect((await copy(source.id, '2026-10-16', 'invalid')).error?.code).toBe('23514')
+    expect((await clientA().from('meal_entries').select('id')).data).toHaveLength(1)
+  })
+  it('동시에 같은 대상에 복사하면 하나만 생성한다', async () => {
+    const id = await addFood()
+    const source = await meal([id])
+    const rows = await Promise.all([copy(source.id), copy(source.id)])
+    expect(rows.filter((row) => !row.error)).toHaveLength(1)
+    expect(rows.find((row) => row.error)?.error?.code).toBe('23505')
+    expect((await clientA().from('meal_entries').select('id')).data).toHaveLength(2)
+  })
+})

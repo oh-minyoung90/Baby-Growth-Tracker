@@ -1,15 +1,7 @@
 import { useEffect, useRef, useState, type DragEventHandler } from 'react'
 import { format } from 'date-fns'
 import { ko } from 'date-fns/locale'
-import {
-  Check,
-  MessageSquare,
-  Plus,
-  Square,
-  TriangleAlert,
-  GripVertical,
-  MoveRight,
-} from 'lucide-react'
+import { Check, MessageSquare, Plus, Square, TriangleAlert, GripVertical } from 'lucide-react'
 import { Checkbox } from '@/components/ui/checkbox'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -29,6 +21,7 @@ export function MealWeekBoard({
   warningsReady = true,
   cautionIds = new Set<string>(),
   onMove,
+  onCopy,
   onDropMove,
   focusDate,
 }: {
@@ -40,6 +33,7 @@ export function MealWeekBoard({
   pendingId?: string
   warningsReady?: boolean
   onMove?: (entry: MealEntry) => void
+  onCopy?: (entry: MealEntry) => void
   onDropMove?: (entry: MealEntry, date: string, type: MealType) => void
   focusDate?: string
   cautionIds?: ReadonlySet<string>
@@ -133,6 +127,8 @@ export function MealWeekBoard({
                     key={type.value}
                     entry={entry}
                     onMove={entry && onMove ? () => onMove(entry) : undefined}
+                    onCopy={entry && onCopy ? () => onCopy(entry) : undefined}
+                    copyDisabled={!!pendingId || !warningsReady}
                     onDragStart={
                       entry && onDropMove
                         ? (event) => {
@@ -206,6 +202,8 @@ function MealCell({
   editingDisabled,
   caution,
   onMove,
+  onCopy,
+  copyDisabled,
   onDragStart,
   onDragEnd,
   onDragOver,
@@ -222,6 +220,8 @@ function MealCell({
   editingDisabled: boolean
   caution: boolean
   onMove?: () => void
+  onCopy?: () => void
+  copyDisabled: boolean
   onDragStart?: DragEventHandler<HTMLButtonElement>
   onDragEnd: DragEventHandler<HTMLButtonElement>
   onDragOver: DragEventHandler<HTMLDivElement>
@@ -271,7 +271,26 @@ function MealCell({
     >
       {entry && (
         <div className="flex min-h-11 items-center justify-between gap-1 pl-3 md:pl-2">
-          <span className="text-sm font-bold">{label}</span>
+          <span className="flex min-w-0 items-center gap-1">
+            {' '}
+            {onDragStart && (
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                className="hidden w-7 cursor-grab md:inline-flex active:cursor-grabbing"
+                draggable={!editingDisabled}
+                disabled={editingDisabled}
+                aria-label={`${label} 식단 드래그로 이동`}
+                title="다른 날짜·끼니로 끌어 이동"
+                onDragStart={onDragStart}
+                onDragEnd={onDragEnd}
+              >
+                <GripVertical className="size-4" aria-hidden />
+              </Button>
+            )}
+            <span className="text-sm font-bold">{label}</span>
+          </span>
           {onEatenChange ? (
             <span className="grid size-11 shrink-0 place-items-center">
               <Checkbox
@@ -305,36 +324,34 @@ function MealCell({
       ) : (
         <div className={contentClass}>{content}</div>
       )}
-      {entry && onMove && (
-        <div className="flex items-center justify-between gap-1 px-2">
-          {onDragStart && (
+      {entry && (onMove || onCopy) && (
+        <div className="grid grid-cols-2 items-center gap-1 px-2 pb-1">
+          {onCopy && (
             <Button
               type="button"
               variant="ghost"
-              size="icon"
-              className="hidden w-7 cursor-grab md:inline-flex active:cursor-grabbing"
-              draggable={!editingDisabled}
-              disabled={editingDisabled}
-              aria-label={`${label} 식단 드래그로 이동`}
-              title="다른 날짜·끼니로 끌어 이동"
-              onDragStart={onDragStart}
-              onDragEnd={onDragEnd}
+              size="sm"
+              className="min-w-0 px-1"
+              disabled={copyDisabled}
+              aria-label={`${label} 식단 복사`}
+              onClick={onCopy}
             >
-              <GripVertical className="size-4" aria-hidden />
+              복사
             </Button>
           )}
-          <Button
-            type="button"
-            variant="ghost"
-            size="sm"
-            className="ml-auto"
-            disabled={editingDisabled}
-            aria-label={`${label} 식단 이동`}
-            onClick={onMove}
-          >
-            <MoveRight className="size-4" aria-hidden />
-            이동
-          </Button>
+          {onMove && (
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              className="col-start-2 min-w-0 px-1"
+              disabled={editingDisabled}
+              aria-label={`${label} 식단 이동`}
+              onClick={onMove}
+            >
+              이동
+            </Button>
+          )}
         </div>
       )}
     </div>

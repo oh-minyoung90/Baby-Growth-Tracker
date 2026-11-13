@@ -7,6 +7,7 @@ import {
   saveMealEntry,
   setMealEaten,
   moveMealEntry,
+  copyMealEntry,
   type MealInput,
 } from './mealApi'
 
@@ -183,4 +184,17 @@ it('서버의 생년월일 이전 오류를 미래 날짜 오류와 구분한다
   await expect(
     moveMealEntry('m1', { date: '2026-01-01', type: 'lunch' }, false),
   ).rejects.toMatchObject({ reason: 'beforeBirth' })
+})
+
+it('복사 API는 원본 ID·대상 날짜·끼니만 보내고 먹음·섭취량을 복사하지 않는다', async () => {
+  mock.rpc.mockResolvedValueOnce({ data: { id: 'copy', first_tried_foods: [] }, error: null })
+  expect(await copyMealEntry('m1', { date: '2026-11-12', type: 'breakfast' })).toEqual({
+    id: 'copy',
+    firstTriedFoods: [],
+  })
+  expect(mock.rpc).toHaveBeenCalledExactlyOnceWith('copy_meal_entry', {
+    id: 'm1',
+    date: '2026-11-12',
+    meal_type: 'breakfast',
+  })
 })
