@@ -13,8 +13,9 @@ import { formatDateLabel, todayString } from '@/domain/date'
 import { MealSaveError, type MealEntry } from '@/lib/mealApi'
 import { MEAL_INTAKES, mealTypeLabel, type MealType } from '@/lib/mealTypes'
 import { NETWORK_ERROR_MESSAGES } from '@/lib/messages'
-import { mealCautionFoods, mealCautionMessage, type MealRecipeOption } from '@/lib/mealCaution'
+import { mealCautionFoods, mealCautionMessage } from '@/lib/mealCaution'
 import { notifyMealSaved } from '@/lib/mealNotify'
+import { useMealRecipes } from '@/lib/useMealRecipes'
 import { useFoods } from '@/lib/useFoods'
 import { useDeleteMeal, useSaveMeal } from '@/lib/useMeals'
 import { MEAL_MESSAGES, mealSchema, type MealFormOutput, type MealFormValues } from './mealSchema'
@@ -22,14 +23,11 @@ import { MealCautionNotice } from './MealCautionNotice'
 import { MealFoodPicker } from './MealFoodPicker'
 import { MealRecipePicker } from './MealRecipePicker'
 
-const NO_RECIPES: readonly MealRecipeOption[] = []
-
 export function MealForm({
   date,
   type,
   initial,
   birthDate,
-  recipeOptions = NO_RECIPES,
   onDone,
   onPendingChange,
 }: {
@@ -37,11 +35,12 @@ export function MealForm({
   type: MealType
   initial?: MealEntry
   birthDate?: string
-  recipeOptions?: readonly MealRecipeOption[]
   onDone: () => void
   onPendingChange: (pending: boolean) => void
 }) {
   const catalog = useFoods()
+  const recipeCatalog = useMealRecipes()
+  const recipeOptions = recipeCatalog.options
   const [confirmedValues, setConfirmedValues] = useState<MealFormOutput | null>(null)
   const save = useSaveMeal()
   const remove = useDeleteMeal()
@@ -70,7 +69,8 @@ export function MealForm({
   const eaten = useController({ control, name: 'eaten' })
   const intake = useController({ control, name: 'intake' })
   const cautionFoods = mealCautionFoods(foods, recipes, catalog.data ?? [], recipeOptions)
-  const warningsReady = catalog.isSuccess && !catalog.isFetching
+  const warningsReady =
+    catalog.isSuccess && !catalog.isFetching && recipeCatalog.isSuccess && !recipeCatalog.isFetching
   const busy = save.isPending || remove.isPending || creatingFood
   const future = date > todayString()
   const onError = (error: unknown, action: 'save' | 'delete') => {
@@ -149,6 +149,10 @@ export function MealForm({
         />
         <MealRecipePicker
           options={recipeOptions}
+          loading={recipeCatalog.isPending}
+          failed={recipeCatalog.isError}
+          retrying={recipeCatalog.isFetching}
+          onRetry={() => void recipeCatalog.refetch()}
           selected={recipes}
           disabled={busy}
           onChange={(items) => {

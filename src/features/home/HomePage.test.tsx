@@ -1,3 +1,4 @@
+import { fetchMealWeek } from '@/lib/mealApi'
 import { screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import type { Session } from '@supabase/supabase-js'
@@ -11,6 +12,10 @@ import { renderApp } from '@/test/renderApp'
 
 // 홈 (T-28, SCR-03, FR-HOME-01~06). 테스트 데이터는 가명이다.
 
+vi.mock('@/lib/mealApi', async (original) => ({
+  ...(await original<typeof import('@/lib/mealApi')>()),
+  fetchMealWeek: vi.fn(),
+}))
 vi.mock('@/lib/childApi', async (importOriginal) => ({
   ...(await importOriginal<typeof import('@/lib/childApi')>()),
   fetchMyChild: vi.fn(),
@@ -68,6 +73,7 @@ beforeEach(() => {
   vi.useFakeTimers({ toFake: ['Date'] })
   vi.setSystemTime(new Date(2026, 9, 22, 9, 0))
   vi.resetAllMocks()
+  vi.mocked(fetchMealWeek).mockResolvedValue([])
   vi.mocked(fetchMyChild).mockResolvedValue({
     id: 'c1',
     nickname: '하늘이',
@@ -184,13 +190,13 @@ describe('빠른 기록 (FR-HOME-05)', () => {
     return card('빠른 기록')
   }
 
-  it('단어·행동·표정·수면·키·몸무게 버튼 4개가 있다', async () => {
+  it('단어·식단·행동·표정·수면·키·몸무게 버튼 5개가 있다', async () => {
     await renderHome()
     expect(
       within(quick())
         .getAllByRole('link')
         .map((link) => link.textContent),
-    ).toEqual(['단어', '행동·표정', '수면', '키·몸무게'])
+    ).toEqual(['단어', '식단', '행동·표정', '수면', '키·몸무게'])
   })
 
   it('단어는 단어 유형을 고른 입력 화면을 열고, 취소하면 홈으로 돌아온다', async () => {
@@ -233,5 +239,56 @@ describe('불러오기 실패', () => {
     expect(await within(card('어젯밤 수면')).findByText('11시간 50분')).toBeVisible()
     expect(fetchSleepLogs).toHaveBeenCalledTimes(2)
     expect(fetchMilestones).toHaveBeenCalledTimes(1)
+  })
+})
+
+describe('오늘의 식단·빠른 기록 (T-51)', () => {
+  it('오늘 하루를 조회하고 빈 카드와 빠른 기록을 오늘 주간 카드로 연결한다', async () => {
+    await renderHome()
+    expect(fetchMealWeek).toHaveBeenCalledWith('2026-10-22', '2026-10-22')
+    expect(
+      await within(card('오늘의 식단')).findByRole('link', { name: '오늘 식단 기록하기' }),
+    ).toHaveAttribute('href', '/meals/week?date=2026-10-22')
+    expect(within(card('빠른 기록')).getByRole('link', { name: '식단' })).toHaveAttribute(
+      'href',
+      '/meals/week?date=2026-10-22',
+    )
+  })
+  it('계획·먹음 상태, 삭제된 항목 이름과 끼니 순서를 표시하고 수정 주소로 연결한다', async () => {
+    vi.mocked(fetchMealWeek).mockResolvedValue([
+      {
+        id: 'dinner',
+        date: '2026-10-22',
+        type: 'dinner',
+        eaten: true,
+        intake: null,
+        memo: null,
+        foods: [{ id: null, name: '삭제된 음식' }],
+        recipes: [],
+      },
+      {
+        id: 'breakfast',
+        date: '2026-10-22',
+        type: 'breakfast',
+        eaten: false,
+        intake: null,
+        memo: null,
+        foods: [],
+        recipes: [{ id: 'r1', name: '쌀죽' }],
+      },
+    ])
+    await renderHome()
+    const links = await within(card('오늘의 식단')).findAllByRole('link')
+    expect(links.map((link) => link.textContent)).toEqual(['아침쌀죽계획', '저녁삭제된 음식먹음'])
+    expect(links[0]).toHaveAttribute('href', '/meals/week?date=2026-10-22&record=breakfast')
+  })
+  it('오늘 식단 조회 실패 시 기존 카드는 유지하고 실패한 조회만 재시도한다', async () => {
+    vi.mocked(fetchMealWeek).mockRejectedValueOnce(new Error('offline'))
+    await renderHome()
+    const alert = await screen.findByRole('alert')
+    await userEvent.click(within(alert).getByRole('button', { name: '다시 시도' }))
+    await within(card('오늘의 식단')).findByRole('link', { name: '오늘 식단 기록하기' })
+    expect(fetchMealWeek).toHaveBeenCalledTimes(2)
+    expect(fetchSleepLogs).toHaveBeenCalledTimes(1)
   })
 })

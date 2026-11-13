@@ -13,6 +13,7 @@ import { mealCautionFoods, mealCautionMessage } from '@/lib/mealCaution'
 import { MealSaveError, type MealEntry, type MealMoveTarget } from '@/lib/mealApi'
 import { notifyDone } from '@/lib/notify'
 import { notifyMealSaved } from '@/lib/mealNotify'
+import { useMealRecipes } from '@/lib/useMealRecipes'
 import { useFoods } from '@/lib/useFoods'
 import { isMealType, mealTypeLabel } from '@/lib/mealTypes'
 import { useChild } from '@/lib/useChild'
@@ -35,6 +36,7 @@ export function MealWeekPage() {
   const sheet = useSheetParam('record', ['date', 'meal'])
   const child = useChild()
   const foods = useFoods()
+  const recipes = useMealRecipes()
   const setEaten = useSetMealEaten()
   const move = useMoveMeal()
   const copy = useCopyMeal()
@@ -56,7 +58,8 @@ export function MealWeekPage() {
     message: string
     retryable: boolean
   } | null>(null)
-  const warningsReady = foods.isSuccess && !foods.isFetching
+  const warningsReady =
+    foods.isSuccess && !foods.isFetching && recipes.isSuccess && !recipes.isFetching
   const changeEaten = async (entry: MealEntry, eaten: boolean) => {
     if (copy.isPending || move.isPending || setEaten.isPending || (eaten && !warningsReady)) return
     setFailedCheck(null)
@@ -89,7 +92,10 @@ export function MealWeekPage() {
   const requestEatenChange = (entry: MealEntry, eaten: boolean) => {
     if (copy.isPending || move.isPending || setEaten.isPending || (eaten && !warningsReady)) return
     const current = meals.data?.find((item) => item.id === entry.id) ?? entry
-    if (eaten && mealCautionFoods(current.foods, current.recipes, foods.data ?? []).length > 0)
+    if (
+      eaten &&
+      mealCautionFoods(current.foods, current.recipes, foods.data ?? [], recipes.options).length > 0
+    )
       setConfirmation(current)
     else void changeEaten(current, eaten)
   }
@@ -197,6 +203,13 @@ export function MealWeekPage() {
           retrying={foods.isFetching}
         />
       )}
+      {recipes.isError && (
+        <ErrorBanner
+          message="레시피와 재료 정보를 불러오지 못했어요. 다시 시도해 주세요."
+          onRetry={() => void recipes.refetch()}
+          retrying={recipes.isFetching}
+        />
+      )}
       {failedCheck && (
         <ErrorBanner
           message={failedCheck.message}
@@ -251,7 +264,12 @@ export function MealWeekPage() {
                 meals.data
                   .filter(
                     (entry) =>
-                      mealCautionFoods(entry.foods, entry.recipes, foods.data ?? []).length > 0,
+                      mealCautionFoods(
+                        entry.foods,
+                        entry.recipes,
+                        foods.data ?? [],
+                        recipes.options,
+                      ).length > 0,
                   )
                   .map((entry) => entry.id),
               )
@@ -270,7 +288,12 @@ export function MealWeekPage() {
         }}
         title={mealCautionMessage(
           confirmation
-            ? mealCautionFoods(confirmation.foods, confirmation.recipes, foods.data ?? [])
+            ? mealCautionFoods(
+                confirmation.foods,
+                confirmation.recipes,
+                foods.data ?? [],
+                recipes.options,
+              )
             : [],
         )}
         description="음식을 확인한 후 먹음으로 저장해 주세요."
@@ -313,10 +336,18 @@ export function MealWeekPage() {
           pending={copy.isPending}
           onMove={performCopy}
           onClose={() => setCopying(null)}
-          cautionFoods={mealCautionFoods(copying.foods, copying.recipes, foods.data ?? [])}
+          cautionFoods={mealCautionFoods(
+            copying.foods,
+            copying.recipes,
+            foods.data ?? [],
+            recipes.options,
+          )}
           warningsReady={warningsReady}
-          cautionFailed={foods.isError}
-          onRetryCaution={() => void foods.refetch()}
+          cautionFailed={foods.isError || recipes.isError}
+          onRetryCaution={() => {
+            if (foods.isError) void foods.refetch()
+            if (recipes.isError) void recipes.refetch()
+          }}
         />
       )}
       <MealSheet

@@ -108,21 +108,20 @@ describe('레시피 목록·상세·편집', () => {
     await screen.findByRole('heading', { name: '레시피 등록' })
     await user.click(screen.getByRole('button', { name: '저장' }))
     expect(await screen.findByText('레시피 이름을 입력해 주세요')).toBeInTheDocument()
-    expect(screen.getByText('재료 이름을 입력해 주세요')).toBeInTheDocument()
-    expect(screen.getByText('조리 순서를 입력해 주세요')).toBeInTheDocument()
+    expect(screen.getByText('재료를 하나 이상 입력해 주세요')).toBeInTheDocument()
+    expect(screen.getByText('조리 순서를 하나 이상 입력해 주세요')).toBeInTheDocument()
     expect(saveRecipe).not.toHaveBeenCalled()
   })
-  it('직접 입력한 재료·단계 이동을 저장하고 실패해도 유지한 같은 ID로 재시도한다', async () => {
+  it('여러 줄 재료·조리 순서를 저장하고 실패해도 유지한 같은 ID로 재시도한다', async () => {
     const user = userEvent.setup()
     renderApp('/meals/recipes/new', auth)
     await screen.findByRole('heading', { name: '레시피 등록' })
     await user.type(screen.getByLabelText('레시피 이름'), '물죽')
-    await user.type(screen.getByLabelText('재료 1 이름'), '물')
-    await user.type(screen.getByLabelText('조리 순서 1'), '먼저')
-    await user.click(screen.getByRole('button', { name: '단계 추가' }))
-    await user.type(screen.getByLabelText('조리 순서 2'), '다음')
-    await user.click(screen.getByRole('button', { name: '단계 2 위로' }))
-    expect(screen.getByLabelText('조리 순서 1')).toHaveValue('다음')
+    await user.type(screen.getByLabelText('재료'), '물 100ml')
+    await user.type(screen.getByLabelText('조리 순서'), '다음{enter}{enter}먼저')
+    expect(
+      within(screen.getByRole('list', { name: '조리 순서 미리보기' })).getAllByRole('listitem'),
+    ).toHaveLength(2)
     vi.mocked(saveRecipe).mockRejectedValueOnce(new Error('network'))
     await user.click(screen.getByRole('button', { name: '저장' }))
     expect(await screen.findByRole('alert')).toHaveTextContent('입력값은 유지')
@@ -132,7 +131,7 @@ describe('레시피 목록·상세·편집', () => {
     expect(vi.mocked(saveRecipe).mock.calls[0][0]).toBe(vi.mocked(saveRecipe).mock.calls[1][0])
     expect(vi.mocked(saveRecipe).mock.calls[1][1]).toMatchObject({
       name: '물죽',
-      ingredients: [{ foodId: null, name: '물', amount: null }],
+      ingredients: [{ foodId: null, name: '물', amount: '100ml' }],
       steps: ['다음', '먼저'],
     })
   })
@@ -141,11 +140,13 @@ describe('레시피 목록·상세·편집', () => {
     renderApp('/meals/recipes/new', auth)
     await screen.findByRole('heading', { name: '레시피 등록' })
     await user.type(screen.getByLabelText('레시피 이름'), '검증 죽')
-    await user.type(screen.getByLabelText('재료 1 이름'), '달')
+    await user.type(screen.getByLabelText('재료'), '달걀 1개')
+    await user.click(screen.getByRole('button', { name: '재료 1 음식 연결' }))
     await user.click(screen.getByRole('button', { name: /달걀.*주의/ }))
-    expect(screen.getByText('음식 목록에서 선택됨')).toBeInTheDocument()
-    await user.type(screen.getByLabelText('재료 1 이름'), '물')
-    expect(screen.queryByText('음식 목록에서 선택됨')).not.toBeInTheDocument()
+    expect(screen.getByRole('button', { name: '재료 1 연결 해제' })).toBeInTheDocument()
+    await user.clear(screen.getByLabelText('재료'))
+    await user.type(screen.getByLabelText('재료'), '물 100ml')
+    expect(screen.queryByRole('button', { name: '재료 1 연결 해제' })).not.toBeInTheDocument()
   })
   it('상세에서 목록으로 돌아와도 검색과 선택 재료를 유지한다', async () => {
     const user = userEvent.setup()
@@ -175,5 +176,22 @@ describe('레시피 목록·상세·편집', () => {
     await user.click(screen.getByRole('button', { name: '다시 시도' }))
     await waitFor(() => expect(deleteRecipePhoto).toHaveBeenCalledTimes(2))
     expect(saveRecipe).toHaveBeenCalledTimes(1)
+  })
+  it('기존 레시피의 줄 순서와 양을 바꿔도 음식 연결과 주의 표시를 보존한다', async () => {
+    const user = userEvent.setup()
+    renderApp('/meals/recipes/r1/edit', auth)
+    const field = await screen.findByLabelText('재료')
+    await user.clear(field)
+    await user.type(field, '달걀 2개{enter}쌀 50g')
+    expect(screen.getByText('주의')).toBeInTheDocument()
+    await user.click(screen.getByRole('button', { name: '저장' }))
+    await waitFor(() => expect(saveRecipe).toHaveBeenCalled())
+    expect(vi.mocked(saveRecipe).mock.calls[0][1]).toMatchObject({
+      ingredients: [
+        { foodId: 'f2', name: '달걀', amount: '2개' },
+        { foodId: 'f1', name: '쌀', amount: '50g' },
+      ],
+      steps: ['쌀을 씻어요', '끓여요'],
+    })
   })
 })

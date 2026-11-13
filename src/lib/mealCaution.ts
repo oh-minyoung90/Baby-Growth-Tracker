@@ -1,7 +1,7 @@
 import type { Food } from './foodApi'
 import type { MealItem } from './mealApi'
 
-/** 실제 레시피 재료 목록은 T-47·T-51에서 조회해 연결한다. 삭제된 재료는 이름만 남는다. */
+/** 실제 레시피 재료 목록은 useMealRecipes에서 공급한다. 삭제된 재료는 이름만 남는다. */
 export interface MealRecipeOption extends MealItem {
   ingredients?: readonly MealItem[]
 }

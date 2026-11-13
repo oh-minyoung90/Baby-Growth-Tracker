@@ -3,6 +3,8 @@ import { supabase } from './supabase'
 import type { Json } from './database.types'
 import { isMealIntake, isMealType, type MealIntake, type MealType } from './mealTypes'
 
+export const MEALS_QUERY_KEY = ['meals'] as const
+
 /** ID가 null인 항목은 삭제된 음식·레시피다. 저장 당시 이름으로 계속 표시한다 (D7). */
 export interface MealItem {
   id: string | null

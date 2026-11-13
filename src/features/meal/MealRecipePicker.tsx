@@ -1,20 +1,30 @@
 import { useState } from 'react'
+import { ErrorBanner } from '@/components/ErrorBanner'
+import { ListLoading } from '@/components/ListLoading'
 import { Input } from '@/components/ui/input'
 import { toContentKey } from '@/domain/text'
 import type { MealItem } from '@/lib/mealApi'
 import { SelectedMealItems } from './MealFoodPicker'
 
-/** 목록 공급은 T-47·T-51에서 연결한다. 삭제된 레시피 이름도 선택 상태에서 보존한다 (D7). */
+/** 본인 레시피를 검색·선택한다. 삭제된 레시피 이름도 선택 상태에서 보존한다 (D7). */
 export function MealRecipePicker({
   options,
   selected,
   onChange,
   disabled,
+  loading = false,
+  failed = false,
+  retrying = false,
+  onRetry,
 }: {
   options: readonly MealItem[]
   selected: MealItem[]
   onChange: (items: MealItem[]) => void
   disabled: boolean
+  loading?: boolean
+  failed?: boolean
+  retrying?: boolean
+  onRetry?: () => void
 }) {
   const [query, setQuery] = useState('')
   const matching = options.filter(
@@ -36,7 +46,15 @@ export function MealRecipePicker({
         value={query}
         onChange={(event) => setQuery(event.target.value)}
       />
-      {matching.length ? (
+      {loading ? (
+        <ListLoading rows={1} />
+      ) : failed ? (
+        <ErrorBanner
+          message="레시피와 재료 정보를 불러오지 못했어요. 다시 시도해 주세요."
+          onRetry={onRetry}
+          retrying={retrying}
+        />
+      ) : matching.length ? (
         <ul
           aria-label="레시피 검색 결과"
           className="max-h-40 overflow-y-auto rounded-button border divide-y"

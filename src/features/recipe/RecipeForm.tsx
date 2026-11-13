@@ -1,16 +1,12 @@
 import { useEffect, useRef, useState, type BaseSyntheticEvent } from 'react'
 import { zodResolver } from '@hookform/resolvers/zod'
-import { useFieldArray, useForm, useWatch } from 'react-hook-form'
-import { ArrowDown, ArrowUp, Plus, Trash2, TriangleAlert } from 'lucide-react'
+import { useForm } from 'react-hook-form'
 import { DeleteRecordButton } from '@/components/DeleteRecordButton'
 import { ErrorBanner } from '@/components/ErrorBanner'
 import { FormActions, FormPage } from '@/components/FormPage'
-import { FieldError } from '@/components/form/Field'
 import { TextField } from '@/components/form/TextField'
-import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { Textarea } from '@/components/ui/textarea'
 import { notifySaved } from '@/lib/notify'
 import { PHOTO_MESSAGES, PhotoError } from '@/lib/photoTypes'
 import { RecipeSaveError, type Recipe } from '@/lib/recipeApi'
@@ -23,6 +19,8 @@ import {
 import { useFoods } from '@/lib/useFoods'
 import { useInvalidateRecipes } from '@/lib/useRecipes'
 import { RecipePhoto } from './RecipePhoto'
+import { RecipeIngredientsField, RecipeStepsField } from './RecipeTextFields'
+import { ingredientKey, ingredientsToText, initialIngredientLinks, stepsToText } from './recipeText'
 import { recipeSchema, type RecipeFormOutput, type RecipeFormValues } from './recipeSchema'
 
 export function RecipeForm({
@@ -53,27 +51,19 @@ export function RecipeForm({
   const [deleting, setDeleting] = useState(false)
   const foods = useFoods()
   const invalidate = useInvalidateRecipes()
-  const {
-    control,
-    register,
-    handleSubmit,
-    setValue,
-    formState: { errors },
-  } = useForm<RecipeFormValues, unknown, RecipeFormOutput>({
+  const [ingredientLinks, setIngredientLinks] = useState(() =>
+    initialIngredientLinks(initial?.ingredients ?? []),
+  )
+  const { control, handleSubmit } = useForm<RecipeFormValues, unknown, RecipeFormOutput>({
     resolver: zodResolver(recipeSchema),
     defaultValues: {
       name: initial?.name ?? '',
       servings: initial?.servings ?? '',
       note: initial?.note ?? '',
-      ingredients: initial?.ingredients.length
-        ? initial.ingredients.map((i) => ({ ...i, amount: i.amount ?? '' }))
-        : [{ foodId: null, name: '', amount: '' }],
-      steps: initial?.steps.map((text) => ({ text })) ?? [{ text: '' }],
+      ingredientsText: ingredientsToText(initial?.ingredients ?? []),
+      stepsText: stepsToText(initial?.steps ?? []),
     },
   })
-  const ingredients = useFieldArray({ control, name: 'ingredients' })
-  const steps = useFieldArray({ control, name: 'steps' })
-  const values = useWatch({ control, name: 'ingredients' })
   const locked = busy || session.committed || deleting
   const run = async (action: 'save' | 'delete' | 'cancel', fn: () => Promise<void>) => {
     if (busyRef.current) return
@@ -107,7 +97,16 @@ export function RecipeForm({
       run('save', async () => {
         await saveRecipeDraft(
           session,
-          { ...output, steps: output.steps.map((s) => s.text) },
+          {
+            name: output.name,
+            servings: output.servings,
+            note: output.note,
+            steps: output.stepsText,
+            ingredients: output.ingredientsText.map((item, index) => ({
+              ...item,
+              foodId: ingredientLinks[ingredientKey(output.ingredientsText, index)] ?? null,
+            })),
+          },
           file,
           removePhoto,
         )
@@ -152,185 +151,19 @@ export function RecipeForm({
             placeholder="예: 2회분"
             maxLength={20}
           />
-          <section
-            aria-labelledby="recipe-ingredients-label"
-            className="flex min-w-0 flex-col gap-3"
-          >
-            <h2 id="recipe-ingredients-label" className="font-bold">
-              재료
-            </h2>
-            <p className="text-sm text-muted-foreground">
-              음식을 검색해 고르거나 직접 입력해 주세요. 직접 입력한 재료는 음식 목록에 추가되지
-              않아요.
-            </p>
-            {foods.isError && (
-              <ErrorBanner
-                message="음식 목록을 불러오지 못했어요. 직접 입력하거나 다시 시도해 주세요"
-                onRetry={() => void foods.refetch()}
-              />
-            )}
-            {ingredients.fields.map((row, index) => {
-              const selected = foods.data?.find((f) => f.id === values[index]?.foodId)
-              const query = values[index]?.name.trim() ?? ''
-              const options =
-                !values[index]?.foodId && query
-                  ? foods.data?.filter((f) => f.name.includes(query)).slice(0, 8)
-                  : []
-              return (
-                <div
-                  key={row.id}
-                  className="flex min-w-0 flex-col gap-3 rounded-input border bg-surface p-3"
-                >
-                  <div className="flex items-center justify-between">
-                    <h3 className="text-sm font-bold">재료 {index + 1}</h3>
-                    <Button
-                      type="button"
-                      size="icon"
-                      variant="ghost"
-                      aria-label={`재료 ${index + 1} 삭제`}
-                      disabled={ingredients.fields.length === 1}
-                      onClick={() => ingredients.remove(index)}
-                    >
-                      <Trash2 aria-hidden />
-                    </Button>
-                  </div>
-                  <label className="flex flex-col gap-1.5 text-sm font-bold">
-                    재료 {index + 1} 이름
-                    <Input
-                      {...register(`ingredients.${index}.name`)}
-                      maxLength={20}
-                      autoComplete="off"
-                      aria-invalid={!!errors.ingredients?.[index]?.name}
-                      onChange={(e) => {
-                        setValue(`ingredients.${index}.name`, e.target.value, { shouldDirty: true })
-                        setValue(`ingredients.${index}.foodId`, null, { shouldDirty: true })
-                      }}
-                    />
-                  </label>
-                  {errors.ingredients?.[index]?.name && (
-                    <FieldError>{errors.ingredients[index].name.message}</FieldError>
-                  )}
-                  {values[index]?.foodId && (
-                    <p className="text-xs text-muted-foreground">
-                      음식 목록에서 선택됨
-                      {selected && (selected.status === 'caution' || selected.cautionTag) && (
-                        <Badge variant="caution" className="ml-2">
-                          <TriangleAlert aria-hidden />
-                          주의
-                        </Badge>
-                      )}
-                    </p>
-                  )}
-                  {!!options?.length && (
-                    <ul
-                      aria-label={`재료 ${index + 1} 검색 결과`}
-                      className="max-h-48 overflow-auto rounded-input border"
-                    >
-                      {options.map((f) => (
-                        <li key={f.id}>
-                          <button
-                            type="button"
-                            className="flex min-h-11 w-full items-center justify-between gap-2 px-3 text-left hover:bg-soft"
-                            onClick={() => {
-                              setValue(`ingredients.${index}.foodId`, f.id, { shouldDirty: true })
-                              setValue(`ingredients.${index}.name`, f.name, {
-                                shouldDirty: true,
-                                shouldValidate: true,
-                              })
-                            }}
-                          >
-                            {f.name}
-                            {(f.status === 'caution' || f.cautionTag) && (
-                              <Badge variant="caution">
-                                <TriangleAlert aria-hidden />
-                                주의
-                              </Badge>
-                            )}
-                          </button>
-                        </li>
-                      ))}
-                    </ul>
-                  )}
-                  <TextField
-                    control={control}
-                    name={`ingredients.${index}.amount`}
-                    label={`재료 ${index + 1} 양 (선택)`}
-                    placeholder="예: 30g"
-                    maxLength={20}
-                  />
-                </div>
-              )
-            })}
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => ingredients.append({ foodId: null, name: '', amount: '' })}
-            >
-              <Plus aria-hidden />
-              재료 추가
-            </Button>
-          </section>
-          <section aria-labelledby="recipe-steps-label" className="flex min-w-0 flex-col gap-3">
-            <h2 id="recipe-steps-label" className="font-bold">
-              조리 순서
-            </h2>
-            {steps.fields.map((row, index) => (
-              <div
-                key={row.id}
-                className="flex min-w-0 flex-col gap-2 rounded-input border bg-surface p-3"
-              >
-                <div className="flex flex-wrap items-center justify-between gap-1">
-                  <label htmlFor={`recipe-step-${row.id}`} className="text-sm font-bold">
-                    조리 순서 {index + 1}
-                  </label>
-                  <div className="flex">
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="icon"
-                      aria-label={`단계 ${index + 1} 위로`}
-                      disabled={index === 0}
-                      onClick={() => steps.move(index, index - 1)}
-                    >
-                      <ArrowUp aria-hidden />
-                    </Button>
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="icon"
-                      aria-label={`단계 ${index + 1} 아래로`}
-                      disabled={index === steps.fields.length - 1}
-                      onClick={() => steps.move(index, index + 1)}
-                    >
-                      <ArrowDown aria-hidden />
-                    </Button>
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="icon"
-                      aria-label={`단계 ${index + 1} 삭제`}
-                      disabled={steps.fields.length === 1}
-                      onClick={() => steps.remove(index)}
-                    >
-                      <Trash2 aria-hidden />
-                    </Button>
-                  </div>
-                </div>
-                <Textarea
-                  id={`recipe-step-${row.id}`}
-                  {...register(`steps.${index}.text`)}
-                  aria-invalid={!!errors.steps?.[index]?.text}
-                />
-                {errors.steps?.[index]?.text && (
-                  <FieldError>{errors.steps[index].text.message}</FieldError>
-                )}
-              </div>
-            ))}
-            <Button type="button" variant="outline" onClick={() => steps.append({ text: '' })}>
-              <Plus aria-hidden />
-              단계 추가
-            </Button>
-          </section>
+          {foods.isError && (
+            <ErrorBanner
+              message="음식 목록을 불러오지 못했어요. 입력은 계속할 수 있으며 기존 음식 연결은 유지돼요."
+              onRetry={() => void foods.refetch()}
+            />
+          )}
+          <RecipeIngredientsField
+            control={control}
+            foods={foods.data ?? []}
+            links={ingredientLinks}
+            onLink={(key, id) => setIngredientLinks((links) => ({ ...links, [key]: id }))}
+          />
+          <RecipeStepsField control={control} />
           <TextField control={control} name="note" label="참고 (선택)" maxLength={500} multiline />
         </fieldset>
         <fieldset

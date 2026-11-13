@@ -9,6 +9,7 @@ import { todayString } from '@/domain/date'
 import { NETWORK_ERROR_MESSAGES } from '@/lib/messages'
 import { useBodyMeasures } from '@/lib/useBodyMeasures'
 import { useChild } from '@/lib/useChild'
+import { useFoods } from '@/lib/useFoods'
 import { useMilestones } from '@/lib/useMilestones'
 import {
   DEFAULT_FILTER,
@@ -27,20 +28,22 @@ import { TimelineFilters } from './TimelineFilters'
 import { TimelineList } from './TimelineList'
 
 /**
- * 성장 > 기록: 발달 타임라인 (SCR-07, FR-TL-01~05, 07~10).
- * 위에서부터 유형별 개수와 추가 버튼, 필터, 날짜 최신순·월별로 묶은 발달 기록과 키·몸무게 측정.
+ * 성장 > 기록: 발달 타임라인 (SCR-07, FR-TL-01~10).
+ * 위에서부터 유형별 개수와 추가 버튼, 필터, 날짜 최신순·월별로 묶은 발달 기록·키/몸무게·처음 먹은 음식.
  * 필터는 주소에 두어 기록을 열었다 돌아와도 유지한다.
  */
 export function TimelinePage() {
   const { data: child } = useChild()
   const milestones = useMilestones()
   const measures = useBodyMeasures()
+  const foods = useFoods()
   const navigate = useNavigate()
   const [params, setParams] = useSearchParams()
 
-  // 한쪽이라도 불러오지 못했으면 다른 쪽을 기다리지 않고 안내한다
-  const failed = milestones.isError || measures.isError
-  if (!failed && (milestones.isPending || measures.isPending)) return <ListLoading />
+  // 어느 목록이든 불러오지 못했으면 나머지를 기다리지 않고 안내한다
+  const failed = milestones.isError || measures.isError || foods.isError
+  if (!failed && (milestones.isPending || measures.isPending || foods.isPending))
+    return <ListLoading />
   if (failed) {
     return (
       <ErrorBanner
@@ -48,19 +51,20 @@ export function TimelinePage() {
         onRetry={() => {
           if (milestones.isError) void milestones.refetch()
           if (measures.isError) void measures.refetch()
+          if (foods.isError) void foods.refetch()
         }}
-        retrying={milestones.isFetching || measures.isFetching}
+        retrying={milestones.isFetching || measures.isFetching || foods.isFetching}
       />
     )
   }
 
-  const items = buildTimeline(milestones.data ?? [], measures.data ?? [])
+  const items = buildTimeline(milestones.data ?? [], measures.data ?? [], foods.data ?? [])
   if (items.length === 0) {
     return (
       <EmptyState
         icon={History}
         title="아직 기록이 없어요"
-        description="발달 기록과 키·몸무게를 기록하면 여기에 날짜순으로 모여요"
+        description="발달 기록·키·몸무게·처음 먹은 음식이 날짜순으로 모여요"
         to="/milestones/new"
       />
     )
@@ -73,7 +77,7 @@ export function TimelinePage() {
   return (
     // 모바일에서 떠 있는 추가 버튼이 마지막 기록을 가리지 않게 아래를 비운다
     <div className="flex flex-col gap-4 pb-20 md:gap-6 md:pb-0">
-      <div className="flex items-center gap-3">
+      <div className="flex flex-col gap-3 xl:flex-row xl:items-center">
         <MilestoneCounts
           counts={countMilestones(milestones.data ?? [])}
           selected={selectedCountType(filter)}
@@ -85,7 +89,7 @@ export function TimelinePage() {
         />
       </div>
 
-      <div className="flex flex-col gap-4 md:flex-row md:items-start md:gap-6">
+      <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:gap-6">
         <TimelineFilters filter={filter} onChange={setFilter} birthDate={child?.birthDate} />
         <div className="min-w-0 flex-1">
           {shown.length > 0 ? (

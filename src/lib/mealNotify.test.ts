@@ -14,7 +14,9 @@ describe('식단 저장 알림', () => {
     ['브로콜리', '브로콜리를'],
   ])('첫 시도 %s에 맞는 조사를 붙이고 일반 알림은 생략한다', (name, subject) => {
     notifyMealSaved({ id: 'm1', firstTriedFoods: [{ id: 'f1', name }] })
-    expect(notifyDone).toHaveBeenCalledExactlyOnceWith(`${subject} 처음 먹었어요`)
+    expect(notifyDone).toHaveBeenCalledExactlyOnceWith(
+      `${subject} 처음 먹었어요. 타임라인에 남겼어요`,
+    )
     expect(notifySaved).not.toHaveBeenCalled()
   })
 })

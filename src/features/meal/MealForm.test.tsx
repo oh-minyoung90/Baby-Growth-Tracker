@@ -1,3 +1,4 @@
+import { fetchRecipes } from '@/lib/recipeApi'
 import { act, fireEvent, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import type { Session } from '@supabase/supabase-js'
@@ -17,6 +18,10 @@ import {
 import { notifyDone, notifySaved } from '@/lib/notify'
 import { renderApp } from '@/test/renderApp'
 
+vi.mock('@/lib/recipeApi', async (original) => ({
+  ...(await original<typeof import('@/lib/recipeApi')>()),
+  fetchRecipes: vi.fn(),
+}))
 vi.mock('@/lib/notify', () => ({ notifyDone: vi.fn(), notifySaved: vi.fn() }))
 vi.mock('@/lib/childApi', async (original) => ({
   ...(await original<typeof import('@/lib/childApi')>()),
@@ -81,6 +86,7 @@ beforeEach(() => {
   vi.useFakeTimers({ toFake: ['Date'] })
   vi.setSystemTime(new Date(2026, 10, 11, 9))
   vi.resetAllMocks()
+  vi.mocked(fetchRecipes).mockResolvedValue([])
   entries = []
   foods = [makeFood('f1', '쌀'), makeFood('f2', '보리')]
   vi.mocked(fetchMyChild).mockResolvedValue({
@@ -426,7 +432,9 @@ describe('주의 경고·첫 시도 알림·표 먹음 체크 (T-44)', () => {
       within(await screen.findByRole('alertdialog')).getByRole('button', { name: '그래도 저장' }),
     )
     await closed()
-    expect(notifyDone).toHaveBeenCalledExactlyOnceWith('쌀, 보리를 처음 먹었어요')
+    expect(notifyDone).toHaveBeenCalledExactlyOnceWith(
+      '쌀, 보리를 처음 먹었어요. 타임라인에 남겼어요',
+    )
     expect(notifySaved).not.toHaveBeenCalled()
   })
 
@@ -487,7 +495,7 @@ describe('주의 경고·첫 시도 알림·표 먹음 체크 (T-44)', () => {
     })
     await userEvent.click(screen.getByRole('button', { name: '다시 시도' }))
     await waitFor(() => expect(check).toBeChecked())
-    expect(notifyDone).toHaveBeenCalledExactlyOnceWith('쌀을 처음 먹었어요')
+    expect(notifyDone).toHaveBeenCalledExactlyOnceWith('쌀을 처음 먹었어요. 타임라인에 남겼어요')
   })
 
   it('주의 정보를 못 읽으면 체크 켜기와 저장을 막고 다시 불러올 수 있다', async () => {
@@ -549,5 +557,78 @@ describe('먹음 체크 경합과 재시도', () => {
       within(screen.getByRole('alertdialog')).getByRole('button', { name: '그래도 저장' }),
     )
     await waitFor(() => expect(check).toBeChecked())
+  })
+})
+
+describe('실제 레시피·재료 연동 (T-51)', () => {
+  const recipe = () => ({
+    id: 'r1',
+    name: '주의 쌀죽',
+    photoId: null,
+    servings: null,
+    note: null,
+    steps: ['끓여요'],
+    ingredients: [{ foodId: 'f1', name: '쌀', amount: '20g' }],
+  })
+  it('레시피만 선택한 계획에도 재료 경고·확인을 거치고 음식으로 자동 추가하지 않는다', async () => {
+    foods[0].status = 'caution'
+    vi.mocked(fetchRecipes).mockResolvedValue([recipe()])
+    await openNew('2026-11-12')
+    const results = await within(dialog()).findByRole('list', { name: '레시피 검색 결과' })
+    await userEvent.click(within(results).getByRole('button', { name: '주의 쌀죽' }))
+    expect(within(dialog()).getByRole('status')).toHaveTextContent(
+      '주의가 필요한 음식이 있어요: 쌀',
+    )
+    await userEvent.click(saveButton())
+    await userEvent.click(
+      within(await screen.findByRole('alertdialog')).getByRole('button', { name: '취소' }),
+    )
+    expect(saveMealEntry).not.toHaveBeenCalled()
+    await userEvent.click(saveButton())
+    await userEvent.click(
+      within(await screen.findByRole('alertdialog')).getByRole('button', { name: '그래도 저장' }),
+    )
+    await closed()
+    expect(saveMealEntry).toHaveBeenCalledWith(
+      expect.objectContaining({
+        foods: [],
+        recipes: [{ id: 'r1', name: '주의 쌀죽' }],
+        eaten: false,
+      }),
+      undefined,
+    )
+  })
+  it('레시피 재료를 못 읽으면 저장을 막고 재조회 후 입력을 유지한다', async () => {
+    vi.mocked(fetchRecipes).mockRejectedValue(new Error('offline'))
+    await openNew()
+    await selectFood()
+    expect(saveButton()).toBeDisabled()
+    const alert = await within(dialog()).findByRole('alert')
+    expect(alert).toHaveTextContent('레시피와 재료 정보를 불러오지 못했어요')
+    vi.mocked(fetchRecipes).mockResolvedValue([])
+    await userEvent.click(within(alert).getByRole('button', { name: '다시 시도' }))
+    await waitFor(() => expect(saveButton()).toBeEnabled())
+    expect(within(dialog()).getByRole('button', { name: '쌀 빼기' })).toBeInTheDocument()
+  })
+  it('표의 먹음 체크와 복사도 레시피 재료의 주의를 확인한다', async () => {
+    foods[0].cautionTag = true
+    vi.mocked(fetchRecipes).mockResolvedValue([recipe()])
+    entries = [makeEntry({ foods: [], recipes: [{ id: 'r1', name: '주의 쌀죽' }], eaten: false })]
+    renderApp('/meals/week', auth)
+    const check = await screen.findByRole('checkbox', { name: '2026. 11. 11. (수) 점심 먹음' })
+    await waitFor(() => expect(check).toBeEnabled())
+    await userEvent.click(check)
+    expect(await screen.findByRole('alertdialog')).toHaveTextContent(
+      '주의가 필요한 음식이 있어요: 쌀',
+    )
+    expect(setMealEaten).not.toHaveBeenCalled()
+    await userEvent.click(
+      within(screen.getByRole('alertdialog')).getByRole('button', { name: '취소' }),
+    )
+    const day = screen.getByRole('region', { name: formatDateLabel('2026-11-11') })
+    await userEvent.click(within(day).getByRole('button', { name: '점심 식단 복사' }))
+    expect(
+      within(screen.getByRole('dialog', { name: '식단 복사' })).getByRole('status'),
+    ).toHaveTextContent('쌀')
   })
 })

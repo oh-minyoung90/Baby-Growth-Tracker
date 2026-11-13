@@ -1,5 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import {
+  MEALS_QUERY_KEY,
   deleteMealEntry,
   fetchMealEntry,
   fetchMealWeek,
@@ -11,9 +12,10 @@ import {
   MealSaveError,
   type MealInput,
 } from './mealApi'
+import { RECIPES_QUERY_KEY } from './useRecipes'
 import { FOODS_QUERY_KEY } from './useFoods'
 
-export const MEALS_QUERY_KEY = ['meals'] as const
+export { MEALS_QUERY_KEY } from './mealApi'
 export function useMealWeek(start: string, end: string) {
   return useQuery({
     queryKey: [...MEALS_QUERY_KEY, start],
@@ -45,7 +47,10 @@ export function useSaveMeal() {
             query.queryKey[0] === MEALS_QUERY_KEY[0] && query.queryKey[1] !== 'entry',
         })
       if (error instanceof MealSaveError && error.reason === 'staleItem')
-        return client.invalidateQueries({ queryKey: FOODS_QUERY_KEY })
+        return Promise.all([
+          client.invalidateQueries({ queryKey: FOODS_QUERY_KEY }),
+          client.invalidateQueries({ queryKey: RECIPES_QUERY_KEY }),
+        ])
     },
   })
 }
@@ -122,5 +127,13 @@ export function useCopyMeal() {
           client.invalidateQueries({ queryKey: FOODS_QUERY_KEY }),
         ])
     },
+  })
+}
+
+/** 홈에서는 오늘 하루만 읽되 주간 조회와 캐시 키가 겹치지 않게 한다. */
+export function useMealDay(date: string) {
+  return useQuery({
+    queryKey: [...MEALS_QUERY_KEY, 'day', date],
+    queryFn: () => fetchMealWeek(date, date),
   })
 }
