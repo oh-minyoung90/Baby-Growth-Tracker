@@ -48,10 +48,10 @@ export function TimelineFilters({
   return (
     <aside
       aria-label="필터"
-      className="flex flex-col gap-3 md:w-60 md:shrink-0 md:gap-5 md:rounded-card md:border md:bg-surface md:p-5"
+      className="flex flex-col gap-3 lg:w-60 lg:shrink-0 lg:gap-5 lg:rounded-card lg:border lg:bg-surface lg:p-5"
     >
       <div className="flex flex-col gap-2">
-        <p aria-hidden className="hidden text-sm font-bold md:block">
+        <p aria-hidden className="hidden text-sm font-bold lg:block">
           유형
         </p>
         <div role="group" aria-label="유형" className="flex flex-wrap gap-2">
@@ -70,7 +70,7 @@ export function TimelineFilters({
       </div>
 
       <div className="flex flex-col gap-2">
-        <p aria-hidden className="hidden text-sm font-bold md:block">
+        <p aria-hidden className="hidden text-sm font-bold lg:block">
           기간
         </p>
         <ChoiceChips

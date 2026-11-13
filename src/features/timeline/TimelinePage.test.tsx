@@ -1,4 +1,6 @@
-import { fireEvent, screen, waitFor, within } from '@testing-library/react'
+import { fetchFoods } from '@/lib/foodApi'
+import type { Food } from '@/lib/foodApi'
+import { act, fireEvent, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import type { Session } from '@supabase/supabase-js'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
@@ -10,6 +12,10 @@ import { renderApp } from '@/test/renderApp'
 
 // 성장 > 기록: 타임라인 (T-23, T-52, SCR-07, FR-TL-01~05, 07~10). 테스트 데이터는 가명이다.
 
+vi.mock('@/lib/foodApi', async (original) => ({
+  ...(await original<typeof import('@/lib/foodApi')>()),
+  fetchFoods: vi.fn(),
+}))
 vi.mock('@/lib/childApi', async (importOriginal) => ({
   ...(await importOriginal<typeof import('@/lib/childApi')>()),
   fetchMyChild: vi.fn(),
@@ -42,6 +48,7 @@ beforeEach(() => {
   vi.useFakeTimers({ toFake: ['Date'] })
   vi.setSystemTime(new Date(2026, 9, 22, 9, 0))
   vi.resetAllMocks()
+  vi.mocked(fetchFoods).mockResolvedValue([])
   vi.mocked(fetchMyChild).mockResolvedValue({
     id: 'c1',
     nickname: '하늘이',
@@ -134,7 +141,7 @@ describe('필터 (FR-TL-03~05)', () => {
     await userEvent.click(typeChip('단어'))
     expect(typeChip('단어')).toHaveAttribute('aria-pressed', 'false')
     expect(titles()).toEqual(['소리 내어 웃기', '72.1cm · 8.9kg', '잡고 서기'])
-    expect(router.state.location.search).toBe('?types=behavior%2Cexpression%2Cmeasure')
+    expect(router.state.location.search).toBe('?types=behavior%2Cexpression%2Cmeasure%2Cfood')
 
     await userEvent.click(typeChip('단어'))
     expect(titles()).toHaveLength(5)
@@ -249,5 +256,51 @@ describe('0건·불러오기 실패 (FR-COM-20~22)', () => {
     await userEvent.click(within(banner).getByRole('button', { name: '다시 시도' }))
     expect(await screen.findByText('72.1cm · 8.9kg')).toBeInTheDocument()
     expect(fetchBodyMeasures).toHaveBeenCalledTimes(2)
+  })
+})
+
+describe('처음 먹은 음식 (T-51)', () => {
+  it('음식 유형만 고를 수 있고 항목은 음식 상세로 연결한다', async () => {
+    vi.mocked(fetchFoods).mockResolvedValue([
+      { id: 'f1', name: '브로콜리', firstTriedDate: '2026-10-05' },
+      { id: 'f2', name: '처음 날짜 모름', firstTriedDate: null },
+    ] as Food[])
+    const { router } = await renderTimeline('/growth/timeline?types=food')
+    expect(titles()).toEqual(['브로콜리'])
+    expect(screen.getByRole('link', { name: /브로콜리/ })).toHaveAttribute(
+      'href',
+      '/meals/foods/f1',
+    )
+    expect(typeChip('처음 먹은 음식')).toHaveAttribute('aria-pressed', 'true')
+    expect(router.state.location.search).toBe('?types=food')
+  })
+  it('첫 날짜 변경·체크 해제 결과를 다시 읽어 이동·제거하며 항목을 중복 저장하지 않는다', async () => {
+    let foods = [{ id: 'f1', name: '쌀', firstTriedDate: '2026-10-05' }] as Food[]
+    vi.mocked(fetchFoods).mockImplementation(async () => [...foods])
+    const { queryClient } = await renderTimeline('/growth/timeline?types=food')
+    expect(titles()).toEqual(['쌀'])
+    foods = [{ ...foods[0], firstTriedDate: '2026-09-08' }]
+    await act(async () => {
+      await queryClient.invalidateQueries({ queryKey: ['foods'] })
+    })
+    expect(titles()).toEqual(['쌀'])
+    await waitFor(() =>
+      expect(screen.getByRole('link', { name: /쌀/ })).toHaveTextContent('2026. 9. 8.'),
+    )
+    foods = []
+    await act(async () => {
+      await queryClient.invalidateQueries({ queryKey: ['foods'] })
+    })
+    await waitFor(() => expect(titles()).toEqual([]))
+    expect(screen.getByText('조건에 맞는 기록이 없어요')).toBeInTheDocument()
+  })
+  it('음식 조회가 실패하면 빈 기록으로 오해시키지 않고 다시 시도한다', async () => {
+    vi.mocked(fetchFoods).mockRejectedValueOnce(new Error('offline'))
+    renderApp('/growth/timeline', auth)
+    const alert = await screen.findByRole('alert')
+    await userEvent.click(within(alert).getByRole('button', { name: '다시 시도' }))
+    await screen.findByRole('group', { name: '유형' })
+    expect(fetchFoods).toHaveBeenCalledTimes(2)
+    expect(fetchMilestones).toHaveBeenCalledTimes(1)
   })
 })

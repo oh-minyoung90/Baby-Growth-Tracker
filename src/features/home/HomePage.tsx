@@ -1,7 +1,7 @@
 import { useId, type ReactNode } from 'react'
 import type { UseQueryResult } from '@tanstack/react-query'
 import type { LucideIcon } from 'lucide-react'
-import { ChevronRight, MessageCircle, Moon, Ruler, Sparkles } from 'lucide-react'
+import { ChevronRight, MessageCircle, Moon, Ruler, Sparkles, Utensils, Check } from 'lucide-react'
 import { Link } from 'react-router'
 import { ErrorBanner } from '@/components/ErrorBanner'
 import { ListLoading } from '@/components/ListLoading'
@@ -20,10 +20,13 @@ import { summarizeSleepLog } from '@/lib/sleepSummary'
 import { useBodyMeasures } from '@/lib/useBodyMeasures'
 import { useChild } from '@/lib/useChild'
 import { useMilestones } from '@/lib/useMilestones'
+import { useMealDay } from '@/lib/useMeals'
+import { MEAL_TYPES } from '@/lib/mealTypes'
+import type { MealEntry } from '@/lib/mealApi'
 import { useSleepLogs } from '@/lib/useSleepLogs'
 import { cn } from '@/lib/utils'
 
-/** 빠른 기록 (FR-HOME-05, R4). 가장 자주 쓰는 단어만 진한 보라 (docs/디자인.md 8장). 식단은 T-51에서 더한다 */
+/** 빠른 기록 (FR-HOME-05, R4). 가장 자주 쓰는 단어만 진한 보라 (docs/디자인.md 8장). 식단은 오늘 날짜의 주간 카드로 연결한다 */
 const QUICK_RECORDS: { to: string; label: string; icon: LucideIcon; primary?: boolean }[] = [
   { to: '/milestones/new?type=word', label: '단어', icon: MessageCircle, primary: true },
   // 행동·표정은 유형을 고르지 않은 채 연다 (FR-MS-01)
@@ -43,8 +46,9 @@ export function HomePage() {
   const measures = useBodyMeasures()
 
   const today = todayString()
+  const meals = useMealDay(today)
   const age = child ? ageLabel(child.birthDate, today) : null
-  const failed = [milestones, sleepLogs, measures].filter((query) => query.isError)
+  const failed = [milestones, sleepLogs, measures, meals].filter((query) => query.isError)
 
   return (
     <Page
@@ -73,7 +77,8 @@ export function HomePage() {
         <MeasureCard query={measures} />
       </div>
 
-      <QuickRecords />
+      <MealCard query={meals} today={today} />
+      <QuickRecords today={today} />
     </Page>
   )
 }
@@ -297,15 +302,20 @@ function MeasureCard({ query }: { query: UseQueryResult<BodyMeasure[]> }) {
 }
 
 /** 빠른 기록 버튼 (FR-HOME-05). 누르면 해당 입력 화면이 열리고, 저장·취소하면 홈으로 돌아온다 */
-function QuickRecords() {
+function QuickRecords({ today }: { today: string }) {
+  const records = [
+    QUICK_RECORDS[0],
+    { to: `/meals/week?date=${today}`, label: '식단', icon: Utensils },
+    ...QUICK_RECORDS.slice(1),
+  ]
   const id = useId()
   return (
     <section aria-labelledby={id} className="flex flex-col gap-2.5 md:gap-3">
       <h2 id={id} className="text-[17px] font-bold md:text-lg">
         빠른 기록
       </h2>
-      <div className="grid grid-cols-2 gap-2.5 md:grid-cols-4 md:gap-3">
-        {QUICK_RECORDS.map(({ to, label, icon: Icon, primary }) => (
+      <div className="grid grid-cols-2 gap-2.5 md:grid-cols-5 md:gap-3">
+        {records.map(({ to, label, icon: Icon, primary }) => (
           <Link
             key={label}
             to={to}
@@ -322,5 +332,49 @@ function QuickRecords() {
         ))}
       </div>
     </section>
+  )
+}
+
+/** 계획과 먹은 기록을 모두 표시하며 누르면 그 식단의 수정 시트를 연다. */
+function MealCard({ query, today }: { query: UseQueryResult<MealEntry[]>; today: string }) {
+  return (
+    <Card title="오늘의 식단" icon={Utensils}>
+      <QueryContent query={query}>
+        {(entries) =>
+          entries.length === 0 ? (
+            <CardAction to={`/meals/week?date=${today}`}>오늘 식단 기록하기</CardAction>
+          ) : (
+            <ul className="grid gap-2 sm:grid-cols-2">
+              {MEAL_TYPES.flatMap(({ value, label }) => {
+                const entry = entries.find((item) => item.type === value)
+                return entry
+                  ? [
+                      <li key={entry.id}>
+                        <Link
+                          to={`/meals/week?date=${today}&record=${entry.id}`}
+                          className="flex min-h-16 min-w-0 items-center gap-3 rounded-input border px-3 py-3 outline-none hover:bg-soft focus-visible:bg-soft"
+                        >
+                          <span className="shrink-0 text-sm font-bold">{label}</span>
+                          <span className="min-w-0 flex-1 break-words">
+                            {[...entry.foods, ...entry.recipes].map((item) => item.name).join(', ')}
+                          </span>
+                          {entry.eaten ? (
+                            <Badge variant="tried">
+                              <Check aria-hidden />
+                              먹음
+                            </Badge>
+                          ) : (
+                            <Badge variant="plan">계획</Badge>
+                          )}
+                        </Link>
+                      </li>,
+                    ]
+                  : []
+              })}
+            </ul>
+          )
+        }
+      </QueryContent>
+    </Card>
   )
 }

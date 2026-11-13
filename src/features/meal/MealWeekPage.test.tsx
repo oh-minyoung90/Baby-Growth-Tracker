@@ -1,3 +1,4 @@
+import { fetchRecipes } from '@/lib/recipeApi'
 import { act, fireEvent, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import type { Session } from '@supabase/supabase-js'
@@ -7,6 +8,10 @@ import { fetchMyChild } from '@/lib/childApi'
 import { fetchMealWeek, type MealEntry } from '@/lib/mealApi'
 import { renderApp } from '@/test/renderApp'
 
+vi.mock('@/lib/recipeApi', async (original) => ({
+  ...(await original<typeof import('@/lib/recipeApi')>()),
+  fetchRecipes: vi.fn(),
+}))
 vi.mock('@/lib/childApi', async (original) => ({
   ...(await original<typeof import('@/lib/childApi')>()),
   fetchMyChild: vi.fn(),
@@ -36,6 +41,7 @@ beforeEach(() => {
   vi.useFakeTimers({ toFake: ['Date'] })
   vi.setSystemTime(new Date(2026, 10, 11, 9))
   vi.resetAllMocks()
+  vi.mocked(fetchRecipes).mockResolvedValue([])
   store = []
   vi.mocked(fetchFoods).mockResolvedValue([])
   vi.mocked(fetchMyChild).mockResolvedValue({

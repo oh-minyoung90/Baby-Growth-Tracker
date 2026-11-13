@@ -213,9 +213,32 @@ describe('주소의 필터', () => {
       types: [],
       period: 'this',
     })
-    expect(parseFilter(new URLSearchParams('types=word,food&period=year'))).toMatchObject({
+    expect(parseFilter(new URLSearchParams('types=word,unknown&period=year'))).toMatchObject({
       types: ['word'],
       period: 'all',
     })
   })
+})
+
+it('첫 시도 날짜가 있는 음식만 합치고 유형·기간을 필터한다', () => {
+  const result = buildTimeline(
+    [],
+    [],
+    [
+      { id: 'known', name: '브로콜리', firstTriedDate: '2026-10-05' },
+      { id: 'unknown', name: '날짜 모름', firstTriedDate: null },
+    ],
+  )
+  expect(result).toEqual([
+    {
+      key: 'food-known',
+      type: 'food',
+      date: '2026-10-05',
+      title: '브로콜리',
+      memo: null,
+      to: '/meals/foods/known',
+    },
+  ])
+  expect(filterTimeline(result, filter({ types: ['food'], period: 'this' }), TODAY)).toHaveLength(1)
+  expect(filterTimeline(result, filter({ types: ['word'] }), TODAY)).toEqual([])
 })

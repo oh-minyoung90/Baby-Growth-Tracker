@@ -1,22 +1,27 @@
 import { format, subMonths } from 'date-fns'
-import { Ruler, type LucideIcon } from 'lucide-react'
+import { Ruler, Utensils, type LucideIcon } from 'lucide-react'
 import { parseDate } from '@/domain/date'
 import { countDistinctContent } from '@/domain/text'
 import type { BodyMeasure } from '@/lib/bodyApi'
 import { formatMeasureValue } from '@/lib/bodyFormat'
+import type { Food } from '@/lib/foodApi'
 import type { Milestone } from '@/lib/milestoneApi'
 import { MILESTONE_TYPE_VALUES, milestoneTypeInfo, type MilestoneType } from '@/lib/milestoneTypes'
 
 /**
- * 타임라인 유형 (FR-TL-03): 발달 유형(단어·행동·표정) + 키·몸무게.
- * "처음 먹은 음식"(FR-TL-06)은 음식 목록이 생기는 T-51에서 추가한다.
+ * 타임라인 유형 (FR-TL-03, 06): 발달 유형 + 키·몸무게 + 처음 먹은 음식.
  */
-export type TimelineType = MilestoneType | 'measure'
+export type TimelineType = MilestoneType | 'measure' | 'food'
 
-export const TIMELINE_TYPE_VALUES: readonly TimelineType[] = [...MILESTONE_TYPE_VALUES, 'measure']
+export const TIMELINE_TYPE_VALUES: readonly TimelineType[] = [
+  ...MILESTONE_TYPE_VALUES,
+  'measure',
+  'food',
+]
 
 /** 유형 이름과 아이콘 (FR-TL-02). 발달 유형은 입력 화면과 같다 */
 export function timelineTypeInfo(type: TimelineType): { label: string; icon: LucideIcon } {
+  if (type === 'food') return { label: '처음 먹은 음식', icon: Utensils }
   return type === 'measure' ? { label: '키·몸무게', icon: Ruler } : milestoneTypeInfo(type)
 }
 
@@ -26,6 +31,7 @@ export const TYPE_COLORS: Record<TimelineType, string> = {
   behavior: 'bg-type-behavior text-type-behavior-text',
   expression: 'bg-type-expression text-type-expression-text',
   measure: 'bg-type-measure text-type-measure-text',
+  food: 'bg-type-food text-type-food-text',
 }
 
 /** 타임라인 한 줄 (FR-TL-02) */
@@ -37,7 +43,7 @@ export interface TimelineItem {
   date: string
   title: string
   memo: string | null
-  /** 누르면 여는 수정 화면 (FR-COM-30). 측정은 키·몸무게 화면의 수정 시트 (FR-TL-07) */
+  /** 누르면 여는 화면. 음식은 상세로 연결하며 타임라인에서는 수정하지 않는다(FR-TL-06). 측정은 키·몸무게 화면의 수정 시트 (FR-TL-07) */
   to: string
 }
 
@@ -78,12 +84,13 @@ export function measureSummary({ heightCm, weightKg }: BodyMeasure): string {
 }
 
 /**
- * 발달 기록과 측정을 날짜 최신순으로 합친다 (FR-TL-01).
- * 두 목록은 이미 날짜 최신순이다. 같은 날짜면 발달 기록이 먼저, 발달 기록끼리는 받은 순서(나중에 저장한 것이 먼저)를 지킨다.
+ * 발달 기록·측정·처음 먹은 음식을 날짜 최신순으로 합친다 (FR-TL-01).
+ * 같은 날짜에는 발달·측정·음식 순서를 유지한다. 같은 날짜면 발달 기록이 먼저, 발달 기록끼리는 받은 순서(나중에 저장한 것이 먼저)를 지킨다.
  */
 export function buildTimeline(
   milestones: readonly Milestone[],
   measures: readonly BodyMeasure[],
+  foods: readonly Pick<Food, 'id' | 'name' | 'firstTriedDate'>[] = [],
 ): TimelineItem[] {
   const items: TimelineItem[] = [
     ...milestones.map((record) => ({
@@ -102,6 +109,20 @@ export function buildTimeline(
       memo: measure.memo,
       to: `/growth/body?record=${measure.id}`,
     })),
+    ...foods.flatMap((food) =>
+      food.firstTriedDate
+        ? [
+            {
+              key: `food-${food.id}`,
+              type: 'food' as const,
+              date: food.firstTriedDate,
+              title: food.name,
+              memo: null,
+              to: `/meals/foods/${food.id}`,
+            },
+          ]
+        : [],
+    ),
   ]
   // 정렬은 안정적이라 같은 날짜는 위 순서를 유지한다
   return items.sort((a, b) => (a.date < b.date ? 1 : a.date > b.date ? -1 : 0))

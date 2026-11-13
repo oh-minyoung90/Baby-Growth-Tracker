@@ -46,11 +46,11 @@ function TimelineRow({ item, age }: { item: TimelineItem; age: string | null }) 
   return (
     <Link
       to={item.to}
-      className="grid grid-cols-[40px_minmax(0,1fr)] gap-x-3 gap-y-1 rounded-2xl border bg-surface px-4 py-3.5 transition-colors outline-none hover:bg-muted focus-visible:bg-muted md:flex md:items-center md:gap-3.5 md:px-[18px]"
+      className="grid grid-cols-[40px_minmax(0,1fr)] gap-x-3 gap-y-1 rounded-2xl border bg-surface px-4 py-3.5 transition-colors outline-none hover:bg-muted focus-visible:bg-muted xl:flex xl:items-center xl:gap-3.5 xl:px-[18px]"
     >
       <span
         className={cn(
-          'flex size-10 items-center justify-center rounded-xl md:hidden',
+          'flex size-10 items-center justify-center rounded-xl xl:hidden',
           item.memo ? 'row-span-3' : 'row-span-2',
           TYPE_COLORS[item.type],
         )}
@@ -58,25 +58,25 @@ function TimelineRow({ item, age }: { item: TimelineItem; age: string | null }) 
         <Icon className="size-5" aria-hidden />
       </span>
       {/* PC에서는 묶음을 풀어 날짜 칸이 맨 앞, 유형이 그다음에 온다 */}
-      <span className="flex flex-wrap items-center gap-x-2 gap-y-1 md:contents">
-        <Badge variant={item.type} className="md:order-2">
+      <span className="flex flex-wrap items-center gap-x-2 gap-y-1 xl:contents">
+        <Badge variant={item.type} className="xl:order-2">
           {label}
         </Badge>
-        <span className="text-[13px] text-muted-foreground md:order-1 md:flex md:w-32 md:shrink-0 md:flex-col">
+        <span className="text-[13px] text-muted-foreground xl:order-1 xl:flex xl:w-32 xl:shrink-0 xl:flex-col">
           <span>{formatDateLabel(item.date)}</span>
           {age && (
             <>
-              <span className="md:hidden"> · </span>
+              <span className="xl:hidden"> · </span>
               <span>{age}</span>
             </>
           )}
         </span>
       </span>
-      <strong className="text-[17px] break-words md:order-3 md:shrink-0 md:text-base">
+      <strong className="min-w-0 text-[17px] break-words xl:order-3 xl:flex-1 xl:text-base">
         {item.title}
       </strong>
       {item.memo && (
-        <span className="truncate text-sm text-muted-foreground md:order-4 md:min-w-0">
+        <span className="truncate text-sm text-muted-foreground xl:order-4 xl:min-w-0">
           {item.memo}
         </span>
       )}

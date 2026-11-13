@@ -1,7 +1,7 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { fetchRecipe, fetchRecipes } from './recipeApi'
 import { PHOTOS_QUERY_KEY } from './useRecipePhoto'
-import { MEALS_QUERY_KEY } from './useMeals'
+import { MEALS_QUERY_KEY } from './mealApi'
 
 export const RECIPES_QUERY_KEY = ['recipes'] as const
 export function useRecipes() {
