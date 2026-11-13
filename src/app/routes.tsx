@@ -12,6 +12,8 @@ import { HomePage } from '@/features/home/HomePage'
 import { MealsLayout } from '@/features/meal/MealsLayout'
 import { MealWeekPage } from '@/features/meal/MealWeekPage'
 import { MilestoneFormPage } from '@/features/milestone/MilestoneFormPage'
+import { RecipeDetailPage } from '@/features/recipe/RecipeDetailPage'
+import { RecipeFormPage } from '@/features/recipe/RecipeFormPage'
 import { RecipesPage } from '@/features/recipe/RecipesPage'
 import { SettingsPage } from '@/features/settings/SettingsPage'
 import { SleepFormPage } from '@/features/sleep/SleepFormPage'
@@ -90,6 +92,16 @@ export const routes: RouteObject[] = [
                     handle: { hideBottomNav: true } satisfies AppRouteHandle,
                   },
                   {
+                    path: 'meals/recipes/new',
+                    element: <RecipeFormPage />,
+                    handle: { hideBottomNav: true } satisfies AppRouteHandle,
+                  },
+                  {
+                    path: 'meals/recipes/:id/edit',
+                    element: <RecipeFormPage />,
+                    handle: { hideBottomNav: true } satisfies AppRouteHandle,
+                  },
+                  {
                     path: 'meals',
                     element: <MealsLayout />,
                     children: [
@@ -98,6 +110,7 @@ export const routes: RouteObject[] = [
                       { path: 'foods', element: <FoodsPage /> },
                       { path: 'foods/:id', element: <FoodDetailPage /> },
                       { path: 'recipes', element: <RecipesPage /> },
+                      { path: 'recipes/:id', element: <RecipeDetailPage /> },
                     ],
                   },
                   { path: 'settings', element: <SettingsPage /> },

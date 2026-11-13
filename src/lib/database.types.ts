@@ -680,6 +680,19 @@ export type Database = {
         }
         Returns: Json
       }
+      save_recipe: {
+        Args: {
+          create_new?: boolean
+          id: string
+          ingredients: Json
+          name: string
+          note?: string
+          photo_id?: string
+          servings?: string
+          steps: Json
+        }
+        Returns: string
+      }
       seed_default_foods: { Args: never; Returns: number }
       set_food_caution: {
         Args: {

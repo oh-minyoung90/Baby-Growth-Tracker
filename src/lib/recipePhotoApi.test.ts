@@ -1,5 +1,10 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { deleteRecipePhoto, getRecipePhotoUrl, uploadRecipePhoto } from './recipePhotoApi'
+import {
+  cleanupPendingRecipePhoto,
+  deleteRecipePhoto,
+  getRecipePhotoUrl,
+  uploadRecipePhoto,
+} from './recipePhotoApi'
 import { prepareRecipePhoto } from './prepareRecipePhoto'
 const mock = vi.hoisted(() => ({
   from: vi.fn(),
@@ -136,6 +141,20 @@ describe('비공개 사진 API', () => {
       error: null,
     })
     await expect(deleteRecipePhoto(id)).rejects.toMatchObject({ reason: 'metadata' })
+    expect(mock.remove).not.toHaveBeenCalled()
+  })
+  it('메타데이터가 없는 업로드도 소유자·정확한 경로 확인 후 파일부터 다시 정리한다', async () => {
+    const photo = { id, ownerId: uid, storagePath: row.storage_path }
+    await cleanupPendingRecipePhoto(photo)
+    expect(mock.remove).toHaveBeenCalledExactlyOnceWith([row.storage_path])
+    expect(mock.maybeSingle).not.toHaveBeenCalled()
+    mock.remove.mockClear()
+    await expect(
+      cleanupPendingRecipePhoto({ ...photo, storagePath: '다른경로.jpg' }),
+    ).rejects.toMatchObject({ reason: 'auth' })
+    await expect(cleanupPendingRecipePhoto({ ...photo, ownerId: '타인' })).rejects.toMatchObject({
+      reason: 'auth',
+    })
     expect(mock.remove).not.toHaveBeenCalled()
   })
 })

@@ -94,3 +94,13 @@ export async function deleteRecipePhoto(id: string): Promise<void> {
   const removed = await supabase.from('photos').delete().eq('id', id).eq('owner_id', photo.ownerId)
   if (removed.error) throw new PhotoError('cleanup', photo)
 }
+
+/** 메타데이터 생성 전 실패한 파일도 보존한 소유자·경로로 다시 정리한다. */
+export async function cleanupPendingRecipePhoto(photo: RecipePhoto): Promise<void> {
+  if (
+    photo.ownerId !== (await ownerId()) ||
+    photo.storagePath !== photoStoragePath(photo.ownerId, photo.id)
+  )
+    throw new PhotoError('auth')
+  await cleanupUpload(photo, true)
+}
