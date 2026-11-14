@@ -590,6 +590,10 @@ export type Database = {
         Args: { date: string; id: string; meal_type: string }
         Returns: Json
       }
+      delete_all_data: {
+        Args: { expected_owner_id: string }
+        Returns: undefined
+      }
       delete_meal_entry: { Args: { id: string }; Returns: undefined }
       export_backup: { Args: never; Returns: Json }
       food_meal_counts: {

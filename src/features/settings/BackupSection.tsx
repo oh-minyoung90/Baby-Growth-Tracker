@@ -16,7 +16,7 @@ import {
 } from '@/lib/backupApi'
 import { notifyDone } from '@/lib/notify'
 
-export function BackupSection() {
+export function BackupSection({ onBusyChange }: { onBusyChange?: (busy: boolean) => void }) {
   const client = useQueryClient(),
     navigate = useNavigate()
   const [selected, setSelected] = useState<{ name: string; payload: Backup } | null>(null)
@@ -32,6 +32,7 @@ export function BackupSection() {
   const onExport = async () => {
     if (busy.current) return
     busy.current = true
+    onBusyChange?.(true)
     setPending('export')
     setFailure(null)
     try {
@@ -41,12 +42,14 @@ export function BackupSection() {
       setFailure({ message: message(error), action: 'export' })
     } finally {
       busy.current = false
+      onBusyChange?.(false)
       setPending(null)
     }
   }
   const onRead = async (file: File) => {
     if (busy.current) return
     busy.current = true
+    onBusyChange?.(true)
     setPending('read')
     setFailure(null)
     setSelected(null)
@@ -56,12 +59,14 @@ export function BackupSection() {
       setFailure({ message: message(error), action: 'read' })
     } finally {
       busy.current = false
+      onBusyChange?.(false)
       setPending(null)
     }
   }
   const onImport = async () => {
     if (busy.current || !selected) return
     busy.current = true
+    onBusyChange?.(true)
     setPending('import')
     setFailure(null)
     try {
@@ -74,6 +79,7 @@ export function BackupSection() {
       setFailure({ message: message(error), action: 'import' })
     } finally {
       busy.current = false
+      onBusyChange?.(false)
       setPending(null)
     }
   }
