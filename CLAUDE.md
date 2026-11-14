@@ -11,7 +11,7 @@ Baby Growth Tracker는 아이의 성장(키·몸무게, 발달, 수면)과 식�
 ## 문서
 
 - `PRD.md`(v1.8, 확정)는 범위, 기능(F-01~F-24), 데이터 모델, 결정 사항의 기준 문서입니다. 동작을 제안하기 전에 9장 "결정 사항"을 확인하고, 이미 결정된 항목은 사용자와 협의 없이 다시 바꾸지 않습니다.
-- 설계 문서는 `docs/` 아래에 둡니다. `docs/기능요구사항서.md`(v1.22)는 화면별 요구사항(FR)과 비즈니스 규칙(BR)의 기준이며, `docs/기술요구사항서.md`(v1.33)는 시스템 구성, DB 스키마, RLS, 인증, 테스트, 배포 방식의 기준입니다. 구현 중 설계가 바뀌면 해당 문서를 함께 고칩니다. `docs/디자인.md`(v1.4)는 색·글자·간격·레이아웃·컴포넌트의 기준이며, 화면을 만들 때 디자인 시안보다 우선합니다. `docs/task.md`(v1.21)는 MVP-1(성장 기록 + 식사 기록) 태스크 목록이며, 태스크마다 GitHub Issue가 연결되어 있습니다. 설계 문서와 `PRD.md`가 서로 다르면 임의로 하나를 고르지 말고 사용자에게 알립니다.
+- 설계 문서는 `docs/` 아래에 둡니다. `docs/기능요구사항서.md`(v1.22)는 화면별 요구사항(FR)과 비즈니스 규칙(BR)의 기준이며, `docs/기술요구사항서.md`(v1.34)는 시스템 구성, DB 스키마, RLS, 인증, 테스트, 배포 방식의 기준입니다. 구현 중 설계가 바뀌면 해당 문서를 함께 고칩니다. `docs/디자인.md`(v1.4)는 색·글자·간격·레이아웃·컴포넌트의 기준이며, 화면을 만들 때 디자인 시안보다 우선합니다. `docs/task.md`(v1.22)는 MVP-1(성장 기록 + 식사 기록) 태스크 목록이며, 태스크마다 GitHub Issue가 연결되어 있습니다. 설계 문서와 `PRD.md`가 서로 다르면 임의로 하나를 고르지 말고 사용자에게 알립니다.
 - 확실하지 않은 내용은 가정하지 말고 "확인 필요"로 표시합니다.
 
 ## 기술 스택
@@ -33,6 +33,7 @@ Baby Growth Tracker는 아이의 성장(키·몸무게, 발달, 수면)과 식�
 - `npm run test:watch`: 파일 변경 시 자동 재실행
 - `npm run test:coverage`: 커버리지 측정 (`coverage/`, 커밋 제외)
 - `npm run test:integration`: dev Supabase에 테스트 계정 A·B로 접속해 RLS·DB 제약을 검사 (`tests/integration/`). `.env.local`과 `.env.test.local`이 필요해 로컬에서만 실행하고 CI에서는 실행하지 않는다. 새 테이블을 추가하는 PR에는 이 테스트를 함께 추가한다
+- `npm run test:e2e`: Playwright로 실제 dev DB와 PC·모바일 화면을 순차 검사. `.env.test.local`의 계정 A·`E2E_DEV_PROJECT_REF`가 필요하다. `E2E_CHROME=1`은 설치된 Chrome 사용. 강제 종료 후 복구는 `npm run test:e2e:recover`. 상세는 `tests/e2e/README.md`를 따른다
 - `npm run db:new -- <이름>`: 새 마이그레이션 파일 생성 (`supabase/migrations/`)
 - `npm run db:push`: 마이그레이션을 연결된 Supabase 프로젝트(dev)에 적용. DB 비밀번호를 묻는다
 - `npm run db:types`: DB 구조에서 TypeScript 타입 생성 (`src/lib/database.types.ts`)

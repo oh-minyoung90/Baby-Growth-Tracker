@@ -62,3 +62,9 @@ supabase/.branches/
 
 # --- 테스트 커버리지 결과 ---
 coverage/
+
+# --- E2E: 기록·사진 복구 파일과 브라우저 산출물 ---
+.e2e-recovery/
+test-results/
+playwright-report/
+playwright/.auth/
