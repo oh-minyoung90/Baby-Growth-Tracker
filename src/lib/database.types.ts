@@ -591,6 +591,7 @@ export type Database = {
         Returns: Json
       }
       delete_meal_entry: { Args: { id: string }; Returns: undefined }
+      export_backup: { Args: never; Returns: Json }
       food_meal_counts: {
         Args: never
         Returns: {
@@ -598,6 +599,7 @@ export type Database = {
           food_id: string
         }[]
       }
+      import_backup: { Args: { payload: Json }; Returns: undefined }
       move_meal_entry: {
         Args: { date: string; id: string; meal_type: string; uncheck: boolean }
         Returns: Json

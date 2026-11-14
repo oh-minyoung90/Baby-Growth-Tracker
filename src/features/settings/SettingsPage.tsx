@@ -1,5 +1,6 @@
 import { Page } from '@/components/Page'
 import { Placeholder } from '@/components/Placeholder'
+import { BackupSection } from './BackupSection'
 import { AccountSection } from './AccountSection'
 import { ChildSection } from './ChildSection'
 import { ThemeModeSelector } from './ThemeModeSelector'
@@ -14,7 +15,8 @@ export function SettingsPage() {
         </h2>
         <ThemeModeSelector />
       </section>
-      <Placeholder task="T-29~T-31" description="데이터 내보내기·가져오기·전체 삭제" />
+      <BackupSection />
+      <Placeholder task="T-31" description="데이터 전체 삭제" />
       <AccountSection />
     </Page>
   )
