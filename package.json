@@ -22,7 +22,8 @@
     "db:types": "supabase gen types typescript --linked --schema public > src/lib/database.types.ts",
     "test:integration": "vitest run --config vitest.integration.config.ts",
     "test:e2e": "playwright test",
-    "test:e2e:recover": "node --experimental-strip-types tests/e2e/recover.ts"
+    "test:e2e:recover": "node --experimental-strip-types tests/e2e/recover.ts",
+    "icons": "node scripts/generate-app-icons.mjs"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.9.2",

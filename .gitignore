@@ -60,6 +60,9 @@ npm-debug.log*
 supabase/.temp/
 supabase/.branches/
 
+# --- Cloudflare 로컬 런타임 캐시 ---
+.wrangler/
+
 # --- 테스트 커버리지 결과 ---
 coverage/
 
