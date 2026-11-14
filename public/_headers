@@ -1,0 +1,5 @@
+# Cloudflare Pages가 모든 정적 응답에 적용한다.
+/*
+  X-Frame-Options: DENY
+  X-Content-Type-Options: nosniff
+  Referrer-Policy: no-referrer

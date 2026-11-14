@@ -1,0 +1,26 @@
+{
+  "id": "/",
+  "name": "Baby Growth Tracker",
+  "short_name": "성장 기록",
+  "description": "아이의 성장과 수면, 식사 기록을 한곳에 모아요.",
+  "lang": "ko",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#FAF8FF",
+  "theme_color": "#FAF8FF",
+  "icons": [
+    {
+      "src": "/icons/app-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icons/app-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}
