@@ -39,7 +39,7 @@ npm test             # 단위·컴포넌트 테스트 (Vitest)
 
 ## 웹으로 이용하기
 
-[운영 서비스 열기](https://baby-growth-tracker-5ib.pages.dev)
+[운영 서비스 열기](https://my-baby-log.pages.dev)
 
 Cloudflare Pages가 웹 화면을 제공하고 서울의 운영 Supabase가 로그인·기록·사진을 저장합니다.
 휴대폰에서 위 주소로 접속하면 다른 장소에서도 이용할 수 있고 개발용 컴퓨터를 켜 둘 필요가
