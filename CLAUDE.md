@@ -34,6 +34,7 @@ Baby Growth Tracker는 아이의 성장(키·몸무게, 발달, 수면)과 식�
 - `npm run test:coverage`: 커버리지 측정 (`coverage/`, 커밋 제외)
 - `npm run test:integration`: dev Supabase에 테스트 계정 A·B로 접속해 RLS·DB 제약을 검사 (`tests/integration/`). `.env.local`과 `.env.test.local`이 필요해 로컬에서만 실행하고 CI에서는 실행하지 않는다. 새 테이블을 추가하는 PR에는 이 테스트를 함께 추가한다
 - `npm run test:e2e`: Playwright로 실제 dev DB와 PC·모바일 화면을 순차 검사. `.env.test.local`의 계정 A·`E2E_DEV_PROJECT_REF`가 필요하다. `E2E_CHROME=1`은 설치된 Chrome 사용. 강제 종료 후 복구는 `npm run test:e2e:recover`. 상세는 `tests/e2e/README.md`를 따른다
+- `npm run test:ui`: 실제 계정·DB 없이 가명 수면 입력 화면의 넘침·겹침·글자 잘림을 Chromium/WebKit에서 검사한다. PR CI에도 포함한다. 준비와 범위는 `docs/UI검증.md`를 따른다
 - `npm run icons`: 디자인 토큰·Lucide 새싹으로 홈 화면 PNG·favicon 재생성. 설치된 Chrome은 `npm run icons -- --chrome`. 생성된 파일은 커밋하며 일반 빌드에서는 재생성하지 않는다. 보안·설치·운영 외부 점검은 `docs/배포점검.md`를 따른다
 - `npm run check:production`: `deployment/production.json`의 실제 HTTPS 주소에서 보안 헤더·SPA 경로·설치 정보·운영 DB 연결을 검사한다. 로그인·아이 데이터·API 키는 조회하지 않는다. 운영 배포와 환경 분리는 `docs/배포점검.md`를 따른다
 - `npm run db:new -- <이름>`: 새 마이그레이션 파일 생성 (`supabase/migrations/`)
@@ -62,6 +63,7 @@ Baby Growth Tracker는 아이의 성장(키·몸무게, 발달, 수면)과 식�
 - 디자인 값은 `src/index.css`의 CSS 변수와 Tailwind 테마로 관리합니다 (`docs/디자인.md`와 일치). 색을 코드에 직접 쓰지 말고 `bg-primary`, `bg-soft`, `text-danger`, `bg-type-word` 같은 토큰 클래스를 씁니다.
 - 공통 컴포넌트는 `src/components/ui/`(shadcn/ui 기반, 디자인 기준으로 수정함)를 씁니다. 새 컴포넌트는 `npx shadcn@latest add <이름>`으로 받은 뒤 디자인 기준(높이 48px, 모서리 토큰, 16px 글자, `@/lib/utils`의 `cn`)에 맞게 고칩니다. shadcn CLI 패키지는 의존성에 넣지 않습니다(개발 도구 취약점 때문에 `src/styles/shadcn.css`로 필요한 CSS만 복사해 둠).
 - 화면 모드(라이트/다크)는 `src/lib/theme.ts`로 다룹니다. `<html class="dark">`가 다크 모드입니다.
+- 시간 입력은 `components/form/TimeInput`을 씁니다. 기기의 기본 시간 선택은 유지하고 표시 영역을 분리해 iPhone의 기본 입력 너비가 레이아웃을 밀지 않게 합니다.
 - 아이콘은 `lucide-react`를 씁니다.
 - 기록 입력 화면은 공통 요소를 조합합니다 (기능요구사항서 3장, T-14). 화면 확인은 개발 서버의 `/dev/ui`에서 합니다.
   - 입력칸: `TextField`(글자 수 제한·표시), `DateField`(요일 표시, 기본값 오늘은 폼의 `defaultValues`에서). 폼 밖의 날짜 칸(타임라인 기간 등)은 같은 파일의 `DateInput`을 씁니다. React Hook Form의 `control`과 `name`을 넘깁니다.

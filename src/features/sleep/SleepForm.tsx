@@ -15,9 +15,9 @@ import { DateInput } from '@/components/form/DateField'
 import { Field, FieldError } from '@/components/form/Field'
 import { invalidProps } from '@/components/form/invalidProps'
 import { TextField } from '@/components/form/TextField'
+import { TimeInput } from '@/components/form/TimeInput'
 import { FormActions } from '@/components/FormPage'
 import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { formatDateTimeLabel, todayString } from '@/domain/date'
 import {
@@ -304,10 +304,9 @@ function TimeField({
   return (
     <div className="flex min-w-0 flex-col gap-1.5">
       <Label htmlFor={id}>{label}</Label>
-      <Input
+      <TimeInput
         {...field}
         id={id}
-        type="time"
         value={value}
         aria-invalid={invalid || undefined}
         aria-describedby={invalid ? errorId : undefined}
@@ -354,9 +353,8 @@ function NapRow({
         </Button>
       </div>
       <div className="flex items-center gap-2">
-        <Input
+        <TimeInput
           {...start.field}
-          type="time"
           aria-label={`${label} 시작`}
           className="flex-1"
           {...invalidProps(id, start.fieldState.error?.message)}
@@ -364,9 +362,8 @@ function NapRow({
         <span aria-hidden className="text-muted-foreground">
           ~
         </span>
-        <Input
+        <TimeInput
           {...end.field}
-          type="time"
           aria-label={`${label} 끝`}
           className="flex-1"
           {...invalidProps(id, end.fieldState.error?.message)}

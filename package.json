@@ -23,6 +23,7 @@
     "test:integration": "vitest run --config vitest.integration.config.ts",
     "test:e2e": "playwright test",
     "test:e2e:recover": "node --experimental-strip-types tests/e2e/recover.ts",
+    "test:ui": "playwright test --config playwright.ui.config.ts",
     "icons": "node scripts/generate-app-icons.mjs",
     "check:production": "node scripts/check-production.mjs"
   },
