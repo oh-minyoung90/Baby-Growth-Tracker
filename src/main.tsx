@@ -5,6 +5,7 @@ import { createBrowserRouter, RouterProvider } from 'react-router'
 import { Toaster } from '@/components/ui/sonner'
 import { AuthProvider } from '@/features/auth/AuthProvider'
 import { applyTheme } from '@/lib/theme'
+import { reportUnexpectedError, safeRootErrors } from '@/lib/reportUnexpectedError'
 import { queryClient } from './app/queryClient'
 import { routes } from './app/routes'
 import './index.css'
@@ -14,11 +15,11 @@ applyTheme()
 
 const router = createBrowserRouter(routes)
 
-createRoot(document.getElementById('root')!).render(
+createRoot(document.getElementById('root')!, safeRootErrors).render(
   <StrictMode>
     <QueryClientProvider client={queryClient}>
       <AuthProvider>
-        <RouterProvider router={router} />
+        <RouterProvider router={router} onError={reportUnexpectedError} />
       </AuthProvider>
       <Toaster />
     </QueryClientProvider>

@@ -1,4 +1,4 @@
-레시피 사진 HEIC 변환 — 제3자 소프트웨어 고지
+제3자 소프트웨어 고지
 
 HEIC 사진을 고를 때 heic-to 1.6.7의 CSP 빌드를 별도 모듈로 불러옵니다.
 변환은 브라우저의 Worker에서 실행하며 사진을 외부 변환 서비스로 전송하지 않습니다.
@@ -19,3 +19,23 @@ libde265: https://github.com/strukturag/libde265 (heic-to의 빌드 지침: 1.0.
 GNU GPL version 3 전문: /licenses/GPL-3.0.txt
 
 이 소프트웨어는 각 라이선스에 명시된 대로 보증 없이 제공됩니다.
+
+Lucide Sprout icon
+앱 메뉴·favicon·홈 화면 PNG 아이콘에 사용합니다.
+https://lucide.dev/
+라이선스 전문: /licenses/lucide-ISC.txt
+ISC License
+
+Copyright (c) 2026 Lucide Icons and Contributors
+
+Permission to use, copy, modify, and/or distribute this software for any
+purpose with or without fee is hereby granted, provided that the above
+copyright notice and this permission notice appear in all copies.
+
+THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES
+WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF
+MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR
+ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES
+WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN
+ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
+OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
