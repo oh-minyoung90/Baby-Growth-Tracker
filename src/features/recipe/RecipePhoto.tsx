@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { ImageOff, CookingPot } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { useRecipePhoto } from '@/lib/useRecipePhoto'
@@ -8,18 +8,43 @@ export function RecipePhoto({
   id,
   name,
   retryable = true,
+  lazy = false,
 }: {
   id: string | null
   name: string
   retryable?: boolean
+  lazy?: boolean
 }) {
-  const photo = useRecipePhoto(id)
+  const container = useRef<HTMLDivElement>(null)
+  const [seen, setSeen] = useState(() => typeof IntersectionObserver === 'undefined')
+  const ready = !lazy || !id || seen
+  useEffect(() => {
+    if (ready || !container.current) return
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries.some((entry) => entry.isIntersecting)) {
+          setSeen(true)
+          observer.disconnect()
+        }
+      },
+      { rootMargin: '200px' },
+    )
+    observer.observe(container.current)
+    return () => observer.disconnect()
+  }, [ready])
+  // 이미지 다운로드뿐 아니라 메타데이터 조회·서명 요청도 화면 가까이 올 때 시작한다.
+  const photo = useRecipePhoto(ready ? id : null)
   const [brokenUrl, setBrokenUrl] = useState<string | null>(null)
   const failed = photo.isError || (photo.data && brokenUrl === photo.data.url)
   return (
-    <div className="flex aspect-[4/3] w-full items-center justify-center overflow-hidden rounded-input bg-muted">
+    <div
+      ref={container}
+      className="flex aspect-[4/3] w-full items-center justify-center overflow-hidden rounded-input bg-muted"
+    >
       {!id ? (
         <CookingPot className="size-12 text-muted-foreground" aria-label="사진 없음" />
+      ) : !ready ? (
+        <CookingPot className="size-12 text-muted-foreground" aria-label="사진" />
       ) : photo.isPending ? (
         <span role="status" className="text-sm text-muted-foreground">
           사진 불러오는 중…
@@ -49,6 +74,7 @@ export function RecipePhoto({
         <img
           src={photo.data?.url}
           alt={`${name} 사진`}
+          loading={lazy ? 'lazy' : undefined}
           className="size-full object-cover"
           onError={() => setBrokenUrl(photo.data?.url ?? null)}
         />

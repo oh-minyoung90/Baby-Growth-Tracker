@@ -142,7 +142,7 @@ export function RecipesPage() {
                   to={`/meals/recipes/${recipe.id}`}
                   className="flex h-full flex-col gap-3 rounded-card border bg-surface p-4 outline-offset-4 focus-visible:outline-2 focus-visible:outline-primary"
                 >
-                  <RecipePhoto id={recipe.photoId} name={recipe.name} retryable={false} />
+                  <RecipePhoto id={recipe.photoId} name={recipe.name} retryable={false} lazy />
                   <h2 className="text-lg font-bold break-words">{recipe.name}</h2>
                   <p className="text-sm text-muted-foreground">
                     완성량 {recipe.servings ?? '미입력'}
