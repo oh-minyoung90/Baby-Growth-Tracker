@@ -33,6 +33,10 @@ npm test             # 단위·컴포넌트 테스트 (Vitest)
 설치된 Chrome을 쓰려면 `E2E_CHROME=1 npm run test:e2e`를 실행합니다.
 준비·시나리오·강제 종료 후 복구 방법은 [E2E 안내](tests/e2e/README.md)를 참고하세요.
 
+실제 계정 없이 화면의 겹침·넘침을 검사하는 `npm run test:ui`도 제공합니다. Chromium·WebKit에서
+수면 입력 화면을 검사하며 PR CI에서도 실행합니다. 실행 방법과 검증 범위는
+[화면 오류 검증](docs/UI검증.md)을 참고하세요.
+
 ## 웹으로 이용하기
 
 운영 배포(T-35)에서는 Cloudflare Pages가 웹 화면을 제공하고 운영용 Supabase가 로그인·기록·사진을
