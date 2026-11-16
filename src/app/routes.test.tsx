@@ -135,7 +135,7 @@ describe('브라우저 탭 제목', () => {
   it('화면 이름으로 바뀐다', async () => {
     renderAt('/settings')
     await screen.findByRole('heading', { level: 1, name: '설정' })
-    expect(document.title).toBe('설정 · Baby Growth Tracker')
+    expect(document.title).toBe('설정 · MyBabyLog')
   })
 })
 
