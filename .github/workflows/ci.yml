@@ -45,3 +45,20 @@ jobs:
 
       - name: 빌드
         run: npm run build
+
+  ui:
+    name: Chrome · WebKit 화면 배치
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - name: 의존성 설치
+        run: npm ci
+      - name: 화면 검사용 브라우저 설치
+        run: npx playwright install --with-deps chromium webkit
+      - name: 가명 화면의 넘침·겹침 검사
+        run: npm run test:ui
