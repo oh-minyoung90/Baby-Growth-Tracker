@@ -87,7 +87,7 @@ export default function UiPreview() {
   return (
     <main className="mx-auto flex max-w-240 flex-col gap-6 px-5 py-8">
       <header className="flex flex-col gap-1">
-        <h1 className="text-2xl font-bold tracking-tight">Baby Growth Tracker</h1>
+        <h1 className="text-2xl font-bold tracking-tight">MyBabyLog</h1>
         <p className="text-sm text-muted-foreground">공통 컴포넌트 확인 화면 (개발 서버 전용)</p>
       </header>
 

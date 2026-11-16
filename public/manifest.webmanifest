@@ -1,7 +1,7 @@
 {
   "id": "/",
-  "name": "Baby Growth Tracker",
-  "short_name": "성장 기록",
+  "name": "MyBabyLog",
+  "short_name": "MyBabyLog",
   "description": "아이의 성장과 수면, 식사 기록을 한곳에 모아요.",
   "lang": "ko",
   "start_url": "/",

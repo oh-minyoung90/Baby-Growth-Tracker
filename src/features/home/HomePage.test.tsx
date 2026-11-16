@@ -103,7 +103,7 @@ describe('머리말 (FR-HOME-01)', () => {
     await renderHome()
     expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent('하늘이 · 생후 9개월 14일')
     expect(screen.getByText('2026. 10. 22. (목)')).toBeInTheDocument()
-    expect(document.title).toBe('홈 · Baby Growth Tracker')
+    expect(document.title).toBe('홈 · MyBabyLog')
   })
 })
 
