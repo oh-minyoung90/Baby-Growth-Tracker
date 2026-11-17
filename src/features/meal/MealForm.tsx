@@ -15,9 +15,11 @@ import { MEAL_INTAKES, mealTypeLabel, type MealType } from '@/lib/mealTypes'
 import { NETWORK_ERROR_MESSAGES } from '@/lib/messages'
 import { mealCautionFoods, mealCautionMessage } from '@/lib/mealCaution'
 import { notifyMealSaved } from '@/lib/mealNotify'
+import { saveRecipe } from '@/lib/recipeApi'
 import { useMealRecipes } from '@/lib/useMealRecipes'
 import { useFoods } from '@/lib/useFoods'
 import { useDeleteMeal, useSaveMeal } from '@/lib/useMeals'
+import { useInvalidateRecipes } from '@/lib/useRecipes'
 import { MEAL_MESSAGES, mealSchema, type MealFormOutput, type MealFormValues } from './mealSchema'
 import { MealCautionNotice } from './MealCautionNotice'
 import { MealFoodPicker } from './MealFoodPicker'
@@ -45,7 +47,8 @@ export function MealForm({
   const save = useSaveMeal()
   const remove = useDeleteMeal()
   const [failed, setFailed] = useState<'save' | 'delete' | null>(null)
-  const [creatingFood, setCreatingFood] = useState(false)
+  const [creatingItem, setCreatingItem] = useState(false)
+  const invalidateRecipes = useInvalidateRecipes()
   const {
     control,
     handleSubmit,
@@ -71,7 +74,24 @@ export function MealForm({
   const cautionFoods = mealCautionFoods(foods, recipes, catalog.data ?? [], recipeOptions)
   const warningsReady =
     catalog.isSuccess && !catalog.isFetching && recipeCatalog.isSuccess && !recipeCatalog.isFetching
-  const busy = save.isPending || remove.isPending || creatingFood
+  const busy = save.isPending || remove.isPending || creatingItem
+  const onItemPending = (pending: boolean) => {
+    setCreatingItem(pending)
+    onPendingChange(pending)
+  }
+  const addRecipe = async (id: string, name: string) => {
+    onItemPending(true)
+    try {
+      await saveRecipe(
+        id,
+        { name, servings: null, ingredients: [], steps: [], note: null, photoId: null },
+        true,
+      )
+      await invalidateRecipes()
+    } finally {
+      onItemPending(false)
+    }
+  }
   const future = date > todayString()
   const onError = (error: unknown, action: 'save' | 'delete') => {
     if (!(error instanceof MealSaveError) || error.reason === 'network') {
@@ -139,10 +159,7 @@ export function MealForm({
           selected={foods}
           disabled={busy}
           error={errors.foods?.message}
-          onPendingChange={(pending) => {
-            setCreatingFood(pending)
-            onPendingChange(pending)
-          }}
+          onPendingChange={onItemPending}
           onChange={(items) =>
             setValue('foods', items, { shouldValidate: true, shouldDirty: true })
           }
@@ -155,6 +172,7 @@ export function MealForm({
           onRetry={() => void recipeCatalog.refetch()}
           selected={recipes}
           disabled={busy}
+          onCreate={addRecipe}
           onChange={(items) => {
             setValue('recipes', items, { shouldDirty: true })
             clearErrors('foods')

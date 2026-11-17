@@ -18,6 +18,7 @@ export function RecipeDetailPage() {
     (foods.data ?? []).filter((f) => f.status === 'caution' || f.cautionTag).map((f) => f.id),
   )
   const data = recipe.data
+  const hasLinkedIngredients = data?.ingredients.some((ingredient) => ingredient.foodId)
   return (
     <div className="flex min-w-0 flex-col gap-5">
       <Button variant="ghost" className="self-start" onClick={goBack}>
@@ -49,44 +50,52 @@ export function RecipeDetailPage() {
             <div className="flex min-w-0 flex-col gap-5">
               <section className="rounded-card border bg-surface p-5">
                 <h3 className="mb-3 text-lg font-bold">재료</h3>
-                {foods.isPending && (
+                {hasLinkedIngredients && foods.isPending && (
                   <p role="status" className="mb-3 text-sm text-muted-foreground">
                     주의 재료 확인 중…
                   </p>
                 )}
-                {foods.isError && (
+                {hasLinkedIngredients && foods.isError && (
                   <ErrorBanner
                     message="주의 재료 정보를 불러오지 못했어요"
                     onRetry={() => void foods.refetch()}
                   />
                 )}
-                <ul className="divide-y">
-                  {data.ingredients.map((i, index) => (
-                    <li key={index} className="flex min-w-0 flex-wrap items-center gap-2 py-3">
-                      <span className="min-w-0 flex-1 break-words">{i.name}</span>
-                      <span className="text-sm text-muted-foreground">{i.amount}</span>
-                      {i.foodId && cautionIds.has(i.foodId) && (
-                        <Badge variant="caution">
-                          <TriangleAlert aria-hidden />
-                          주의
-                        </Badge>
-                      )}
-                    </li>
-                  ))}
-                </ul>
+                {data.ingredients.length === 0 ? (
+                  <p className="text-sm text-muted-foreground">등록된 재료가 없어요</p>
+                ) : (
+                  <ul className="divide-y">
+                    {data.ingredients.map((i, index) => (
+                      <li key={index} className="flex min-w-0 flex-wrap items-center gap-2 py-3">
+                        <span className="min-w-0 flex-1 break-words">{i.name}</span>
+                        <span className="text-sm text-muted-foreground">{i.amount}</span>
+                        {i.foodId && cautionIds.has(i.foodId) && (
+                          <Badge variant="caution">
+                            <TriangleAlert aria-hidden />
+                            주의
+                          </Badge>
+                        )}
+                      </li>
+                    ))}
+                  </ul>
+                )}
               </section>
               <section className="rounded-card border bg-surface p-5">
                 <h3 className="mb-3 text-lg font-bold">조리 순서</h3>
-                <ol className="flex flex-col gap-4">
-                  {data.steps.map((step, index) => (
-                    <li key={index} className="flex gap-3">
-                      <span className="flex size-7 shrink-0 items-center justify-center rounded-full bg-soft text-sm font-bold text-soft-text">
-                        {index + 1}
-                      </span>
-                      <p className="min-w-0 pt-0.5 break-words whitespace-pre-wrap">{step}</p>
-                    </li>
-                  ))}
-                </ol>
+                {data.steps.length === 0 ? (
+                  <p className="text-sm text-muted-foreground">등록된 조리 순서가 없어요</p>
+                ) : (
+                  <ol className="flex flex-col gap-4">
+                    {data.steps.map((step, index) => (
+                      <li key={index} className="flex gap-3">
+                        <span className="flex size-7 shrink-0 items-center justify-center rounded-full bg-soft text-sm font-bold text-soft-text">
+                          {index + 1}
+                        </span>
+                        <p className="min-w-0 pt-0.5 break-words whitespace-pre-wrap">{step}</p>
+                      </li>
+                    ))}
+                  </ol>
+                )}
               </section>
               {data.note && (
                 <section className="rounded-card border bg-surface p-5">

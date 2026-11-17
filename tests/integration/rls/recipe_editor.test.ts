@@ -109,14 +109,31 @@ describe('레시피 편집 트랜잭션 (T-50)', () => {
     expect((await a.client.rpc('save_recipe', other)).error).toBeNull()
     expect(other.id).not.toBe(args.id)
   })
+  it('이름만 먼저 저장하고 같은 레시피에 재료와 조리 순서를 채울 수 있다', async () => {
+    const args = input({ name: '검증 계란말이', ingredients: [], steps: [] })
+    expect((await a.client.rpc('save_recipe', args)).error).toBeNull()
+    expect(await read(args.id)).toMatchObject({ steps: [], recipe_ingredients: [] })
+    expect(
+      (
+        await a.client.rpc('save_recipe', {
+          ...args,
+          create_new: false,
+          ingredients: [{ name: '달걀', amount: '1개' }],
+          steps: ['달걀을 풀어 말아요'],
+        })
+      ).error,
+    ).toBeNull()
+    expect(await read(args.id)).toMatchObject({
+      steps: ['달걀을 풀어 말아요'],
+      recipe_ingredients: [{ name: '달걀', amount: '1개' }],
+    })
+  })
   it.each([
-    { ingredients: [] },
     { ingredients: {} },
     { ingredients: [null] },
     { ingredients: [{ name: '' }] },
     { ingredients: [{ name: '물', amount: 1 }] },
     { ingredients: [{ name: '물', amount: '가'.repeat(21) }] },
-    { steps: [] },
     { steps: [''] },
     { name: '가'.repeat(31) },
   ])('유효하지 않은 수정은 기존 레시피·재료를 그대로 둔다: %j', async (invalid) => {

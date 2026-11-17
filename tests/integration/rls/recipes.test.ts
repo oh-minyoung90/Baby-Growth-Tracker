@@ -93,7 +93,6 @@ describe('레시피 DB·소유권 (T-47)', () => {
     { name: '가'.repeat(31) },
     { servings: '가'.repeat(21) },
     { note: '가'.repeat(501) },
-    { steps: [] },
     { steps: {} },
     { steps: [''] },
     { steps: ['   '] },
@@ -257,7 +256,7 @@ describe('레시피 DB·소유권 (T-47)', () => {
     ).toBeNull()
   })
   it('식단에는 본인 레시피만 현재 이름으로 저장하고 삭제 후 이름을 보존한다', async () => {
-    const r = await recipe()
+    const r = await recipe({ name: '검증 계란말이', steps: [] })
     const id = await meal([{ recipe_id: r.id, recipe_name: '변조' }])
     expect(
       (

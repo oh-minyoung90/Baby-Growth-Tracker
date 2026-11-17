@@ -102,23 +102,34 @@ describe('레시피 목록·상세·편집', () => {
     renderApp('/meals/recipes/missing', auth)
     expect(await screen.findByRole('alert')).toHaveTextContent('레시피를 찾을 수 없어요')
   })
-  it('공백 이름·재료·조리 단계를 저장하지 않는다', async () => {
+  it('이름이 비어 있으면 저장하지 않는다', async () => {
     const user = userEvent.setup()
     renderApp('/meals/recipes/new', auth)
     await screen.findByRole('heading', { name: '레시피 등록' })
     await user.click(screen.getByRole('button', { name: '저장' }))
     expect(await screen.findByText('레시피 이름을 입력해 주세요')).toBeInTheDocument()
-    expect(screen.getByText('재료를 하나 이상 입력해 주세요')).toBeInTheDocument()
-    expect(screen.getByText('조리 순서를 하나 이상 입력해 주세요')).toBeInTheDocument()
     expect(saveRecipe).not.toHaveBeenCalled()
+  })
+  it('이름만으로 레시피를 저장한다', async () => {
+    const user = userEvent.setup()
+    renderApp('/meals/recipes/new', auth)
+    await user.type(await screen.findByLabelText('레시피 이름'), '계란말이')
+    await user.click(screen.getByRole('button', { name: '저장' }))
+    await waitFor(() =>
+      expect(saveRecipe).toHaveBeenCalledWith(
+        expect.any(String),
+        expect.objectContaining({ name: '계란말이', ingredients: [], steps: [] }),
+        true,
+      ),
+    )
   })
   it('여러 줄 재료·조리 순서를 저장하고 실패해도 유지한 같은 ID로 재시도한다', async () => {
     const user = userEvent.setup()
     renderApp('/meals/recipes/new', auth)
     await screen.findByRole('heading', { name: '레시피 등록' })
     await user.type(screen.getByLabelText('레시피 이름'), '물죽')
-    await user.type(screen.getByLabelText('재료'), '물 100ml')
-    await user.type(screen.getByLabelText('조리 순서'), '다음{enter}{enter}먼저')
+    await user.type(screen.getByLabelText('재료 (선택)'), '물 100ml')
+    await user.type(screen.getByLabelText('조리 순서 (선택)'), '다음{enter}{enter}먼저')
     expect(
       within(screen.getByRole('list', { name: '조리 순서 미리보기' })).getAllByRole('listitem'),
     ).toHaveLength(2)
@@ -140,12 +151,12 @@ describe('레시피 목록·상세·편집', () => {
     renderApp('/meals/recipes/new', auth)
     await screen.findByRole('heading', { name: '레시피 등록' })
     await user.type(screen.getByLabelText('레시피 이름'), '검증 죽')
-    await user.type(screen.getByLabelText('재료'), '달걀 1개')
+    await user.type(screen.getByLabelText('재료 (선택)'), '달걀 1개')
     await user.click(screen.getByRole('button', { name: '재료 1 음식 연결' }))
     await user.click(screen.getByRole('button', { name: /달걀.*주의/ }))
     expect(screen.getByRole('button', { name: '재료 1 연결 해제' })).toBeInTheDocument()
-    await user.clear(screen.getByLabelText('재료'))
-    await user.type(screen.getByLabelText('재료'), '물 100ml')
+    await user.clear(screen.getByLabelText('재료 (선택)'))
+    await user.type(screen.getByLabelText('재료 (선택)'), '물 100ml')
     expect(screen.queryByRole('button', { name: '재료 1 연결 해제' })).not.toBeInTheDocument()
   })
   it('상세에서 목록으로 돌아와도 검색과 선택 재료를 유지한다', async () => {
@@ -180,7 +191,7 @@ describe('레시피 목록·상세·편집', () => {
   it('기존 레시피의 줄 순서와 양을 바꿔도 음식 연결과 주의 표시를 보존한다', async () => {
     const user = userEvent.setup()
     renderApp('/meals/recipes/r1/edit', auth)
-    const field = await screen.findByLabelText('재료')
+    const field = await screen.findByLabelText('재료 (선택)')
     await user.clear(field)
     await user.type(field, '달걀 2개{enter}쌀 50g')
     expect(screen.getByText('주의')).toBeInTheDocument()

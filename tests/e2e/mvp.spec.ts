@@ -376,9 +376,9 @@ test('레시피 여러 줄·번호·사진 저장, 새 브라우저 유지, 재�
   await expect(page.getByText('등록된 레시피가 없어요', { exact: true })).toBeVisible()
   await page.getByRole('button', { name: '레시피 추가', exact: true }).click()
   await page.getByLabel('레시피 이름', { exact: true }).fill('검증 쌀죽')
-  await page.getByLabel('재료', { exact: true }).fill('검증 주의쌀 30g\n물 300ml')
+  await page.getByLabel('재료 (선택)', { exact: true }).fill('검증 주의쌀 30g\n물 300ml')
   await page
-    .getByLabel('조리 순서', { exact: true })
+    .getByLabel('조리 순서 (선택)', { exact: true })
     .fill('1. 쌀을 씻어요\n깨끗이 헹궈요\n\n2. 물을 넣고 끓여요')
   await expect(page.getByRole('list', { name: '재료 미리보기' }).getByRole('listitem')).toHaveCount(
     2,

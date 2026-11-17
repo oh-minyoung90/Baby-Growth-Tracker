@@ -131,7 +131,7 @@ export const backupSchema = z
               note: z.string().max(500).nullable(),
               photo_id: uuid.nullable(),
               servings: z.string().max(20).nullable(),
-              steps: z.array(z.string().refine((value) => value.trim().length > 0)).min(1),
+              steps: z.array(z.string().refine((value) => value.trim().length > 0)),
               updated_at: time,
             })
             .strict(),
