@@ -115,7 +115,7 @@ describe('레시피 텍스트 자동 구분', () => {
       null,
     ])
   })
-  it('빈 입력·긴 재료/양을 막고 예시는 잘라내지 않고 저장한다', () => {
+  it('빈 재료와 조리 순서를 허용하고 재료 이름·양의 길이 제한을 유지한다', () => {
     const input = {
       name: '만둣국',
       servings: '',
@@ -126,8 +126,8 @@ describe('레시피 텍스트 자동 구분', () => {
     const valid = recipeSchema.parse(input)
     expect(valid.ingredientsText).toHaveLength(9)
     expect(valid.stepsText).toHaveLength(7)
-    expect(recipeSchema.safeParse({ ...input, ingredientsText: ' \n\n' }).success).toBe(false)
-    expect(recipeSchema.safeParse({ ...input, stepsText: ' \n\n' }).success).toBe(false)
+    expect(recipeSchema.parse({ ...input, ingredientsText: ' \n\n' }).ingredientsText).toEqual([])
+    expect(recipeSchema.parse({ ...input, stepsText: ' \n\n' }).stepsText).toEqual([])
     expect(recipeSchema.safeParse({ ...input, ingredientsText: '가'.repeat(21) }).success).toBe(
       false,
     )

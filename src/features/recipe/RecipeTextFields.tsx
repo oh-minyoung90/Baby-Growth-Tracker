@@ -28,7 +28,7 @@ export function RecipeIngredientsField({
     <section className="flex min-w-0 flex-col gap-3">
       <Field
         id="recipe-ingredients"
-        label="재료"
+        label="재료 (선택)"
         error={fieldState.error?.message}
         aside={<span className="text-xs text-muted-foreground">{items.length}개</span>}
       >
@@ -187,7 +187,7 @@ export function RecipeStepsField({ control }: Props) {
     <section className="flex min-w-0 flex-col gap-3">
       <Field
         id="recipe-steps"
-        label="조리 순서"
+        label="조리 순서 (선택)"
         error={fieldState.error?.message}
         aside={<span className="text-xs text-muted-foreground">{steps.length}단계</span>}
       >

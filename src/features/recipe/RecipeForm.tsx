@@ -144,6 +144,11 @@ export function RecipeForm({
         )}
         <fieldset disabled={locked} className="flex min-w-0 flex-col gap-5">
           <TextField control={control} name="name" label="레시피 이름" maxLength={30} />
+          {!initial && (
+            <p className="text-sm text-muted-foreground">
+              이름만 저장해도 식단에 넣을 수 있어요. 재료와 조리 순서는 나중에 적어도 돼요.
+            </p>
+          )}
           <TextField
             control={control}
             name="servings"

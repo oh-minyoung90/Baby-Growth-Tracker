@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 import type { MealItem } from '@/lib/mealApi'
 import { MealRecipePicker } from './MealRecipePicker'
 
@@ -15,6 +15,7 @@ function Picker({ initial = [] }: { initial?: MealItem[] }) {
       ]}
       selected={selected}
       onChange={setSelected}
+      onCreate={vi.fn()}
       disabled={false}
     />
   )

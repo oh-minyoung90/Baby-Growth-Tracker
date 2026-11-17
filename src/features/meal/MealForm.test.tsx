@@ -1,4 +1,4 @@
-import { fetchRecipes } from '@/lib/recipeApi'
+import { fetchRecipes, saveRecipe, type Recipe } from '@/lib/recipeApi'
 import { act, fireEvent, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import type { Session } from '@supabase/supabase-js'
@@ -21,6 +21,7 @@ import { renderApp } from '@/test/renderApp'
 vi.mock('@/lib/recipeApi', async (original) => ({
   ...(await original<typeof import('@/lib/recipeApi')>()),
   fetchRecipes: vi.fn(),
+  saveRecipe: vi.fn(),
 }))
 vi.mock('@/lib/notify', () => ({ notifyDone: vi.fn(), notifySaved: vi.fn() }))
 vi.mock('@/lib/childApi', async (original) => ({
@@ -208,6 +209,40 @@ describe('식단 입력·검증·화면 이동 (T-43)', () => {
     ).toBeDisabled()
     await userEvent.click(screen.getByRole('button', { name: '쌀 빼기' }))
     expect(screen.queryByRole('list', { name: '선택한 음식' })).not.toBeInTheDocument()
+  })
+  it('식단의 입력을 유지하며 새 레시피를 이름으로 추가하고 같은 ID로 재시도한다', async () => {
+    const recipes: Recipe[] = []
+    vi.mocked(fetchRecipes).mockImplementation(async () => [...recipes])
+    vi.mocked(saveRecipe).mockImplementation(async (id, input) => {
+      recipes.push({ id, ...input })
+    })
+    vi.mocked(saveRecipe).mockRejectedValueOnce(new Error('network'))
+    await openNew()
+    await userEvent.type(screen.getByLabelText('메모'), '반 개 먹었어요')
+    const search = screen.getByRole('searchbox', { name: '식단에 넣을 레시피 검색' })
+    await userEvent.type(search, '고구마계란말이')
+    const add = screen.getByRole('button', { name: '‘고구마계란말이’ 레시피 추가' })
+    await userEvent.click(add)
+    expect(await screen.findByRole('alert')).toHaveTextContent('레시피를 추가하지 못했어요')
+    expect(search).toHaveValue('고구마계란말이')
+    await userEvent.click(add)
+    expect(await screen.findByRole('button', { name: '고구마계란말이 빼기' })).toBeInTheDocument()
+    const id = vi.mocked(saveRecipe).mock.calls[0][0]
+    expect(saveRecipe).toHaveBeenLastCalledWith(
+      id,
+      expect.objectContaining({ name: '고구마계란말이', ingredients: [], steps: [] }),
+      true,
+    )
+    await userEvent.click(saveButton())
+    await closed()
+    expect(saveMealEntry).toHaveBeenCalledWith(
+      expect.objectContaining({
+        memo: '반 개 먹었어요',
+        foods: [],
+        recipes: [{ id, name: '고구마계란말이' }],
+      }),
+      undefined,
+    )
   })
   it('취소와 휴대폰 뒤로 가기는 주소와 시트를 되돌리고 저장하지 않는다', async () => {
     const { router } = await openNew()

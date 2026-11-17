@@ -17,6 +17,12 @@ describe('백업 형식·파일·API', () => {
     expect(validateBackup(payload)).toEqual(payload)
     expect(validateBackup(emptyBackup()).data.recipes).toEqual([])
   })
+  it('재료와 조리 순서가 비어 있는 레시피가 포함된 백업을 받아들인다', () => {
+    const payload = exampleBackup()
+    payload.data.recipes[0].steps = []
+    payload.data.recipe_ingredients = []
+    expect(validateBackup(payload)).toEqual(payload)
+  })
   it.each([
     'version',
     'missing',

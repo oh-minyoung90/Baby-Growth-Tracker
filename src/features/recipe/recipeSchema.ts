@@ -8,7 +8,6 @@ export const recipeSchema = z.object({
     .string()
     .transform(parseRecipeIngredients)
     .superRefine((items, ctx) => {
-      if (!items.length) ctx.addIssue({ code: 'custom', message: '재료를 하나 이상 입력해 주세요' })
       items.forEach((item, index) => {
         const message = !item.name
           ? '재료 이름을 입력해 주세요'
@@ -20,10 +19,7 @@ export const recipeSchema = z.object({
         if (message) ctx.addIssue({ code: 'custom', message: `${index + 1}번: ${message}` })
       })
     }),
-  stepsText: z
-    .string()
-    .transform(parseRecipeSteps)
-    .refine((steps) => steps.length > 0, '조리 순서를 하나 이상 입력해 주세요'),
+  stepsText: z.string().transform(parseRecipeSteps),
   note: optionalText(500),
 })
 export type RecipeFormValues = z.input<typeof recipeSchema>
