@@ -190,39 +190,66 @@ describe('빠른 기록 (FR-HOME-05)', () => {
     return card('빠른 기록')
   }
 
-  it('단어·식단·행동·표정·수면·키·몸무게 버튼 5개가 있다', async () => {
+  it('빠른 기록 3개와 카드를 승인된 순서로 보여 준다', async () => {
     await renderHome()
     expect(
       within(quick())
         .getAllByRole('link')
         .map((link) => link.textContent),
-    ).toEqual(['단어', '식단', '행동·표정', '수면', '키·몸무게'])
+    ).toEqual(['식사', '수면'])
+    expect(within(quick()).getByRole('button', { name: '성장' })).toHaveAttribute(
+      'aria-expanded',
+      'false',
+    )
+    expect(
+      screen.getAllByRole('heading', { level: 2 }).map((heading) => heading.textContent),
+    ).toEqual(['오늘의 식단', '오늘의 기록', '어젯밤 수면', '최근 측정', '빠른 기록'])
   })
 
-  it('단어는 단어 유형을 고른 입력 화면을 열고, 취소하면 홈으로 돌아온다', async () => {
-    const { router } = await renderHome()
-    await userEvent.click(within(quick()).getByRole('link', { name: '단어' }))
-    const types = await screen.findByRole('radiogroup', { name: '유형' })
-    expect(within(types).getByRole('radio', { name: '단어' })).toBeChecked()
-    await userEvent.click(screen.getByRole('button', { name: '취소' }))
-    await waitFor(() => expect(router.state.location.pathname).toBe('/'))
-  })
+  it.each(['단어', '행동', '표정'])(
+    '%s를 고르면 해당 유형의 입력을 열고 취소하면 홈으로 돌아온다',
+    async (label) => {
+      const { router } = await renderHome()
+      await userEvent.click(within(quick()).getByRole('button', { name: '성장' }))
+      const menu = await screen.findByRole('dialog', { name: '성장 기록' })
+      await userEvent.click(within(menu).getByRole('link', { name: label }))
+      const types = await screen.findByRole('radiogroup', { name: '유형' })
+      expect(within(types).getByRole('radio', { name: label })).toBeChecked()
+      expect(screen.queryByRole('dialog', { name: '성장 기록' })).not.toBeInTheDocument()
+      await userEvent.click(screen.getByRole('button', { name: '취소' }))
+      await waitFor(() => expect(router.state.location.pathname).toBe('/'))
+    },
+  )
 
-  it('행동·표정은 유형을 고르지 않은 입력 화면을 연다', async () => {
+  it('성장 종류 선택은 취소·Escape로 닫히고 성장 버튼에 초점을 돌려준다', async () => {
     await renderHome()
-    await userEvent.click(within(quick()).getByRole('link', { name: '행동·표정' }))
-    const types = await screen.findByRole('radiogroup', { name: '유형' })
-    for (const radio of within(types).getAllByRole('radio')) expect(radio).not.toBeChecked()
+    const button = within(quick()).getByRole('button', { name: '성장' })
+    for (const cancel of ['button', 'escape']) {
+      await userEvent.click(button)
+      const menu = await screen.findByRole('dialog', { name: '성장 기록' })
+      expect(
+        within(menu)
+          .getAllByRole('link')
+          .map((link) => link.textContent),
+      ).toEqual(['단어', '행동', '표정', '키·몸무게'])
+      if (cancel === 'button')
+        await userEvent.click(within(menu).getByRole('button', { name: '취소' }))
+      else await userEvent.keyboard('{Escape}')
+      await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument())
+      await waitFor(() => expect(button).toHaveFocus())
+    }
   })
 
-  it('수면은 수면 입력 화면을, 키·몸무게는 입력 시트를 열고 닫으면 홈으로 돌아온다', async () => {
+  it('수면 입력·성장 메뉴의 키·몸무게 입력을 닫으면 홈으로 돌아온다', async () => {
     const { router } = await renderHome()
     await userEvent.click(within(quick()).getByRole('link', { name: '수면' }))
     expect(router.state.location.pathname).toBe('/sleep/new')
     await userEvent.click(await screen.findByRole('button', { name: '취소' }))
     await waitFor(() => expect(router.state.location.pathname).toBe('/'))
 
-    await userEvent.click(await within(quick()).findByRole('link', { name: '키·몸무게' }))
+    await userEvent.click(within(quick()).getByRole('button', { name: '성장' }))
+    const menu = await screen.findByRole('dialog', { name: '성장 기록' })
+    await userEvent.click(within(menu).getByRole('link', { name: '키·몸무게' }))
     const sheet = await screen.findByRole('dialog', { name: '키·몸무게 기록' })
     await userEvent.click(within(sheet).getByRole('button', { name: '취소' }))
     await waitFor(() => expect(router.state.location.pathname).toBe('/'))
@@ -249,7 +276,7 @@ describe('오늘의 식단·빠른 기록 (T-51)', () => {
     expect(
       await within(card('오늘의 식단')).findByRole('link', { name: '오늘 식단 기록하기' }),
     ).toHaveAttribute('href', '/meals/week?date=2026-10-22')
-    expect(within(card('빠른 기록')).getByRole('link', { name: '식단' })).toHaveAttribute(
+    expect(within(card('빠른 기록')).getByRole('link', { name: '식사' })).toHaveAttribute(
       'href',
       '/meals/week?date=2026-10-22',
     )

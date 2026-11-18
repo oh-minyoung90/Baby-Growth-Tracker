@@ -3,3 +3,5 @@ coverage
 package-lock.json
 *.md
 src/lib/database.types.ts
+# 로컬 색상 비교 시안 산출물
+output/color-study/
