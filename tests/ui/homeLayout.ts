@@ -63,7 +63,7 @@ export async function prepareHomePage(page: Page, empty = false) {
         })),
   })
   await page.getByRole('heading', { name: /^가명아기/ }).waitFor()
-  if (empty) await page.getByText('오늘 첫 기록을 남겨 보세요').waitFor()
+  if (empty) await page.getByRole('button', { name: '오늘 성장 기록하기', exact: true }).waitFor()
   else await page.getByText('10시간 30분', { exact: true }).waitFor()
   await page.evaluate(() => document.fonts.ready)
 }
@@ -146,22 +146,25 @@ export async function assertHomeLayout(page: Page, empty = false) {
 export async function exerciseHomeLayout(page: Page, empty = false) {
   await prepareHomePage(page, empty)
   await assertHomeLayout(page, empty)
-  const button = page.getByRole('button', { name: '성장', exact: true })
-  await button.click()
-  const menu = page.getByRole('dialog', { name: '성장 기록', exact: true })
-  await menu.waitFor()
-  assert.deepEqual(await menu.getByRole('link').allTextContents(), [
-    '단어',
-    '행동',
-    '표정',
-    '키·몸무게',
-  ])
-  const box = await menu.boundingBox()
-  assert.ok(
-    box && box.x >= 0 && box.x + box.width <= page.viewportSize()!.width + 1,
-    '성장 메뉴 화면 밖 넘침',
-  )
-  await menu.getByRole('button', { name: '취소', exact: true }).click()
-  await menu.waitFor({ state: 'hidden' })
-  assert.equal(await button.evaluate((element) => element === document.activeElement), true)
+  const buttons = [page.getByRole('button', { name: '성장', exact: true })]
+  if (empty) buttons.unshift(page.getByRole('button', { name: '오늘 성장 기록하기', exact: true }))
+  for (const button of buttons) {
+    await button.click()
+    const menu = page.getByRole('dialog', { name: '성장 기록', exact: true })
+    await menu.waitFor()
+    assert.deepEqual(await menu.getByRole('link').allTextContents(), [
+      '단어',
+      '행동',
+      '표정',
+      '키·몸무게',
+    ])
+    const box = await menu.boundingBox()
+    assert.ok(
+      box && box.x >= 0 && box.x + box.width <= page.viewportSize()!.width + 1,
+      '성장 메뉴 화면 밖 넘침',
+    )
+    await menu.getByRole('button', { name: '취소', exact: true }).click()
+    await menu.waitFor({ state: 'hidden' })
+    assert.equal(await button.evaluate((element) => element === document.activeElement), true)
+  }
 }
