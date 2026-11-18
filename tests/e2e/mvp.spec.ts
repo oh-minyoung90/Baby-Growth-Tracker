@@ -65,7 +65,7 @@ test('로그인 가드, 첫 등록, 빈 화면과 홈·빠른 기록', async ({ 
   await expect(page.getByText(/개월.*일/).first()).toBeVisible()
   await page
     .getByRole('region', { name: '빠른 기록' })
-    .getByRole('link', { name: '식단', exact: true })
+    .getByRole('link', { name: '식사', exact: true })
     .click()
   await expect(page).toHaveURL(new RegExp(`/meals/week\\?date=${day()}`))
   await expect(page.getByRole('region', { name: labelDate(day()), exact: true })).toBeVisible()

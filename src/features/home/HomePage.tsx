@@ -1,12 +1,25 @@
-import { useId, type ReactNode } from 'react'
+import { useId, useRef, useState, type ReactNode } from 'react'
 import type { UseQueryResult } from '@tanstack/react-query'
 import type { LucideIcon } from 'lucide-react'
-import { ChevronRight, MessageCircle, Moon, Ruler, Sparkles, Utensils, Check } from 'lucide-react'
+import {
+  ChevronRight,
+  MessageCircle,
+  Moon,
+  Ruler,
+  Sparkles,
+  Utensils,
+  Check,
+  NotebookPen,
+  Sprout,
+  Smile,
+} from 'lucide-react'
 import { Link } from 'react-router'
 import { ErrorBanner } from '@/components/ErrorBanner'
 import { ListLoading } from '@/components/ListLoading'
 import { Page } from '@/components/Page'
 import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
+import { Sheet, SheetContent, SheetDescription, SheetTitle } from '@/components/ui/sheet'
 import { ageLabel } from '@/domain/age'
 import { formatDateLabel, todayString, yesterdayString } from '@/domain/date'
 import { formatNapSleep, formatNightSleep, formatTotalSleep } from '@/domain/sleep'
@@ -26,18 +39,17 @@ import type { MealEntry } from '@/lib/mealApi'
 import { useSleepLogs } from '@/lib/useSleepLogs'
 import { cn } from '@/lib/utils'
 
-/** 빠른 기록 (FR-HOME-05, R4). 가장 자주 쓰는 단어만 진한 보라 (docs/디자인.md 8장). 식단은 오늘 날짜의 주간 카드로 연결한다 */
-const QUICK_RECORDS: { to: string; label: string; icon: LucideIcon; primary?: boolean }[] = [
-  { to: '/milestones/new?type=word', label: '단어', icon: MessageCircle, primary: true },
-  // 행동·표정은 유형을 고르지 않은 채 연다 (FR-MS-01)
-  { to: '/milestones/new', label: '행동·표정', icon: Sparkles },
-  { to: '/sleep/new', label: '수면', icon: Moon },
+/** 빠른 기록의 성장 메뉴. 기존 네 가지 입력 기능에 홈에서 바로 접근한다. */
+const GROWTH_RECORDS: { to: string; label: string; icon: LucideIcon }[] = [
+  { to: '/milestones/new?type=word', label: '단어', icon: MessageCircle },
+  { to: '/milestones/new?type=behavior', label: '행동', icon: Sparkles },
+  { to: '/milestones/new?type=expression', label: '표정', icon: Smile },
   { to: '/growth/body?record=new', label: '키·몸무게', icon: Ruler },
 ]
 
 /**
- * 홈 (SCR-03, FR-HOME-01~06): 아이 이름·생후 일수·오늘 날짜, 오늘의 기록, 어젯밤 수면, 최근 측정, 빠른 기록.
- * 모바일은 한 열(수면·측정은 두 칸), PC는 오늘의 기록 옆에 수면·측정을 세로로 둔다 (시안 D-03)
+ * 홈 (SCR-03): 식단 → 오늘 기록 → 어젯밤 수면 → 최근 측정 → 빠른 기록.
+ * 모바일·PC 모두 한 열로 배치한다 (docs/디자인.md 5.1).
  */
 export function HomePage() {
   const { data: child } = useChild()
@@ -71,13 +83,10 @@ export function HomePage() {
         />
       )}
 
-      <div className="grid grid-cols-2 gap-3 md:grid-cols-3 md:gap-5">
-        <TodayCard query={milestones} today={today} className="col-span-2 md:row-span-2" />
-        <SleepCard query={sleepLogs} yesterday={yesterdayString()} />
-        <MeasureCard query={measures} />
-      </div>
-
       <MealCard query={meals} today={today} />
+      <TodayCard query={milestones} today={today} />
+      <SleepCard query={sleepLogs} yesterday={yesterdayString()} />
+      <MeasureCard query={measures} />
       <QuickRecords today={today} />
     </Page>
   )
@@ -91,7 +100,7 @@ function Card({
   children,
 }: {
   title: string
-  icon?: LucideIcon
+  icon: LucideIcon
   className?: string
   children: ReactNode
 }) {
@@ -99,19 +108,10 @@ function Card({
   return (
     <section
       aria-labelledby={id}
-      className={cn(
-        'flex min-w-0 flex-col gap-3 rounded-card border bg-surface p-4 md:p-5',
-        className,
-      )}
+      className={cn('flex min-w-0 flex-col gap-3 rounded-card border bg-surface p-4', className)}
     >
-      <h2
-        id={id}
-        className={cn(
-          'flex items-center gap-1.5',
-          Icon ? 'text-sm font-bold text-soft-text' : 'text-[17px] font-bold md:text-lg',
-        )}
-      >
-        {Icon && <Icon className="size-4.5 shrink-0" aria-hidden />}
+      <h2 id={id} className="flex items-center gap-2 text-base leading-6 font-bold text-foreground">
+        <Icon className="size-5 shrink-0 text-soft-text" aria-hidden />
         {title}
       </h2>
       {children}
@@ -147,27 +147,22 @@ function CardAction({ to, children }: { to: string; children: ReactNode }) {
 
 /**
  * 이름(흐린 글자) + 값(진한 글자). 값이 시간이 아니면("없음", "계산 불가") 흐리게.
- * stacked면 이름을 값 위에 둔다 (큰 글자로 보여 주는 대표 값)
  */
 function LabeledValue({
   label,
   value,
   muted = false,
-  stacked = false,
   className,
 }: {
   label: string
   value: string
   muted?: boolean
-  stacked?: boolean
   className?: string
 }) {
   return (
-    <div className={stacked ? 'flex flex-col' : 'flex flex-wrap items-baseline gap-x-1.5'}>
-      <dt className="text-[13px] text-muted-foreground md:text-sm">{label}</dt>
-      <dd
-        className={cn('whitespace-nowrap', className, muted && 'font-normal text-muted-foreground')}
-      >
+    <div className="flex flex-wrap items-baseline gap-x-1.5 text-sm">
+      <dt className="text-muted-foreground">{label}</dt>
+      <dd className={cn('font-bold', className, muted && 'font-normal text-muted-foreground')}>
         {value}
       </dd>
     </div>
@@ -178,17 +173,9 @@ function LabeledValue({
  * 오늘의 기록 (FR-HOME-02, 06): 기록 날짜가 오늘인 발달 기록. 입력한 시각이 아니라 기록 날짜 기준이다.
  * 누르면 그 기록의 수정 화면이 열린다 (FR-COM-30)
  */
-function TodayCard({
-  query,
-  today,
-  className,
-}: {
-  query: UseQueryResult<Milestone[]>
-  today: string
-  className?: string
-}) {
+function TodayCard({ query, today }: { query: UseQueryResult<Milestone[]>; today: string }) {
   return (
-    <Card title="오늘의 기록" className={className}>
+    <Card title="오늘의 기록" icon={NotebookPen}>
       <QueryContent query={query}>
         {(milestones) => {
           const records = milestones.filter((record) => record.date === today)
@@ -197,22 +184,32 @@ function TodayCard({
           }
           return (
             <ul className="flex flex-col gap-2">
-              {records.map((record) => (
-                <li key={record.id}>
-                  <Link
-                    to={`/milestones/${record.id}`}
-                    className="flex min-h-12 items-center gap-3 rounded-xl border px-3.5 py-2.5 transition-colors outline-none hover:bg-muted focus-visible:bg-muted"
-                  >
-                    <Badge variant={record.type}>{milestoneTypeInfo(record.type).label}</Badge>
-                    <span className="min-w-0 flex-1 truncate font-medium">{record.title}</span>
-                    {record.memo && (
-                      <span className="hidden max-w-[50%] truncate text-[13px] text-muted-foreground md:block">
-                        {record.memo}
+              {records.map((record) => {
+                const { icon: Icon, label } = milestoneTypeInfo(record.type)
+                return (
+                  <li key={record.id}>
+                    <Link
+                      to={`/milestones/${record.id}`}
+                      className="flex min-h-11 items-start gap-2.5 rounded-input py-1.5 outline-none hover:bg-muted focus-visible:bg-muted"
+                    >
+                      <span className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-soft text-soft-text">
+                        <Icon className="size-4.5" aria-hidden />
                       </span>
-                    )}
-                  </Link>
-                </li>
-              ))}
+                      <span className="min-w-0 flex-1">
+                        <span className="sr-only">{label}</span>
+                        <span className="block text-[15px] font-medium break-words">
+                          {record.title}
+                        </span>
+                        {record.memo && (
+                          <span className="mt-0.5 line-clamp-2 text-[13px] break-words text-muted-foreground">
+                            {record.memo}
+                          </span>
+                        )}
+                      </span>
+                    </Link>
+                  </li>
+                )
+              })}
             </ul>
           )
         }}
@@ -235,27 +232,25 @@ function SleepCard({ query, yesterday }: { query: UseQueryResult<SleepLog[]>; ye
           const result = summarizeSleepLog(log)
           const total = result ? result.totalMinutes : null
           return (
-            <dl className="flex flex-col gap-1">
-              <LabeledValue
-                label="총 수면"
-                value={formatTotalSleep(total)}
-                muted={total === null}
-                stacked
-                className="text-xl font-bold md:text-[22px]"
-              />
-              <LabeledValue
-                label="밤잠"
-                value={result ? formatNightSleep(result) : '계산 불가'}
-                muted={result?.nightMinutes == null}
-                className="text-[13px] font-medium md:text-sm"
-              />
-              <LabeledValue
-                label="낮잠"
-                value={result ? formatNapSleep(result) : '계산 불가'}
-                muted={!result || result.naps.length === 0}
-                className="text-[13px] font-medium md:text-sm"
-              />
-            </dl>
+            <div className="flex flex-col gap-1">
+              <dl>
+                <LabeledValue label="총" value={formatTotalSleep(total)} muted={total === null} />
+              </dl>
+              <dl className="flex flex-wrap gap-x-4 gap-y-1">
+                <LabeledValue
+                  label="밤잠"
+                  value={result ? formatNightSleep(result) : '계산 불가'}
+                  muted={result?.nightMinutes == null}
+                  className="text-[13px] font-normal text-muted-foreground"
+                />
+                <LabeledValue
+                  label="낮잠"
+                  value={result ? formatNapSleep(result) : '계산 불가'}
+                  muted={!result || result.naps.length === 0}
+                  className="text-[13px] font-normal text-muted-foreground"
+                />
+              </dl>
+            </div>
           )
         }}
       </QueryContent>
@@ -275,18 +270,16 @@ function MeasureCard({ query }: { query: UseQueryResult<BodyMeasure[]> }) {
             return <CardAction to="/growth/body?record=new">키·몸무게 기록하기</CardAction>
           return (
             <>
-              <dl className="flex flex-col gap-1">
+              <dl className="flex flex-wrap gap-x-5 gap-y-2">
                 <LabeledValue
                   label="키"
                   value={formatMeasureValue(latest.heightCm, 'cm')}
                   muted={latest.heightCm === null}
-                  className="text-lg font-bold md:text-xl"
                 />
                 <LabeledValue
                   label="몸무게"
                   value={formatMeasureValue(latest.weightKg, 'kg')}
                   muted={latest.weightKg === null}
-                  className="text-lg font-bold md:text-xl"
                 />
               </dl>
               {/* 좁은 화면에서는 날짜 중간이나 "측·정" 사이가 아니라 날짜와 "측정" 사이에서 줄을 바꾼다 */}
@@ -303,34 +296,71 @@ function MeasureCard({ query }: { query: UseQueryResult<BodyMeasure[]> }) {
 
 /** 빠른 기록 버튼 (FR-HOME-05). 누르면 해당 입력 화면이 열리고, 저장·취소하면 홈으로 돌아온다 */
 function QuickRecords({ today }: { today: string }) {
-  const records = [
-    QUICK_RECORDS[0],
-    { to: `/meals/week?date=${today}`, label: '식단', icon: Utensils },
-    ...QUICK_RECORDS.slice(1),
-  ]
+  const [growthOpen, setGrowthOpen] = useState(false)
+  const growthButtonRef = useRef<HTMLButtonElement>(null)
   const id = useId()
+  const quickClass =
+    'flex min-h-20 min-w-0 flex-col items-center justify-center gap-1.5 rounded-card border border-quick-line bg-cream px-2 py-3 text-sm font-bold text-cream-text transition-colors outline-none hover:bg-soft focus-visible:ring-3 focus-visible:ring-ring/40 md:min-h-16 md:flex-row md:gap-2'
   return (
-    <section aria-labelledby={id} className="flex flex-col gap-2.5 md:gap-3">
-      <h2 id={id} className="text-[17px] font-bold md:text-lg">
+    <section aria-labelledby={id} className="flex flex-col gap-3">
+      <h2 id={id} className="text-base leading-6 font-bold">
         빠른 기록
       </h2>
-      <div className="grid grid-cols-2 gap-2.5 md:grid-cols-5 md:gap-3">
-        {records.map(({ to, label, icon: Icon, primary }) => (
-          <Link
-            key={label}
-            to={to}
-            className={cn(
-              'flex h-20 flex-col items-center justify-center gap-1.5 rounded-card text-sm font-bold transition-colors outline-none focus-visible:ring-3 focus-visible:ring-ring/40 md:h-16 md:flex-row md:gap-2 md:text-base',
-              primary
-                ? 'bg-primary text-primary-foreground hover:bg-primary/90'
-                : 'bg-soft text-soft-text hover:bg-soft/70',
-            )}
-          >
-            <Icon className="size-6 md:size-5.5" aria-hidden />
-            {label}
-          </Link>
-        ))}
+      <div className="grid grid-cols-3 gap-3">
+        <Link
+          to={`/meals/week?date=${today}`}
+          className={cn(
+            quickClass,
+            'border-primary bg-primary text-primary-foreground hover:bg-primary/90',
+          )}
+        >
+          <Utensils className="size-5 shrink-0" aria-hidden />
+          식사
+        </Link>
+        <button
+          ref={growthButtonRef}
+          type="button"
+          aria-haspopup="dialog"
+          aria-expanded={growthOpen}
+          onClick={() => setGrowthOpen(true)}
+          className={quickClass}
+        >
+          <Sprout className="size-5 shrink-0" aria-hidden />
+          성장
+        </button>
+        <Link to="/sleep/new" className={quickClass}>
+          <Moon className="size-5 shrink-0" aria-hidden />
+          수면
+        </Link>
       </div>
+      <Sheet open={growthOpen} onOpenChange={setGrowthOpen}>
+        <SheetContent
+          onCloseAutoFocus={(event) => {
+            // 기록 화면으로 이동한 경우 새 화면의 초점을 덮어쓰지 않는다.
+            event.preventDefault()
+            growthButtonRef.current?.focus()
+          }}
+        >
+          <SheetTitle>성장 기록</SheetTitle>
+          <SheetDescription>어떤 기록을 남길까요?</SheetDescription>
+          <div className="grid grid-cols-2 gap-3">
+            {GROWTH_RECORDS.map(({ to, label, icon: Icon }) => (
+              <Link
+                key={label}
+                to={to}
+                onClick={() => setGrowthOpen(false)}
+                className="flex min-h-16 items-center justify-center gap-2 rounded-button border bg-surface px-3 text-sm font-bold outline-none hover:bg-soft focus-visible:ring-3 focus-visible:ring-ring/40"
+              >
+                <Icon className="size-5 shrink-0 text-soft-text" aria-hidden />
+                {label}
+              </Link>
+            ))}
+          </div>
+          <Button variant="soft" onClick={() => setGrowthOpen(false)}>
+            취소
+          </Button>
+        </SheetContent>
+      </Sheet>
     </section>
   )
 }
@@ -338,13 +368,13 @@ function QuickRecords({ today }: { today: string }) {
 /** 계획과 먹은 기록을 모두 표시하며 누르면 그 식단의 수정 시트를 연다. */
 function MealCard({ query, today }: { query: UseQueryResult<MealEntry[]>; today: string }) {
   return (
-    <Card title="오늘의 식단" icon={Utensils}>
+    <Card title="오늘의 식단" icon={Utensils} className="bg-cream">
       <QueryContent query={query}>
         {(entries) =>
           entries.length === 0 ? (
             <CardAction to={`/meals/week?date=${today}`}>오늘 식단 기록하기</CardAction>
           ) : (
-            <ul className="grid gap-2 sm:grid-cols-2">
+            <ul className="flex flex-col gap-2">
               {MEAL_TYPES.flatMap(({ value, label }) => {
                 const entry = entries.find((item) => item.type === value)
                 return entry
@@ -352,7 +382,7 @@ function MealCard({ query, today }: { query: UseQueryResult<MealEntry[]>; today:
                       <li key={entry.id}>
                         <Link
                           to={`/meals/week?date=${today}&record=${entry.id}`}
-                          className="flex min-h-16 min-w-0 items-center gap-3 rounded-input border px-3 py-3 outline-none hover:bg-soft focus-visible:bg-soft"
+                          className="flex min-h-16 min-w-0 items-center gap-3 rounded-input border bg-surface px-3 py-3 text-sm outline-none hover:bg-soft focus-visible:bg-soft"
                         >
                           <span className="shrink-0 text-sm font-bold">{label}</span>
                           <span className="min-w-0 flex-1 break-words">

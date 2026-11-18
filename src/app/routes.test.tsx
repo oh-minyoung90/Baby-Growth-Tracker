@@ -75,9 +75,9 @@ describe('주 메뉴', () => {
       const links = within(nav).getAllByRole('link')
       expect(links.map((l) => l.textContent?.trim())).toEqual([
         expect.stringContaining('홈'),
-        '수면',
-        '성장',
         '식사',
+        '성장',
+        '수면',
         '설정',
       ])
       expect(within(nav).getByRole('link', { name: '수면' })).toHaveAttribute(
