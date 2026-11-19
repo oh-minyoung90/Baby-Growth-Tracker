@@ -6,16 +6,14 @@ import { todayString } from '@/domain/date'
 import {
   RANGE_ERROR,
   TIMELINE_PERIODS,
-  TIMELINE_TYPE_VALUES,
   isInvalidRange,
-  timelineTypeInfo,
   type TimelineFilter,
   type TimelinePeriod,
 } from './timeline'
 
 /**
- * 유형·기간 필터 (FR-TL-03~04).
- * 모바일은 목록 위에 칩 두 줄, PC는 왼쪽 필터 상자에 "유형"·"기간" 제목과 함께 둔다.
+ * 기간 필터 (FR-TL-04). 유형 선택은 위쪽 누적 카드에서만 한다.
+ * 모바일·PC 모두 기록 목록 위에 둔다.
  * 선택 상태는 모두 보라색 (docs/디자인.md 2.4)
  */
 export function TimelineFilters({
@@ -29,14 +27,6 @@ export function TimelineFilters({
 }) {
   const today = todayString()
 
-  const toggleType = (type: (typeof TIMELINE_TYPE_VALUES)[number]) =>
-    onChange({
-      ...filter,
-      types: filter.types.includes(type)
-        ? filter.types.filter((value) => value !== type)
-        : [...filter.types, type],
-    })
-
   const changePeriod = (period: TimelinePeriod) =>
     onChange(
       // 직접 선택을 처음 고르면 이번 달 1일~오늘로 시작한다
@@ -46,33 +36,8 @@ export function TimelineFilters({
     )
 
   return (
-    <aside
-      aria-label="필터"
-      className="flex flex-col gap-3 lg:w-60 lg:shrink-0 lg:gap-5 lg:rounded-card lg:border lg:bg-surface lg:p-5"
-    >
+    <aside aria-label="기간 필터" className="flex flex-col gap-3">
       <div className="flex flex-col gap-2">
-        <p aria-hidden className="hidden text-sm font-bold lg:block">
-          유형
-        </p>
-        <div role="group" aria-label="유형" className="flex flex-wrap gap-2">
-          {TIMELINE_TYPE_VALUES.map((type) => (
-            <button
-              key={type}
-              type="button"
-              aria-pressed={filter.types.includes(type)}
-              onClick={() => toggleType(type)}
-              className="relative h-9 rounded-full border border-line bg-surface px-4 text-sm font-medium text-muted-foreground transition-colors after:absolute after:inset-x-0 after:-inset-y-1 aria-pressed:border-2 aria-pressed:border-primary aria-pressed:bg-soft aria-pressed:px-[15px] aria-pressed:font-bold aria-pressed:text-soft-text"
-            >
-              {timelineTypeInfo(type).label}
-            </button>
-          ))}
-        </div>
-      </div>
-
-      <div className="flex flex-col gap-2">
-        <p aria-hidden className="hidden text-sm font-bold lg:block">
-          기간
-        </p>
         <ChoiceChips
           label="기간"
           options={TIMELINE_PERIODS}
@@ -101,7 +66,7 @@ function CustomRange({
 }) {
   const error = isInvalidRange(filter) ? RANGE_ERROR : undefined
   return (
-    <div className="mt-1 flex flex-col gap-3">
+    <div className="mt-1 grid max-w-120 gap-3 sm:grid-cols-2">
       <Field id="tl-from" label="시작일">
         <DateInput
           id="tl-from"

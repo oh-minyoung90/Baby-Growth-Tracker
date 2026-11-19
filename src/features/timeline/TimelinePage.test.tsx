@@ -64,7 +64,7 @@ afterEach(() => vi.useRealTimers())
 
 async function renderTimeline(path = '/growth/timeline') {
   const result = renderApp(path, auth)
-  await screen.findByRole('group', { name: '유형' })
+  await screen.findByRole('group', { name: '유형별 개수' })
   return result
 }
 
@@ -77,7 +77,9 @@ function titles() {
 }
 
 function typeChip(name: string) {
-  return within(screen.getByRole('group', { name: '유형' })).getByRole('button', { name })
+  return within(screen.getByRole('group', { name: '유형별 개수' })).getByRole('button', {
+    name: new RegExp(`^${name} \\d+개$`),
+  })
 }
 
 function periodChip(name: string) {
@@ -85,13 +87,14 @@ function periodChip(name: string) {
 }
 
 describe('목록 (FR-TL-01~02, 07)', () => {
-  it('발달 기록과 키·몸무게를 날짜 최신순으로, 월별로 묶어 보여 준다', async () => {
+  it('발달 기록을 최신순·월별로 묶고 측정 기록은 별도 탭에 둔다', async () => {
     await renderTimeline()
     expect(screen.getAllByRole('heading', { level: 2 }).map((h) => h.textContent)).toEqual([
+      '누적 기록',
       '2026년 10월',
       '2026년 9월',
     ])
-    expect(titles()).toEqual(['네', '소리 내어 웃기', '72.1cm · 8.9kg', '잡고 서기', '엄마'])
+    expect(titles()).toEqual(['네', '소리 내어 웃기', '잡고 서기', '엄마'])
     const october = screen.getByRole('region', { name: '2026년 10월' })
     expect(within(october).getAllByRole('listitem')).toHaveLength(2)
   })
@@ -102,49 +105,50 @@ describe('목록 (FR-TL-01~02, 07)', () => {
     expect(row).toHaveTextContent('표정')
     expect(row).toHaveTextContent('2026. 10. 3. (토) · 생후 8개월 25일')
     expect(row).toHaveTextContent('까꿍놀이')
-    expect(screen.getByRole('link', { name: /72\.1cm/ })).toHaveTextContent('키·몸무게')
+    expect(screen.queryByRole('link', { name: /72\.1cm/ })).not.toBeInTheDocument()
+    expect(fetchBodyMeasures).not.toHaveBeenCalled()
   })
 
   it('발달 기록을 누르면 수정 화면이 열리고, 취소하면 필터를 유지한 채 돌아온다', async () => {
-    const { router } = await renderTimeline('/growth/timeline?types=word,expression')
+    const { router } = await renderTimeline('/growth/timeline?types=expression&period=this')
     await userEvent.click(screen.getByRole('link', { name: /소리 내어 웃기/ }))
     expect(await screen.findByRole('heading', { name: '발달 기록 수정' })).toBeInTheDocument()
     expect(router.state.location.pathname).toBe('/milestones/e1')
 
     await userEvent.click(await screen.findByRole('button', { name: '취소' }))
     await waitFor(() => expect(router.state.location.pathname).toBe('/growth/timeline'))
-    expect(router.state.location.search).toBe('?types=word,expression')
-    expect(await screen.findByRole('button', { name: '행동' })).toHaveAttribute(
+    expect(router.state.location.search).toBe('?types=expression&period=this')
+    expect(await screen.findByRole('button', { name: '행동 1개' })).toHaveAttribute(
       'aria-pressed',
       'false',
     )
   })
 
-  it('키·몸무게를 누르면 측정 수정 시트가 열린다', async () => {
-    const { router } = await renderTimeline()
-    await userEvent.click(screen.getByRole('link', { name: /72\.1cm/ }))
-    expect(await screen.findByRole('dialog', { name: '키·몸무게 수정' })).toBeInTheDocument()
-    expect(router.state.location.pathname + router.state.location.search).toBe(
-      '/growth/body?record=m1',
+  it('이전 측정 전용 필터 주소도 빈 결과 대신 지원하는 기록을 보여 준다', async () => {
+    await renderTimeline('/growth/timeline?types=measure')
+    expect(titles()).toEqual(['네', '소리 내어 웃기', '잡고 서기', '엄마'])
+    expect(screen.getByRole('button', { name: '전체 보기' })).toHaveAttribute(
+      'aria-pressed',
+      'true',
     )
+    expect(screen.getByRole('link', { name: '키·몸무게' })).toHaveAttribute('href', '/growth/body')
   })
 })
 
 describe('필터 (FR-TL-03~05)', () => {
-  it('기본은 모든 유형·전체 기간이고, 유형을 끄고 켤 수 있다', async () => {
+  it('기본은 전체 유형이고, 카드 선택·재선택으로 한 유형과 전체를 전환한다', async () => {
     const { router } = await renderTimeline()
-    for (const name of ['단어', '행동', '표정', '키·몸무게']) {
-      expect(typeChip(name)).toHaveAttribute('aria-pressed', 'true')
+    for (const name of ['단어', '행동', '표정', '처음 먹은 음식']) {
+      expect(typeChip(name)).toHaveAttribute('aria-pressed', 'false')
     }
-    expect(periodChip('전체')).toBeChecked()
-
+    expect(screen.queryByRole('group', { name: '유형' })).not.toBeInTheDocument()
+    expect(periodChip('전체 기간')).toBeChecked()
     await userEvent.click(typeChip('단어'))
-    expect(typeChip('단어')).toHaveAttribute('aria-pressed', 'false')
-    expect(titles()).toEqual(['소리 내어 웃기', '72.1cm · 8.9kg', '잡고 서기'])
-    expect(router.state.location.search).toBe('?types=behavior%2Cexpression%2Cmeasure%2Cfood')
-
+    expect(typeChip('단어')).toHaveAttribute('aria-pressed', 'true')
+    expect(titles()).toEqual(['네', '엄마'])
+    expect(router.state.location.search).toBe('?types=word')
     await userEvent.click(typeChip('단어'))
-    expect(titles()).toHaveLength(5)
+    expect(titles()).toHaveLength(4)
     expect(router.state.location.search).toBe('')
   })
 
@@ -153,7 +157,7 @@ describe('필터 (FR-TL-03~05)', () => {
     await userEvent.click(periodChip('이번 달'))
     expect(titles()).toEqual(['네', '소리 내어 웃기'])
     await userEvent.click(periodChip('지난 달'))
-    expect(titles()).toEqual(['72.1cm · 8.9kg', '잡고 서기', '엄마'])
+    expect(titles()).toEqual(['잡고 서기', '엄마'])
   })
 
   it('직접 선택은 이번 달 1일~오늘로 시작하고, 시작일·종료일을 바꿀 수 있다', async () => {
@@ -165,7 +169,7 @@ describe('필터 (FR-TL-03~05)', () => {
 
     fireEvent.change(screen.getByLabelText('시작일'), { target: { value: '2026-09-16' } })
     fireEvent.change(screen.getByLabelText('종료일'), { target: { value: '2026-09-30' } })
-    expect(titles()).toEqual(['72.1cm · 8.9kg', '잡고 서기'])
+    expect(titles()).toEqual(['잡고 서기'])
     expect(router.state.location.search).toBe('?period=custom&from=2026-09-16&to=2026-09-30')
   })
 
@@ -181,10 +185,10 @@ describe('필터 (FR-TL-03~05)', () => {
     )
     expect(screen.getByText('조건에 맞는 기록이 없어요')).toBeInTheDocument()
     await userEvent.click(screen.getByRole('button', { name: '필터 초기화' }))
-    expect(titles()).toHaveLength(5)
+    expect(titles()).toHaveLength(4)
     expect(router.state.location.search).toBe('')
-    expect(typeChip('행동')).toHaveAttribute('aria-pressed', 'true')
-    expect(periodChip('전체')).toBeChecked()
+    expect(typeChip('행동')).toHaveAttribute('aria-pressed', 'false')
+    expect(periodChip('전체 기간')).toBeChecked()
   })
 })
 
@@ -207,17 +211,23 @@ describe('유형별 개수와 추가 버튼 (FR-TL-08~10)', () => {
 
     // 다시 누르면 필터 초기화
     await userEvent.click(countCard('단어 2개'))
-    expect(titles()).toHaveLength(5)
+    expect(titles()).toHaveLength(4)
     expect(router.state.location.search).toBe('')
   })
 
-  it('개수는 필터와 관계없이 전체 기준이고, 누르면 기간도 전체로 바꾼다', async () => {
-    await renderTimeline('/growth/timeline?period=this')
+  it('개수는 누적 기준이며 카드·전체 보기를 눌러도 선택한 기간을 유지한다', async () => {
+    const { router } = await renderTimeline('/growth/timeline?period=this')
     expect(titles()).toEqual(['네', '소리 내어 웃기'])
-    expect(countCard('행동 1개')).toBeInTheDocument()
     await userEvent.click(countCard('행동 1개'))
+    expect(periodChip('이번 달')).toBeChecked()
+    expect(countCard('행동 1개')).toHaveAttribute('aria-pressed', 'true')
+    expect(screen.getByText('조건에 맞는 기록이 없어요')).toBeVisible()
+    await userEvent.click(periodChip('지난 달'))
     expect(titles()).toEqual(['잡고 서기'])
-    expect(periodChip('전체')).toBeChecked()
+    await userEvent.click(screen.getByRole('button', { name: '전체 보기' }))
+    expect(titles()).toEqual(['잡고 서기', '엄마'])
+    expect(periodChip('지난 달')).toBeChecked()
+    expect(router.state.location.search).toBe('?period=last')
   })
 
   it('한 유형만 보고 있으면 추가 버튼이 그 유형을 고른 채 입력 화면을 연다', async () => {
@@ -250,12 +260,12 @@ describe('0건·불러오기 실패 (FR-COM-20~22)', () => {
   })
 
   it('불러오지 못하면 안내하고, 다시 시도할 수 있다', async () => {
-    vi.mocked(fetchBodyMeasures).mockRejectedValueOnce(new Error('offline'))
+    vi.mocked(fetchMilestones).mockRejectedValueOnce(new Error('offline'))
     renderApp('/growth/timeline', auth)
     const banner = await screen.findByRole('alert')
     await userEvent.click(within(banner).getByRole('button', { name: '다시 시도' }))
-    expect(await screen.findByText('72.1cm · 8.9kg')).toBeInTheDocument()
-    expect(fetchBodyMeasures).toHaveBeenCalledTimes(2)
+    expect(await screen.findByRole('button', { name: '단어 2개' })).toBeInTheDocument()
+    expect(fetchMilestones).toHaveBeenCalledTimes(2)
   })
 })
 
@@ -271,8 +281,12 @@ describe('처음 먹은 음식 (T-51)', () => {
       'href',
       '/meals/foods/f1',
     )
-    expect(typeChip('처음 먹은 음식')).toHaveAttribute('aria-pressed', 'true')
+    expect(screen.getByRole('button', { name: '처음 먹은 음식 1개' })).toHaveAttribute(
+      'aria-pressed',
+      'true',
+    )
     expect(router.state.location.search).toBe('?types=food')
+    expect(screen.getByRole('button', { name: '처음 먹은 음식 1개' })).toBeVisible()
   })
   it('첫 날짜 변경·체크 해제 결과를 다시 읽어 이동·제거하며 항목을 중복 저장하지 않는다', async () => {
     let foods = [{ id: 'f1', name: '쌀', firstTriedDate: '2026-10-05' }] as Food[]
@@ -299,7 +313,7 @@ describe('처음 먹은 음식 (T-51)', () => {
     renderApp('/growth/timeline', auth)
     const alert = await screen.findByRole('alert')
     await userEvent.click(within(alert).getByRole('button', { name: '다시 시도' }))
-    await screen.findByRole('group', { name: '유형' })
+    await screen.findByRole('group', { name: '유형별 개수' })
     expect(fetchFoods).toHaveBeenCalledTimes(2)
     expect(fetchMilestones).toHaveBeenCalledTimes(1)
   })
