@@ -111,6 +111,9 @@ describe('오늘의 기록 (FR-HOME-02, 06)', () => {
   it('기록 날짜가 오늘인 발달 기록만 유형과 함께 보여 준다', async () => {
     await renderHome()
     const today = card('오늘의 기록')
+    expect(
+      within(today).queryByRole('button', { name: '오늘 성장 기록하기' }),
+    ).not.toBeInTheDocument()
     const links = await within(today).findAllByRole('link')
     expect(links.map((link) => link.textContent)).toEqual(['단어물컵을 가리키며', '행동혼자 서기'])
   })
@@ -126,10 +129,31 @@ describe('오늘의 기록 (FR-HOME-02, 06)', () => {
     await waitFor(() => expect(router.state.location.pathname).toBe('/'))
   })
 
-  it('오늘 기록이 없으면 첫 기록을 남겨 보라고 안내한다', async () => {
+  it('오늘 기록이 없으면 성장 기록하기로 종류를 고르고 입력 후 홈으로 돌아온다', async () => {
     vi.mocked(fetchMilestones).mockResolvedValue(milestones.slice(2))
-    await renderHome()
-    expect(await within(card('오늘의 기록')).findByText('오늘 첫 기록을 남겨 보세요')).toBeVisible()
+    const { router } = await renderHome()
+    const button = await within(card('오늘의 기록')).findByRole('button', {
+      name: '오늘 성장 기록하기',
+    })
+    await userEvent.click(button)
+    let menu = await screen.findByRole('dialog', { name: '성장 기록' })
+    expect(
+      within(menu)
+        .getAllByRole('link')
+        .map((link) => link.textContent),
+    ).toEqual(['단어', '행동', '표정', '키·몸무게'])
+    await userEvent.click(within(menu).getByRole('button', { name: '취소' }))
+    await waitFor(() => expect(button).toHaveFocus())
+    await userEvent.click(button)
+    menu = await screen.findByRole('dialog', { name: '성장 기록' })
+    await userEvent.click(within(menu).getByRole('link', { name: '단어' }))
+    const types = await screen.findByRole('radiogroup', { name: '유형' })
+    expect(within(types).getByRole('radio', { name: '단어' })).toBeChecked()
+    await userEvent.click(screen.getByRole('button', { name: '취소' }))
+    await waitFor(() => expect(router.state.location.pathname).toBe('/'))
+    expect(
+      within(card('오늘의 기록')).getByRole('button', { name: '오늘 성장 기록하기' }),
+    ).toBeVisible()
   })
 })
 

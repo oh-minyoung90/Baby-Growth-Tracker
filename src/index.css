@@ -65,6 +65,8 @@
   --color-type-expression-text: var(--type-expression-text);
   --color-type-food: var(--type-food);
   --color-type-food-text: var(--type-food-text);
+  --color-type-food-icon: var(--type-food-icon);
+  --color-type-food-icon-text: var(--type-food-icon-text);
   --color-type-measure: var(--type-measure);
   --color-type-measure-text: var(--type-measure-text);
   --color-tried: var(--tried);
@@ -116,6 +118,8 @@
   --type-expression-text: #1d6b59;
   --type-food: #f1eff6;
   --type-food-text: #4f4b5c;
+  --type-food-icon: #fff3cd;
+  --type-food-icon-text: #9b7000;
   --type-measure: #e3eeff;
   --type-measure-text: #1c5797;
   --tried: #ddf4ec;
@@ -157,6 +161,8 @@
   --type-expression-text: #9be8d3;
   --type-food: #2a2733;
   --type-food-text: #d6d2e0;
+  --type-food-icon: #40351c;
+  --type-food-icon-text: #f4d16a;
   --type-measure: #1d3350;
   --type-measure-text: #b9d6ff;
   --tried: #1e3d35;

@@ -132,13 +132,13 @@ function QueryContent<T>({
   return children(query.data)
 }
 
+const CARD_ACTION_CLASS =
+  'flex min-h-11 items-center gap-0.5 self-start text-sm font-bold text-soft-text outline-none hover:underline focus-visible:underline'
+
 /** 0건일 때 입력 화면으로 가는 글자 버튼 (시안: "어젯밤 수면 기록하기 ›") */
 function CardAction({ to, children }: { to: string; children: ReactNode }) {
   return (
-    <Link
-      to={to}
-      className="flex min-h-11 items-center gap-0.5 self-start text-sm font-bold text-soft-text outline-none hover:underline focus-visible:underline"
-    >
+    <Link to={to} className={CARD_ACTION_CLASS}>
       {children}
       <ChevronRight className="size-4" aria-hidden />
     </Link>
@@ -180,7 +180,12 @@ function TodayCard({ query, today }: { query: UseQueryResult<Milestone[]>; today
         {(milestones) => {
           const records = milestones.filter((record) => record.date === today)
           if (records.length === 0) {
-            return <p className="text-[15px] text-muted-foreground">오늘 첫 기록을 남겨 보세요</p>
+            return (
+              <GrowthRecordAction className={CARD_ACTION_CLASS}>
+                오늘 성장 기록하기
+                <ChevronRight className="size-4" aria-hidden />
+              </GrowthRecordAction>
+            )
           }
           return (
             <ul className="flex flex-col gap-2">
@@ -294,45 +299,22 @@ function MeasureCard({ query }: { query: UseQueryResult<BodyMeasure[]> }) {
   )
 }
 
-/** 빠른 기록 버튼 (FR-HOME-05). 누르면 해당 입력 화면이 열리고, 저장·취소하면 홈으로 돌아온다 */
-function QuickRecords({ today }: { today: string }) {
+/** 빈 카드와 빠른 기록이 같은 성장 종류 선택 메뉴를 사용한다. */
+function GrowthRecordAction({ className, children }: { className: string; children: ReactNode }) {
   const [growthOpen, setGrowthOpen] = useState(false)
   const growthButtonRef = useRef<HTMLButtonElement>(null)
-  const id = useId()
-  const quickClass =
-    'flex min-h-20 min-w-0 flex-col items-center justify-center gap-1.5 rounded-card border border-quick-line bg-cream px-2 py-3 text-sm font-bold text-cream-text transition-colors outline-none hover:bg-soft focus-visible:ring-3 focus-visible:ring-ring/40 md:min-h-16 md:flex-row md:gap-2'
   return (
-    <section aria-labelledby={id} className="flex flex-col gap-3">
-      <h2 id={id} className="text-base leading-6 font-bold">
-        빠른 기록
-      </h2>
-      <div className="grid grid-cols-3 gap-3">
-        <Link
-          to={`/meals/week?date=${today}`}
-          className={cn(
-            quickClass,
-            'border-primary bg-primary text-primary-foreground hover:bg-primary/90',
-          )}
-        >
-          <Utensils className="size-5 shrink-0" aria-hidden />
-          식사
-        </Link>
-        <button
-          ref={growthButtonRef}
-          type="button"
-          aria-haspopup="dialog"
-          aria-expanded={growthOpen}
-          onClick={() => setGrowthOpen(true)}
-          className={quickClass}
-        >
-          <Sprout className="size-5 shrink-0" aria-hidden />
-          성장
-        </button>
-        <Link to="/sleep/new" className={quickClass}>
-          <Moon className="size-5 shrink-0" aria-hidden />
-          수면
-        </Link>
-      </div>
+    <>
+      <button
+        ref={growthButtonRef}
+        type="button"
+        aria-haspopup="dialog"
+        aria-expanded={growthOpen}
+        onClick={() => setGrowthOpen(true)}
+        className={className}
+      >
+        {children}
+      </button>
       <Sheet open={growthOpen} onOpenChange={setGrowthOpen}>
         <SheetContent
           onCloseAutoFocus={(event) => {
@@ -361,6 +343,40 @@ function QuickRecords({ today }: { today: string }) {
           </Button>
         </SheetContent>
       </Sheet>
+    </>
+  )
+}
+
+/** 빠른 기록 버튼 (FR-HOME-05). 누르면 해당 입력 화면이 열리고, 저장·취소하면 홈으로 돌아온다 */
+function QuickRecords({ today }: { today: string }) {
+  const id = useId()
+  const quickClass =
+    'flex min-h-20 min-w-0 flex-col items-center justify-center gap-1.5 rounded-card border border-quick-line bg-cream px-2 py-3 text-sm font-bold text-cream-text transition-colors outline-none hover:bg-soft focus-visible:ring-3 focus-visible:ring-ring/40 md:min-h-16 md:flex-row md:gap-2'
+  return (
+    <section aria-labelledby={id} className="flex flex-col gap-3">
+      <h2 id={id} className="text-base leading-6 font-bold">
+        빠른 기록
+      </h2>
+      <div className="grid grid-cols-3 gap-3">
+        <Link
+          to={`/meals/week?date=${today}`}
+          className={cn(
+            quickClass,
+            'border-primary bg-primary text-primary-foreground hover:bg-primary/90',
+          )}
+        >
+          <Utensils className="size-5 shrink-0" aria-hidden />
+          식사
+        </Link>
+        <GrowthRecordAction className={quickClass}>
+          <Sprout className="size-5 shrink-0" aria-hidden />
+          성장
+        </GrowthRecordAction>
+        <Link to="/sleep/new" className={quickClass}>
+          <Moon className="size-5 shrink-0" aria-hidden />
+          수면
+        </Link>
+      </div>
     </section>
   )
 }

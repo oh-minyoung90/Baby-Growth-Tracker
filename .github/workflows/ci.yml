@@ -49,7 +49,8 @@ jobs:
   ui:
     name: Chrome · WebKit 화면 배치
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    # Ubuntu 패키지 미러 지연으로 설치에 9분 가까이 걸릴 수 있어 전체 검사를 위한 시간을 확보한다.
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
