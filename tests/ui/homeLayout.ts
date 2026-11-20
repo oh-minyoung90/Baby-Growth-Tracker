@@ -2,10 +2,10 @@ import assert from 'node:assert/strict'
 import type { Page } from '@playwright/test'
 import { fixtureChild, prepareFixturePage } from './fixture.ts'
 
-const sections = ['오늘의 식단', '오늘의 기록', '어젯밤 수면', '최근 측정', '빠른 기록']
+const sections = ['오늘의 식단', '오늘의 기록', '어젯밤 수면', '최근 측정']
 
 /** 가명 데이터: 긴 음식 이름·발달 기록이 있어도 세로 카드와 버튼이 넘치지 않아야 한다. */
-export async function prepareHomePage(page: Page, empty = false) {
+export async function prepareHomePage(page: Page, empty = false, partialMeals = false) {
   await page.clock.setFixedTime(new Date('2026-11-18T09:00:00+09:00'))
   await prepareFixturePage(page, '/', {
     '/rest/v1/children': fixtureChild,
@@ -43,24 +43,28 @@ export async function prepareHomePage(page: Page, empty = false) {
             memo: null,
           },
         ],
+    '/rest/v1/foods': [],
+    '/rest/v1/recipes': [],
     '/rest/v1/meal_entries': empty
       ? []
-      : ['breakfast', 'lunch', 'dinner'].map((type, i) => ({
-          id: `meal-fixture-${i}`,
-          date: '2026-11-18',
-          meal_type: type,
-          eaten: i === 0,
-          intake: null,
-          memo: null,
-          meal_entry_foods: [
-            {
-              food_id: null,
-              food_name: i === 1 ? 'LongFoodName'.repeat(10) : '바나나, 계란, 그릭요거트',
-              position: 0,
-            },
-          ],
-          meal_entry_recipes: [],
-        })),
+      : (partialMeals ? ['breakfast'] : ['breakfast', 'lunch', 'dinner', 'snack']).map(
+          (type, i) => ({
+            id: `meal-fixture-${i}`,
+            date: '2026-11-18',
+            meal_type: type,
+            eaten: i === 0,
+            intake: null,
+            memo: null,
+            meal_entry_foods: [
+              {
+                food_id: null,
+                food_name: i === 1 ? 'LongFoodName'.repeat(10) : '바나나, 계란, 그릭요거트',
+                position: 0,
+              },
+            ],
+            meal_entry_recipes: [],
+          }),
+        ),
   })
   await page.getByRole('heading', { name: /^가명아기/ }).waitFor()
   if (empty) await page.getByRole('button', { name: '오늘 성장 기록하기', exact: true }).waitFor()
@@ -102,22 +106,12 @@ export async function assertHomeLayout(page: Page, empty = false) {
             errors.push(`${sections[i]}: 카드 밖 넘침`)
         }
       })
-      const buttons = [...cards[4].querySelectorAll<HTMLElement>('a, button')]
-      if (buttons.map((button) => button.textContent?.trim()).join('|') !== '식사|성장|수면')
-        errors.push('빠른 기록 3개 순서 불일치')
-      const mealBackground = getComputedStyle(cards[0]).backgroundColor
-      buttons.forEach((button, i) => {
-        const box = button.getBoundingClientRect()
-        const firstButton = buttons[0].getBoundingClientRect()
-        const style = getComputedStyle(button)
-        if (Math.abs(box.top - firstButton.top) > 1 || Math.abs(box.width - firstButton.width) > 1)
-          errors.push('빠른 기록 한 줄·동일 폭 불일치')
-        if (style.borderTopStyle !== 'solid' || style.borderTopWidth !== '1px')
-          errors.push('빠른 기록 실선 누락')
-        if (i > 0 && style.backgroundColor !== mealBackground)
-          errors.push('식단·보조 버튼 크림 배경 불일치')
-        if (button.scrollWidth > button.clientWidth + 1) errors.push('빠른 기록 글자 잘림')
-      })
+      for (const card of cards) {
+        const heading = card.querySelector('h2')!.getBoundingClientRect()
+        const action = card.querySelector('h2')!.parentElement!.querySelector('a, button')
+        if (action && heading.right > action.getBoundingClientRect().left)
+          errors.push('카드 제목·동작 버튼 겹침')
+      }
       if (!empty) {
         const total = cards[2].querySelector('dd')!
         const height = cards[3].querySelector('dd')!
@@ -143,28 +137,77 @@ export async function assertHomeLayout(page: Page, empty = false) {
   assert.deepEqual(errors, [])
 }
 
-export async function exerciseHomeLayout(page: Page, empty = false) {
-  await prepareHomePage(page, empty)
+export async function exerciseHomeLayout(page: Page, empty = false, partialMeals = false) {
+  await prepareHomePage(page, empty, partialMeals)
   await assertHomeLayout(page, empty)
-  const buttons = [page.getByRole('button', { name: '성장', exact: true })]
-  if (empty) buttons.unshift(page.getByRole('button', { name: '오늘 성장 기록하기', exact: true }))
-  for (const button of buttons) {
-    await button.click()
-    const menu = page.getByRole('dialog', { name: '성장 기록', exact: true })
-    await menu.waitFor()
-    assert.deepEqual(await menu.getByRole('link').allTextContents(), [
-      '단어',
-      '행동',
-      '표정',
-      '키·몸무게',
-    ])
-    const box = await menu.boundingBox()
-    assert.ok(
-      box && box.x >= 0 && box.x + box.width <= page.viewportSize()!.width + 1,
-      '성장 메뉴 화면 밖 넘침',
+  assert.equal(await page.getByRole('region', { name: '빠른 기록' }).count(), 0)
+  const growth = page.getByRole('button', {
+    name: empty ? '오늘 성장 기록하기' : '성장 기록 추가',
+    exact: true,
+  })
+  await growth.click()
+  const menu = page.getByRole('dialog', { name: '성장 기록', exact: true })
+  await menu.waitFor()
+  assert.deepEqual(await menu.getByRole('link').allTextContents(), ['단어', '행동', '표정'])
+  const box = await menu.boundingBox()
+  assert.ok(
+    box && box.x >= 0 && box.x + box.width <= page.viewportSize()!.width + 1,
+    '성장 메뉴 화면 밖 넘침',
+  )
+  await menu.getByRole('button', { name: '취소', exact: true }).click()
+  await menu.waitFor({ state: 'hidden' })
+  assert.equal(await growth.evaluate((element) => element === document.activeElement), true)
+
+  if (empty || partialMeals) {
+    const meal = page.getByRole('button', {
+      name: empty ? '오늘 식단 기록하기' : '식단 추가',
+      exact: true,
+    })
+    await meal.click()
+    const picker = page.getByRole('dialog', { name: '끼니 선택', exact: true })
+    await picker.waitFor()
+    assert.deepEqual(
+      await picker.getByRole('link').allTextContents(),
+      empty ? ['아침', '점심', '저녁', '간식'] : ['점심', '저녁', '간식'],
     )
-    await menu.getByRole('button', { name: '취소', exact: true }).click()
-    await menu.waitFor({ state: 'hidden' })
-    assert.equal(await button.evaluate((element) => element === document.activeElement), true)
+    const bounds = await picker.boundingBox()
+    assert.ok(
+      bounds && bounds.x >= 0 && bounds.x + bounds.width <= page.viewportSize()!.width + 1,
+      '끼니 메뉴 화면 밖 넘침',
+    )
+    await picker.getByRole('link', { name: '점심', exact: true }).click()
+    const editor = page.getByRole('dialog', { name: '식단 기록', exact: true })
+    await editor.waitFor()
+    assert.equal(new URL(page.url()).searchParams.get('meal'), 'lunch')
+    await editor.getByRole('button', { name: '취소', exact: true }).click()
+    await page.waitForURL('http://127.0.0.1:4180/')
+    await editor.waitFor({ state: 'hidden' })
+  } else {
+    assert.equal(await page.getByRole('button', { name: '식단 추가', exact: true }).count(), 0)
+  }
+
+  if (empty) {
+    assert.equal(
+      await page.getByRole('link', { name: '어젯밤 수면 기록하기', exact: true }).count(),
+      1,
+    )
+    assert.equal(
+      await page.getByRole('link', { name: '키·몸무게 기록하기', exact: true }).count(),
+      1,
+    )
+  } else {
+    await page.getByRole('link', { name: '어젯밤 수면 수정', exact: true }).click()
+    await page.getByLabel('수면일', { exact: true }).waitFor()
+    assert.equal(await page.getByLabel('수면일', { exact: true }).inputValue(), '2026-11-17')
+    assert.equal(new URL(page.url()).pathname, '/sleep/sleep-fixture')
+    await page.getByRole('button', { name: '취소', exact: true }).click()
+    await page.waitForURL('http://127.0.0.1:4180/')
+    await page.getByRole('link', { name: '키·몸무게 기록 추가', exact: true }).click()
+    const editor = page.getByRole('dialog', { name: '키·몸무게 기록', exact: true })
+    await editor.waitFor()
+    assert.equal(await editor.getByLabel('측정 날짜', { exact: true }).inputValue(), '2026-11-18')
+    await editor.getByRole('button', { name: '취소', exact: true }).click()
+    await page.waitForURL('http://127.0.0.1:4180/')
+    await editor.waitFor({ state: 'hidden' })
   }
 }

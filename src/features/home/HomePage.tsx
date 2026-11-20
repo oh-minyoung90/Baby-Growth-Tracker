@@ -1,18 +1,7 @@
 import { useId, useRef, useState, type ReactNode } from 'react'
 import type { UseQueryResult } from '@tanstack/react-query'
 import type { LucideIcon } from 'lucide-react'
-import {
-  ChevronRight,
-  MessageCircle,
-  Moon,
-  Ruler,
-  Sparkles,
-  Utensils,
-  Check,
-  NotebookPen,
-  Sprout,
-  Smile,
-} from 'lucide-react'
+import { ChevronRight, Moon, Ruler, Utensils, Check, NotebookPen, Plus } from 'lucide-react'
 import { Link } from 'react-router'
 import { ErrorBanner } from '@/components/ErrorBanner'
 import { ListLoading } from '@/components/ListLoading'
@@ -27,7 +16,7 @@ import type { BodyMeasure } from '@/lib/bodyApi'
 import { formatMeasureValue } from '@/lib/bodyFormat'
 import { NETWORK_ERROR_MESSAGES } from '@/lib/messages'
 import type { Milestone } from '@/lib/milestoneApi'
-import { milestoneTypeInfo } from '@/lib/milestoneTypes'
+import { MILESTONE_TYPES, milestoneTypeInfo } from '@/lib/milestoneTypes'
 import type { SleepLog } from '@/lib/sleepApi'
 import { summarizeSleepLog } from '@/lib/sleepSummary'
 import { useBodyMeasures } from '@/lib/useBodyMeasures'
@@ -39,16 +28,23 @@ import type { MealEntry } from '@/lib/mealApi'
 import { useSleepLogs } from '@/lib/useSleepLogs'
 import { cn } from '@/lib/utils'
 
-/** 빠른 기록의 성장 메뉴. 기존 네 가지 입력 기능에 홈에서 바로 접근한다. */
-const GROWTH_RECORDS: { to: string; label: string; icon: LucideIcon }[] = [
-  { to: '/milestones/new?type=word', label: '단어', icon: MessageCircle },
-  { to: '/milestones/new?type=behavior', label: '행동', icon: Sparkles },
-  { to: '/milestones/new?type=expression', label: '표정', icon: Smile },
-  { to: '/growth/body?record=new', label: '키·몸무게', icon: Ruler },
-]
+interface RecordChoice {
+  to: string
+  label: string
+  icon?: LucideIcon
+}
+
+const GROWTH_RECORDS: readonly RecordChoice[] = MILESTONE_TYPES.map(({ value, label, icon }) => ({
+  to: `/milestones/new?type=${value}`,
+  label,
+  icon,
+}))
+
+const HEADER_ACTION_CLASS =
+  'inline-flex min-h-11 min-w-11 shrink-0 items-center justify-center gap-1 rounded-button px-2 text-sm font-bold text-soft-text outline-none hover:bg-soft focus-visible:ring-3 focus-visible:ring-ring/40'
 
 /**
- * 홈 (SCR-03): 식단 → 오늘 기록 → 어젯밤 수면 → 최근 측정 → 빠른 기록.
+ * 홈 (SCR-03): 식단 → 오늘 기록 → 어젯밤 수면 → 최근 측정.
  * 모바일·PC 모두 한 열로 배치한다 (docs/디자인.md 5.1).
  */
 export function HomePage() {
@@ -87,7 +83,6 @@ export function HomePage() {
       <TodayCard query={milestones} today={today} />
       <SleepCard query={sleepLogs} yesterday={yesterdayString()} />
       <MeasureCard query={measures} />
-      <QuickRecords today={today} />
     </Page>
   )
 }
@@ -96,11 +91,13 @@ export function HomePage() {
 function Card({
   title,
   icon: Icon,
+  action,
   className,
   children,
 }: {
   title: string
   icon: LucideIcon
+  action?: ReactNode
   className?: string
   children: ReactNode
 }) {
@@ -110,10 +107,16 @@ function Card({
       aria-labelledby={id}
       className={cn('flex min-w-0 flex-col gap-3 rounded-card border bg-surface p-4', className)}
     >
-      <h2 id={id} className="flex items-center gap-2 text-base leading-6 font-bold text-foreground">
-        <Icon className="size-5 shrink-0 text-soft-text" aria-hidden />
-        {title}
-      </h2>
+      <div className="flex min-w-0 items-center justify-between gap-2">
+        <h2
+          id={id}
+          className="flex min-w-0 items-center gap-2 text-base leading-6 font-bold text-foreground"
+        >
+          <Icon className="size-5 shrink-0 text-soft-text" aria-hidden />
+          {title}
+        </h2>
+        {action}
+      </div>
       {children}
     </section>
   )
@@ -174,8 +177,20 @@ function LabeledValue({
  * 누르면 그 기록의 수정 화면이 열린다 (FR-COM-30)
  */
 function TodayCard({ query, today }: { query: UseQueryResult<Milestone[]>; today: string }) {
+  const hasRecords = query.isSuccess && query.data.some((record) => record.date === today)
   return (
-    <Card title="오늘의 기록" icon={NotebookPen}>
+    <Card
+      title="오늘의 기록"
+      icon={NotebookPen}
+      action={
+        hasRecords && (
+          <GrowthRecordAction className={HEADER_ACTION_CLASS} ariaLabel="성장 기록 추가">
+            <Plus className="size-4" aria-hidden />
+            추가
+          </GrowthRecordAction>
+        )
+      }
+    >
       <QueryContent query={query}>
         {(milestones) => {
           const records = milestones.filter((record) => record.date === today)
@@ -228,8 +243,23 @@ function TodayCard({ query, today }: { query: UseQueryResult<Milestone[]>; today
  * 잠든·일어난 시간 중 하나만 있으면 총 수면은 "계산 불가" (BR-07, R44)
  */
 function SleepCard({ query, yesterday }: { query: UseQueryResult<SleepLog[]>; yesterday: string }) {
+  const existing = query.isSuccess ? query.data.find((log) => log.date === yesterday) : undefined
   return (
-    <Card title="어젯밤 수면" icon={Moon}>
+    <Card
+      title="어젯밤 수면"
+      icon={Moon}
+      action={
+        existing && (
+          <Link
+            to={`/sleep/${existing.id}`}
+            className={HEADER_ACTION_CLASS}
+            aria-label="어젯밤 수면 수정"
+          >
+            수정
+          </Link>
+        )
+      }
+    >
       <QueryContent query={query}>
         {(logs) => {
           const log = logs.find((item) => item.date === yesterday)
@@ -265,8 +295,24 @@ function SleepCard({ query, yesterday }: { query: UseQueryResult<SleepLog[]>; ye
 
 /** 최근 측정 (FR-HOME-04): 가장 최근 키·몸무게와 측정 날짜. 한쪽만 있으면 빈 값은 "-" (FR-BODY-05) */
 function MeasureCard({ query }: { query: UseQueryResult<BodyMeasure[]> }) {
+  const hasRecords = query.isSuccess && query.data.length > 0
   return (
-    <Card title="최근 측정" icon={Ruler}>
+    <Card
+      title="최근 측정"
+      icon={Ruler}
+      action={
+        hasRecords && (
+          <Link
+            to="/growth/body?record=new"
+            className={HEADER_ACTION_CLASS}
+            aria-label="키·몸무게 기록 추가"
+          >
+            <Plus className="size-4" aria-hidden />
+            기록
+          </Link>
+        )
+      }
+    >
       <QueryContent query={query}>
         {(measures) => {
           // 측정 날짜 최신순으로 받는다
@@ -299,46 +345,69 @@ function MeasureCard({ query }: { query: UseQueryResult<BodyMeasure[]> }) {
   )
 }
 
-/** 빈 카드와 빠른 기록이 같은 성장 종류 선택 메뉴를 사용한다. */
-function GrowthRecordAction({ className, children }: { className: string; children: ReactNode }) {
-  const [growthOpen, setGrowthOpen] = useState(false)
-  const growthButtonRef = useRef<HTMLButtonElement>(null)
+/** 카드별 기록 종류를 고르는 공통 시트. 입력 경로로 이동하면 닫히고, 취소 시 원래 버튼에 초점을 돌린다. */
+function RecordPickerAction({
+  className,
+  children,
+  ariaLabel,
+  title,
+  description,
+  options,
+}: {
+  className: string
+  children: ReactNode
+  ariaLabel?: string
+  title: string
+  description: string
+  options: readonly RecordChoice[]
+}) {
+  const [open, setOpen] = useState(false)
+  const triggerRef = useRef<HTMLButtonElement>(null)
   return (
     <>
       <button
-        ref={growthButtonRef}
+        ref={triggerRef}
         type="button"
+        aria-label={ariaLabel}
         aria-haspopup="dialog"
-        aria-expanded={growthOpen}
-        onClick={() => setGrowthOpen(true)}
+        aria-expanded={open}
+        onClick={() => setOpen(true)}
         className={className}
       >
         {children}
       </button>
-      <Sheet open={growthOpen} onOpenChange={setGrowthOpen}>
+      <Sheet open={open} onOpenChange={setOpen}>
         <SheetContent
           onCloseAutoFocus={(event) => {
-            // 기록 화면으로 이동한 경우 새 화면의 초점을 덮어쓰지 않는다.
             event.preventDefault()
-            growthButtonRef.current?.focus()
+            triggerRef.current?.focus()
           }}
         >
-          <SheetTitle>성장 기록</SheetTitle>
-          <SheetDescription>어떤 기록을 남길까요?</SheetDescription>
-          <div className="grid grid-cols-2 gap-3">
-            {GROWTH_RECORDS.map(({ to, label, icon: Icon }) => (
+          <SheetTitle>{title}</SheetTitle>
+          <SheetDescription>{description}</SheetDescription>
+          <div
+            className={cn(
+              'grid gap-3',
+              options.length === 3
+                ? 'grid-cols-3'
+                : options.length >= 2
+                  ? 'grid-cols-2'
+                  : 'grid-cols-1',
+            )}
+          >
+            {options.map(({ to, label, icon: Icon }) => (
               <Link
                 key={label}
                 to={to}
-                onClick={() => setGrowthOpen(false)}
-                className="flex min-h-16 items-center justify-center gap-2 rounded-button border bg-surface px-3 text-sm font-bold outline-none hover:bg-soft focus-visible:ring-3 focus-visible:ring-ring/40"
+                onClick={() => setOpen(false)}
+                className="flex min-h-16 min-w-0 flex-col items-center justify-center gap-2 rounded-button border bg-surface px-2 py-3 text-sm font-bold outline-none hover:bg-soft focus-visible:ring-3 focus-visible:ring-ring/40"
               >
-                <Icon className="size-5 shrink-0 text-soft-text" aria-hidden />
+                {Icon && <Icon className="size-5 shrink-0 text-soft-text" aria-hidden />}
                 {label}
               </Link>
             ))}
           </div>
-          <Button variant="soft" onClick={() => setGrowthOpen(false)}>
+          <Button variant="soft" onClick={() => setOpen(false)}>
             취소
           </Button>
         </SheetContent>
@@ -347,48 +416,73 @@ function GrowthRecordAction({ className, children }: { className: string; childr
   )
 }
 
-/** 빠른 기록 버튼 (FR-HOME-05). 누르면 해당 입력 화면이 열리고, 저장·취소하면 홈으로 돌아온다 */
-function QuickRecords({ today }: { today: string }) {
-  const id = useId()
-  const quickClass =
-    'flex min-h-20 min-w-0 flex-col items-center justify-center gap-1.5 rounded-card border border-quick-line bg-cream px-2 py-3 text-sm font-bold text-cream-text transition-colors outline-none hover:bg-soft focus-visible:ring-3 focus-visible:ring-ring/40 md:min-h-16 md:flex-row md:gap-2'
+function GrowthRecordAction(props: { className: string; children: ReactNode; ariaLabel?: string }) {
   return (
-    <section aria-labelledby={id} className="flex flex-col gap-3">
-      <h2 id={id} className="text-base leading-6 font-bold">
-        빠른 기록
-      </h2>
-      <div className="grid grid-cols-3 gap-3">
-        <Link
-          to={`/meals/week?date=${today}`}
-          className={cn(
-            quickClass,
-            'border-primary bg-primary text-primary-foreground hover:bg-primary/90',
-          )}
-        >
-          <Utensils className="size-5 shrink-0" aria-hidden />
-          식사
-        </Link>
-        <GrowthRecordAction className={quickClass}>
-          <Sprout className="size-5 shrink-0" aria-hidden />
-          성장
-        </GrowthRecordAction>
-        <Link to="/sleep/new" className={quickClass}>
-          <Moon className="size-5 shrink-0" aria-hidden />
-          수면
-        </Link>
-      </div>
-    </section>
+    <RecordPickerAction
+      {...props}
+      title="성장 기록"
+      description="어떤 기록을 남길까요?"
+      options={GROWTH_RECORDS}
+    />
+  )
+}
+
+function MealRecordAction({
+  today,
+  options,
+  ...props
+}: {
+  today: string
+  options: readonly (typeof MEAL_TYPES)[number][]
+  className: string
+  children: ReactNode
+  ariaLabel?: string
+}) {
+  return (
+    <RecordPickerAction
+      {...props}
+      title="끼니 선택"
+      description={`${formatDateLabel(today)}에 기록할 끼니를 골라 주세요`}
+      options={options.map(({ value, label }) => ({
+        label,
+        to: `/meals/week?date=${today}&meal=${value}&record=new`,
+      }))}
+    />
   )
 }
 
 /** 계획과 먹은 기록을 모두 표시하며 누르면 그 식단의 수정 시트를 연다. */
 function MealCard({ query, today }: { query: UseQueryResult<MealEntry[]>; today: string }) {
+  const remaining = MEAL_TYPES.filter(
+    ({ value }) => !query.data?.some((entry) => entry.type === value),
+  )
+  const showAdd = query.isSuccess && query.data.length > 0 && remaining.length > 0
   return (
-    <Card title="오늘의 식단" icon={Utensils} className="bg-cream">
+    <Card
+      title="오늘의 식단"
+      icon={Utensils}
+      className="bg-cream"
+      action={
+        showAdd && (
+          <MealRecordAction
+            today={today}
+            options={remaining}
+            className={HEADER_ACTION_CLASS}
+            ariaLabel="식단 추가"
+          >
+            <Plus className="size-4" aria-hidden />
+            추가
+          </MealRecordAction>
+        )
+      }
+    >
       <QueryContent query={query}>
         {(entries) =>
           entries.length === 0 ? (
-            <CardAction to={`/meals/week?date=${today}`}>오늘 식단 기록하기</CardAction>
+            <MealRecordAction today={today} options={MEAL_TYPES} className={CARD_ACTION_CLASS}>
+              오늘 식단 기록하기
+              <ChevronRight className="size-4" aria-hidden />
+            </MealRecordAction>
           ) : (
             <ul className="flex flex-col gap-2">
               {MEAL_TYPES.flatMap(({ value, label }) => {
