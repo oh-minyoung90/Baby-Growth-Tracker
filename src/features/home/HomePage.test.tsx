@@ -1,8 +1,10 @@
-import { fetchMealWeek } from '@/lib/mealApi'
+import { fetchMealWeek, fetchMealEntry, saveMealEntry, type MealEntry } from '@/lib/mealApi'
+import { fetchFoods } from '@/lib/foodApi'
+import { fetchRecipes } from '@/lib/recipeApi'
 import { screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import type { Session } from '@supabase/supabase-js'
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest'
 import type { AuthState } from '@/lib/auth'
 import { fetchBodyMeasures, type BodyMeasure } from '@/lib/bodyApi'
 import { fetchMyChild } from '@/lib/childApi'
@@ -15,6 +17,16 @@ import { renderApp } from '@/test/renderApp'
 vi.mock('@/lib/mealApi', async (original) => ({
   ...(await original<typeof import('@/lib/mealApi')>()),
   fetchMealWeek: vi.fn(),
+  fetchMealEntry: vi.fn(),
+  saveMealEntry: vi.fn(),
+}))
+vi.mock('@/lib/foodApi', async (original) => ({
+  ...(await original<typeof import('@/lib/foodApi')>()),
+  fetchFoods: vi.fn(),
+}))
+vi.mock('@/lib/recipeApi', async (original) => ({
+  ...(await original<typeof import('@/lib/recipeApi')>()),
+  fetchRecipes: vi.fn(),
 }))
 vi.mock('@/lib/childApi', async (importOriginal) => ({
   ...(await importOriginal<typeof import('@/lib/childApi')>()),
@@ -33,6 +45,19 @@ vi.mock('@/lib/bodyApi', async (importOriginal) => ({
   ...(await importOriginal<typeof import('@/lib/bodyApi')>()),
   fetchBodyMeasures: vi.fn(),
 }))
+
+// jsdom에서 실제 식단 체크박스를 열기 위한 크기 관찰 API 대체.
+beforeAll(() =>
+  vi.stubGlobal(
+    'ResizeObserver',
+    class {
+      observe() {}
+      unobserve() {}
+      disconnect() {}
+    },
+  ),
+)
+afterAll(() => vi.unstubAllGlobals())
 
 const auth: AuthState = { status: 'signedIn', session: { user: { id: 'u1' } } as Session }
 
@@ -74,6 +99,25 @@ beforeEach(() => {
   vi.setSystemTime(new Date(2026, 9, 22, 9, 0))
   vi.resetAllMocks()
   vi.mocked(fetchMealWeek).mockResolvedValue([])
+  vi.mocked(fetchMealEntry).mockResolvedValue(null)
+  vi.mocked(fetchRecipes).mockResolvedValue([])
+  vi.mocked(fetchFoods).mockResolvedValue([
+    {
+      id: 'f1',
+      name: '쌀',
+      group: 'grain',
+      status: 'tried',
+      cautionTag: false,
+      firstTriedDate: '2026-09-01',
+      preference: null,
+      manualTried: true,
+      manualFirstTriedDate: '2026-09-01',
+      memo: null,
+      reactionDate: null,
+      symptomNote: null,
+      checkNote: null,
+    },
+  ])
   vi.mocked(fetchMyChild).mockResolvedValue({
     id: 'c1',
     nickname: '하늘이',
@@ -91,6 +135,7 @@ afterEach(() => vi.useRealTimers())
 async function renderHome() {
   const result = renderApp('/', auth)
   await screen.findByRole('heading', { level: 1, name: /^하늘이/ })
+  await waitFor(() => expect(screen.queryByRole('status')).not.toBeInTheDocument())
   return result
 }
 
@@ -141,7 +186,7 @@ describe('오늘의 기록 (FR-HOME-02, 06)', () => {
       within(menu)
         .getAllByRole('link')
         .map((link) => link.textContent),
-    ).toEqual(['단어', '행동', '표정', '키·몸무게'])
+    ).toEqual(['단어', '행동', '표정'])
     await userEvent.click(within(menu).getByRole('button', { name: '취소' }))
     await waitFor(() => expect(button).toHaveFocus())
     await userEvent.click(button)
@@ -209,45 +254,37 @@ describe('최근 측정 (FR-HOME-04)', () => {
   })
 })
 
-describe('빠른 기록 (FR-HOME-05)', () => {
-  function quick() {
-    return card('빠른 기록')
-  }
-
-  it('빠른 기록 3개와 카드를 승인된 순서로 보여 준다', async () => {
+describe('카드별 추가·수정 (FR-HOME-05)', () => {
+  it('빠른 기록을 제거하고 카드 4개를 승인된 순서로 보여 준다', async () => {
     await renderHome()
-    expect(
-      within(quick())
-        .getAllByRole('link')
-        .map((link) => link.textContent),
-    ).toEqual(['식사', '수면'])
-    expect(within(quick()).getByRole('button', { name: '성장' })).toHaveAttribute(
-      'aria-expanded',
-      'false',
-    )
+    expect(screen.queryByRole('region', { name: '빠른 기록' })).not.toBeInTheDocument()
     expect(
       screen.getAllByRole('heading', { level: 2 }).map((heading) => heading.textContent),
-    ).toEqual(['오늘의 식단', '오늘의 기록', '어젯밤 수면', '최근 측정', '빠른 기록'])
+    ).toEqual(['오늘의 식단', '오늘의 기록', '어젯밤 수면', '최근 측정'])
+    expect(
+      within(card('오늘의 기록')).getByRole('button', { name: '성장 기록 추가' }),
+    ).toBeVisible()
   })
 
   it.each(['단어', '행동', '표정'])(
-    '%s를 고르면 해당 유형의 입력을 열고 취소하면 홈으로 돌아온다',
+    '%s 추가를 고르면 해당 입력을 열고 취소하면 홈으로 돌아온다',
     async (label) => {
       const { router } = await renderHome()
-      await userEvent.click(within(quick()).getByRole('button', { name: '성장' }))
+      await userEvent.click(
+        within(card('오늘의 기록')).getByRole('button', { name: '성장 기록 추가' }),
+      )
       const menu = await screen.findByRole('dialog', { name: '성장 기록' })
       await userEvent.click(within(menu).getByRole('link', { name: label }))
       const types = await screen.findByRole('radiogroup', { name: '유형' })
       expect(within(types).getByRole('radio', { name: label })).toBeChecked()
-      expect(screen.queryByRole('dialog', { name: '성장 기록' })).not.toBeInTheDocument()
       await userEvent.click(screen.getByRole('button', { name: '취소' }))
       await waitFor(() => expect(router.state.location.pathname).toBe('/'))
     },
   )
 
-  it('성장 종류 선택은 취소·Escape로 닫히고 성장 버튼에 초점을 돌려준다', async () => {
+  it('성장 선택 메뉴를 취소·Escape로 닫으면 누른 버튼에 초점이 돌아온다', async () => {
     await renderHome()
-    const button = within(quick()).getByRole('button', { name: '성장' })
+    const button = within(card('오늘의 기록')).getByRole('button', { name: '성장 기록 추가' })
     for (const cancel of ['button', 'escape']) {
       await userEvent.click(button)
       const menu = await screen.findByRole('dialog', { name: '성장 기록' })
@@ -255,7 +292,7 @@ describe('빠른 기록 (FR-HOME-05)', () => {
         within(menu)
           .getAllByRole('link')
           .map((link) => link.textContent),
-      ).toEqual(['단어', '행동', '표정', '키·몸무게'])
+      ).toEqual(['단어', '행동', '표정'])
       if (cancel === 'button')
         await userEvent.click(within(menu).getByRole('button', { name: '취소' }))
       else await userEvent.keyboard('{Escape}')
@@ -264,17 +301,25 @@ describe('빠른 기록 (FR-HOME-05)', () => {
     }
   })
 
-  it('수면 입력·성장 메뉴의 키·몸무게 입력을 닫으면 홈으로 돌아온다', async () => {
+  it('어젯밤 수면은 기존 기록을 수정하고 취소하면 홈으로 돌아온다', async () => {
     const { router } = await renderHome()
-    await userEvent.click(within(quick()).getByRole('link', { name: '수면' }))
-    expect(router.state.location.pathname).toBe('/sleep/new')
-    await userEvent.click(await screen.findByRole('button', { name: '취소' }))
+    await userEvent.click(
+      within(card('어젯밤 수면')).getByRole('link', { name: '어젯밤 수면 수정' }),
+    )
+    expect(router.state.location.pathname).toBe('/sleep/s2')
+    expect(await screen.findByLabelText('수면일')).toHaveValue('2026-10-21')
+    expect(screen.getByLabelText('잠든 시간')).toHaveValue('21:00')
+    await userEvent.click(screen.getByRole('button', { name: '취소' }))
     await waitFor(() => expect(router.state.location.pathname).toBe('/'))
+  })
 
-    await userEvent.click(within(quick()).getByRole('button', { name: '성장' }))
-    const menu = await screen.findByRole('dialog', { name: '성장 기록' })
-    await userEvent.click(within(menu).getByRole('link', { name: '키·몸무게' }))
+  it('측정이 있어도 새 측정 입력을 열고 취소하면 홈으로 돌아온다', async () => {
+    const { router } = await renderHome()
+    await userEvent.click(
+      within(card('최근 측정')).getByRole('link', { name: '키·몸무게 기록 추가' }),
+    )
     const sheet = await screen.findByRole('dialog', { name: '키·몸무게 기록' })
+    expect(within(sheet).getByLabelText('측정 날짜')).toHaveValue('2026-10-22')
     await userEvent.click(within(sheet).getByRole('button', { name: '취소' }))
     await waitFor(() => expect(router.state.location.pathname).toBe('/'))
   })
@@ -293,18 +338,101 @@ describe('불러오기 실패', () => {
   })
 })
 
-describe('오늘의 식단·빠른 기록 (T-51)', () => {
-  it('오늘 하루를 조회하고 빈 카드와 빠른 기록을 오늘 주간 카드로 연결한다', async () => {
-    await renderHome()
+describe('오늘의 식단·끼니 추가', () => {
+  const meal = (type: MealEntry['type']): MealEntry => ({
+    id: type,
+    date: '2026-10-22',
+    type,
+    eaten: false,
+    intake: null,
+    memo: null,
+    foods: [{ id: null, name: '쌀죽' }],
+    recipes: [],
+  })
+
+  it('식단이 비어 있으면 본문 버튼으로 끼니를 골라 입력하고 홈으로 돌아온다', async () => {
+    const { router } = await renderHome()
     expect(fetchMealWeek).toHaveBeenCalledWith('2026-10-22', '2026-10-22')
     expect(
-      await within(card('오늘의 식단')).findByRole('link', { name: '오늘 식단 기록하기' }),
-    ).toHaveAttribute('href', '/meals/week?date=2026-10-22')
-    expect(within(card('빠른 기록')).getByRole('link', { name: '식사' })).toHaveAttribute(
-      'href',
-      '/meals/week?date=2026-10-22',
+      within(card('오늘의 식단')).queryByRole('button', { name: '식단 추가' }),
+    ).not.toBeInTheDocument()
+    await userEvent.click(
+      within(card('오늘의 식단')).getByRole('button', { name: '오늘 식단 기록하기' }),
     )
+    const picker = await screen.findByRole('dialog', { name: '끼니 선택' })
+    expect(
+      within(picker)
+        .getAllByRole('link')
+        .map((link) => link.textContent),
+    ).toEqual(['아침', '점심', '저녁', '간식'])
+    await userEvent.click(within(picker).getByRole('link', { name: '점심' }))
+    const sheet = await screen.findByRole('dialog', { name: '식단 기록' })
+    expect(router.state.location.pathname + router.state.location.search).toBe(
+      '/meals/week?date=2026-10-22&meal=lunch&record=new',
+    )
+    await userEvent.click(within(sheet).getByRole('button', { name: '취소' }))
+    await waitFor(() => expect(router.state.location.pathname).toBe('/'))
   })
+
+  it.each([
+    [['breakfast'], ['점심', '저녁', '간식']],
+    [
+      ['breakfast', 'lunch'],
+      ['저녁', '간식'],
+    ],
+    [['breakfast', 'lunch', 'dinner'], ['간식']],
+    [['breakfast', 'lunch', 'dinner', 'snack'], []],
+  ] as const)('기록된 끼니 %s를 제외한 선택지만 표시한다', async (types, remaining) => {
+    vi.mocked(fetchMealWeek).mockResolvedValue(types.map(meal))
+    await renderHome()
+    const button = within(card('오늘의 식단')).queryByRole('button', { name: '식단 추가' })
+    if (remaining.length === 0) {
+      expect(button).not.toBeInTheDocument()
+      expect(within(card('오늘의 식단')).getAllByRole('link')).toHaveLength(4)
+    } else {
+      await userEvent.click(button!)
+      const menu = await screen.findByRole('dialog', { name: '끼니 선택' })
+      expect(
+        within(menu)
+          .getAllByRole('link')
+          .map((link) => link.textContent),
+      ).toEqual([...remaining])
+      await userEvent.click(within(menu).getByRole('button', { name: '취소' }))
+      await waitFor(() => expect(button).toHaveFocus())
+    }
+  })
+
+  it('아침 이후 점심을 저장하면 홈에 반영되고 저녁·간식을 추가할 수 있다', async () => {
+    const entries: MealEntry[] = [meal('breakfast')]
+    vi.mocked(fetchMealWeek).mockImplementation(async () => [...entries])
+    vi.mocked(saveMealEntry).mockImplementation(async (input) => {
+      entries.push({ ...input, id: 'lunch' })
+      return { id: 'lunch', firstTriedFoods: [] }
+    })
+    const { router } = await renderHome()
+    await userEvent.click(within(card('오늘의 식단')).getByRole('button', { name: '식단 추가' }))
+    const picker = await screen.findByRole('dialog', { name: '끼니 선택' })
+    await userEvent.click(within(picker).getByRole('link', { name: '점심' }))
+    const sheet = await screen.findByRole('dialog', { name: '식단 기록' })
+    const result = await within(sheet).findByRole('list', { name: '음식 검색 결과' })
+    await userEvent.click(within(result).getByRole('button', { name: /^쌀/ }))
+    await userEvent.click(within(sheet).getByRole('button', { name: '저장' }))
+    await waitFor(() => expect(router.state.location.pathname).toBe('/'))
+    await screen.findByRole('region', { name: '오늘의 식단' })
+    await within(card('오늘의 식단')).findByRole('link', { name: /점심/ })
+    expect(saveMealEntry).toHaveBeenCalledWith(
+      expect.objectContaining({ date: '2026-10-22', type: 'lunch' }),
+      undefined,
+    )
+    await userEvent.click(within(card('오늘의 식단')).getByRole('button', { name: '식단 추가' }))
+    const remaining = await screen.findByRole('dialog', { name: '끼니 선택' })
+    expect(
+      within(remaining)
+        .getAllByRole('link')
+        .map((link) => link.textContent),
+    ).toEqual(['저녁', '간식'])
+  })
+
   it('계획·먹음 상태, 삭제된 항목 이름과 끼니 순서를 표시하고 수정 주소로 연결한다', async () => {
     vi.mocked(fetchMealWeek).mockResolvedValue([
       {
@@ -338,7 +466,7 @@ describe('오늘의 식단·빠른 기록 (T-51)', () => {
     await renderHome()
     const alert = await screen.findByRole('alert')
     await userEvent.click(within(alert).getByRole('button', { name: '다시 시도' }))
-    await within(card('오늘의 식단')).findByRole('link', { name: '오늘 식단 기록하기' })
+    await within(card('오늘의 식단')).findByRole('button', { name: '오늘 식단 기록하기' })
     expect(fetchMealWeek).toHaveBeenCalledTimes(2)
     expect(fetchSleepLogs).toHaveBeenCalledTimes(1)
   })

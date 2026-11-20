@@ -41,7 +41,7 @@ async function closed(page: Page) {
   await expect(page.getByRole('dialog')).toHaveCount(0)
 }
 
-test('로그인 가드, 첫 등록, 빈 화면과 홈·빠른 기록', async ({ page, browser, data }) => {
+test('로그인 가드, 첫 등록, 빈 화면과 홈 식단 입력', async ({ page, browser, data }) => {
   const anonymous = await browser.newContext()
   try {
     const guest = await anonymous.newPage()
@@ -63,12 +63,16 @@ test('로그인 가드, 첫 등록, 빈 화면과 홈·빠른 기록', async ({ 
   await expect(page).toHaveURL('http://127.0.0.1:4173/')
   await expect(page.getByText(/자동검증아기/).first()).toBeVisible()
   await expect(page.getByText(/개월.*일/).first()).toBeVisible()
+  await page.getByRole('button', { name: '오늘 식단 기록하기', exact: true }).click()
   await page
-    .getByRole('region', { name: '빠른 기록' })
-    .getByRole('link', { name: '식사', exact: true })
+    .getByRole('dialog', { name: '끼니 선택', exact: true })
+    .getByRole('link', { name: '아침', exact: true })
     .click()
-  await expect(page).toHaveURL(new RegExp(`/meals/week\\?date=${day()}`))
-  await expect(page.getByRole('region', { name: labelDate(day()), exact: true })).toBeVisible()
+  await expect(page).toHaveURL(new RegExp(`/meals/week\\?date=${day()}&meal=breakfast&record=new`))
+  const mealEditor = page.getByRole('dialog', { name: '식단 기록', exact: true })
+  await expect(mealEditor).toBeVisible()
+  await mealEditor.getByRole('button', { name: '취소', exact: true }).click()
+  await expect(page).toHaveURL('http://127.0.0.1:4173/')
   await expect.poll(async () => (await exported(data)).data.foods.length).toBeGreaterThan(0)
 })
 
