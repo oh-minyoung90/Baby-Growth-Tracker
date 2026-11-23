@@ -2,7 +2,7 @@ import { test, expect, exported } from './fixtures.ts'
 
 test('쇼핑: 입력·구매 체크·다시 담기·링크 수정·메뉴 설정·삭제', async ({ page, data }) => {
   await page.goto('/')
-  await page.getByRole('link', { name: /쇼핑 목록/ }).click()
+  await page.getByRole('link', { name: /사야 할 물건/ }).click()
   await page.getByRole('link', { name: '살 물건 추가', exact: true }).click()
   await page.getByLabel('물건 이름', { exact: true }).fill('검증 그림책')
   await page.getByRole('radio', { name: '도서', exact: true }).click()

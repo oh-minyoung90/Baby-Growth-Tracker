@@ -18,7 +18,7 @@ const text = (max: number) =>
       `${max}자 이내의 내용을 입력해 주세요`,
     )
 export const BACKUP_LABELS = {
-  shopping_items: '쇼핑 물건',
+  shopping_items: '사야 할 물건',
   children: '아이 정보',
   body_measures: '키·몸무게',
   milestones: '발달 기록',

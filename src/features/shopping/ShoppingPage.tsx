@@ -142,10 +142,10 @@ export function ShoppingPage() {
       </p>
     )
   return (
-    <Page title="쇼핑 목록">
+    <Page title="사야 할 물건">
       <div
         role="tablist"
-        aria-label="쇼핑 목록 종류"
+        aria-label="사야 할 물건 종류"
         className="grid grid-cols-2 gap-1 rounded-button bg-soft p-1"
       >
         {[

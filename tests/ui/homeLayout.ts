@@ -2,7 +2,7 @@ import assert from 'node:assert/strict'
 import type { Page } from '@playwright/test'
 import { fixtureChild, prepareFixturePage } from './fixture.ts'
 
-const sections = ['오늘의 식단', '오늘의 기록', '어젯밤 수면', '쇼핑 목록', '최근 측정']
+const sections = ['오늘의 식단', '오늘의 기록', '어젯밤 수면', '사야 할 물건', '최근 측정']
 
 /** 가명 데이터: 긴 음식 이름·발달 기록이 있어도 세로 카드와 버튼이 넘치지 않아야 한다. */
 export async function prepareHomePage(page: Page, empty = false, partialMeals = false) {
@@ -111,7 +111,7 @@ export async function prepareHomePage(page: Page, empty = false, partialMeals = 
   else await page.getByText('10시간 30분', { exact: true }).waitFor()
   if (!empty)
     await page
-      .getByRole('region', { name: '쇼핑 목록', exact: true })
+      .getByRole('region', { name: '사야 할 물건', exact: true })
       .getByRole('link', { name: '아기 내복', exact: true })
       .waitFor()
   await page.evaluate(() => document.fonts.ready)
@@ -185,7 +185,7 @@ export async function assertHomeLayout(page: Page, empty = false) {
 export async function exerciseHomeLayout(page: Page, empty = false, partialMeals = false) {
   await prepareHomePage(page, empty, partialMeals)
   await assertHomeLayout(page, empty)
-  const shopping = page.getByRole('region', { name: '쇼핑 목록', exact: true })
+  const shopping = page.getByRole('region', { name: '사야 할 물건', exact: true })
   assert.equal(await shopping.getByRole('listitem').count(), empty ? 0 : 2)
   assert.equal(await shopping.getByText('구매 완료한 가명 물건', { exact: true }).count(), 0)
   assert.equal(await shopping.getByText('보관 전용 가명 물건', { exact: true }).count(), 0)

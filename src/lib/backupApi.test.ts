@@ -96,7 +96,7 @@ describe('백업 형식·파일·API', () => {
   })
 })
 
-it('v1 백업은 빈 쇼핑 목록을 포함한 v2로 변환하고 v2 누락·위험한 링크는 거부한다', () => {
+it('v1 백업은 비어 있는 물건 목록을 포함한 v2로 변환하고 v2 누락·위험한 링크는 거부한다', () => {
   const old = structuredClone(exampleBackup()) as unknown as {
     schema_version: number
     data: Record<string, unknown>

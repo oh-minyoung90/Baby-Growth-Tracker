@@ -264,7 +264,7 @@ describe('카드별 추가·수정 (FR-HOME-05)', () => {
     expect(screen.queryByRole('region', { name: '빠른 기록' })).not.toBeInTheDocument()
     expect(
       screen.getAllByRole('heading', { level: 2 }).map((heading) => heading.textContent),
-    ).toEqual(['오늘의 식단', '오늘의 기록', '어젯밤 수면', '쇼핑 목록', '최근 측정'])
+    ).toEqual(['오늘의 식단', '오늘의 기록', '어젯밤 수면', '사야 할 물건', '최근 측정'])
     expect(
       within(card('오늘의 기록')).getByRole('button', { name: '성장 기록 추가' }),
     ).toBeVisible()
@@ -479,9 +479,9 @@ describe('오늘의 식단·끼니 추가', () => {
 // 쇼핑도 다른 요약과 같은 카드로 표시하되, 아직 구매하지 않은 물건 이름만 보여 준다.
 it('빈 쇼핑 카드의 제목 아래 링크로 목록을 연다', async () => {
   const { router } = await renderHome()
-  const region = card('쇼핑 목록')
-  expect(within(region).getByRole('heading', { name: '쇼핑 목록' })).toBeVisible()
-  await userEvent.click(within(region).getByRole('link', { name: '쇼핑 목록 보기' }))
+  const region = card('사야 할 물건')
+  expect(within(region).getByRole('heading', { name: '사야 할 물건' })).toBeVisible()
+  await userEvent.click(within(region).getByRole('link', { name: '사야 할 물건 보기' }))
   await waitFor(() => expect(router.state.location.pathname).toBe('/shopping'))
 })
 it('쇼핑 카드에는 개수 대신 모든 미구매 물건 이름과 수정 링크를 보여 준다', async () => {
@@ -499,15 +499,14 @@ it('쇼핑 카드에는 개수 대신 모든 미구매 물건 이름과 수정 �
     { ...base, id: 's3', name: '보관 전용 물건', status: 'saved' },
   ])
   await renderHome()
-  const region = within(card('쇼핑 목록'))
+  const region = within(card('사야 할 물건'))
   const list = within(await region.findByRole('list'))
   expect(list.getAllByRole('link').map((link) => link.textContent)).toEqual(['그림책', '아기 내복'])
   expect(list.getByRole('link', { name: '그림책' })).toHaveAttribute('href', '/shopping/s1/edit')
   expect(region.queryByText('구매 완료한 물건')).not.toBeInTheDocument()
   expect(region.queryByText('보관 전용 물건')).not.toBeInTheDocument()
   expect(region.queryByText(/살 물건.*개/)).not.toBeInTheDocument()
-  expect(within(card('쇼핑 목록')).getByRole('link', { name: '쇼핑 목록 보기' })).toHaveAttribute(
-    'href',
-    '/shopping',
-  )
+  expect(
+    within(card('사야 할 물건')).getByRole('link', { name: '사야 할 물건 보기' }),
+  ).toHaveAttribute('href', '/shopping')
 })

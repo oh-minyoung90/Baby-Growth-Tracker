@@ -109,7 +109,7 @@ async function open(path = '/shopping') {
         ? '물건 수정'
         : path === '/settings'
           ? '설정'
-          : '쇼핑 목록',
+          : '사야 할 물건',
   })
   return result
 }

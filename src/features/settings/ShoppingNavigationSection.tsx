@@ -30,7 +30,7 @@ export function ShoppingNavigationSection() {
       <p className="text-[13px] text-muted-foreground">
         {enabled
           ? '모바일에서 쇼핑을 켜면 설정은 화면 오른쪽 위 톱니바퀴로 이동해요.'
-          : '꺼도 홈의 쇼핑 목록 카드에서 열 수 있어요.'}{' '}
+          : '꺼도 홈의 사야 할 물건 카드에서 열 수 있어요.'}{' '}
         선택은 이 브라우저에 저장돼요.
       </p>
       <p className="hidden text-[13px] text-muted-foreground md:block">
@@ -41,7 +41,7 @@ export function ShoppingNavigationSection() {
         className="inline-flex min-h-11 items-center gap-2 text-sm font-bold text-soft-text"
       >
         <ShoppingBag className="size-5" aria-hidden />
-        쇼핑 목록 열기
+        사야 할 물건 열기
         <ChevronRight className="size-4" aria-hidden />
       </Link>
     </section>

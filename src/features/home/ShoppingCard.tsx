@@ -7,7 +7,7 @@ export function ShoppingCard() {
   const query = useShoppingItems()
   const items = query.data?.filter((item) => item.status === 'pending') ?? []
   return (
-    <HomeCard title="쇼핑 목록" icon={ShoppingBag}>
+    <HomeCard title="사야 할 물건" icon={ShoppingBag}>
       {query.isPending ? (
         <p className="text-sm text-muted-foreground">불러오는 중…</p>
       ) : query.isError ? (
@@ -31,7 +31,7 @@ export function ShoppingCard() {
         to="/shopping"
         className="flex min-h-11 items-center gap-0.5 self-start text-sm font-bold text-soft-text outline-none hover:underline focus-visible:underline"
       >
-        쇼핑 목록 보기
+        사야 할 물건 보기
         <ChevronRight className="size-4" aria-hidden />
       </Link>
     </HomeCard>
