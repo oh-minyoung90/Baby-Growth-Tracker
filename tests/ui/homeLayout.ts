@@ -2,14 +2,53 @@ import assert from 'node:assert/strict'
 import type { Page } from '@playwright/test'
 import { fixtureChild, prepareFixturePage } from './fixture.ts'
 
-const sections = ['쇼핑 목록', '오늘의 식단', '오늘의 기록', '어젯밤 수면', '최근 측정']
+const sections = ['오늘의 식단', '오늘의 기록', '어젯밤 수면', '쇼핑 목록', '최근 측정']
 
 /** 가명 데이터: 긴 음식 이름·발달 기록이 있어도 세로 카드와 버튼이 넘치지 않아야 한다. */
 export async function prepareHomePage(page: Page, empty = false, partialMeals = false) {
   await page.clock.setFixedTime(new Date('2026-11-18T09:00:00+09:00'))
   await prepareFixturePage(page, '/', {
     '/rest/v1/children': fixtureChild,
-    '/rest/v1/shopping_items': [],
+    '/rest/v1/shopping_items': empty
+      ? []
+      : [
+          {
+            id: 'shopping-long',
+            name: 'LongShoppingItem'.repeat(5),
+            category: 'books',
+            url: null,
+            memo: null,
+            is_frequent: true,
+            status: 'pending',
+          },
+          {
+            id: 'shopping-clothes',
+            name: '아기 내복',
+            category: 'clothing',
+            url: null,
+            memo: null,
+            is_frequent: false,
+            status: 'pending',
+          },
+          {
+            id: 'shopping-completed',
+            name: '구매 완료한 가명 물건',
+            category: 'etc',
+            url: null,
+            memo: null,
+            is_frequent: false,
+            status: 'purchased',
+          },
+          {
+            id: 'shopping-saved',
+            name: '보관 전용 가명 물건',
+            category: 'etc',
+            url: null,
+            memo: null,
+            is_frequent: true,
+            status: 'saved',
+          },
+        ],
     '/rest/v1/milestones': empty
       ? []
       : [
@@ -70,6 +109,11 @@ export async function prepareHomePage(page: Page, empty = false, partialMeals = 
   await page.getByRole('heading', { name: /^가명아기/ }).waitFor()
   if (empty) await page.getByRole('button', { name: '오늘 성장 기록하기', exact: true }).waitFor()
   else await page.getByText('10시간 30분', { exact: true }).waitFor()
+  if (!empty)
+    await page
+      .getByRole('region', { name: '쇼핑 목록', exact: true })
+      .getByRole('link', { name: '아기 내복', exact: true })
+      .waitFor()
   await page.evaluate(() => document.fonts.ready)
 }
 
@@ -114,14 +158,14 @@ export async function assertHomeLayout(page: Page, empty = false) {
           errors.push('카드 제목·동작 버튼 겹침')
       }
       if (!empty) {
-        const total = cards[3].querySelector('dd')!
+        const total = cards[2].querySelector('dd')!
         const height = cards[4].querySelector('dd')!
         for (const value of [total, height]) {
           const style = getComputedStyle(value)
           if (style.fontSize !== '14px' || style.fontWeight !== '700')
             errors.push('수면·측정 값 크기 불일치')
         }
-        if (cards[3].querySelector('dt')?.textContent !== '총') errors.push('수면 총 라벨 누락')
+        if (cards[2].querySelector('dt')?.textContent !== '총') errors.push('수면 총 라벨 누락')
       }
       const nav = [...document.querySelectorAll<HTMLElement>('nav[aria-label="주 메뉴"]')].find(
         (element) => getComputedStyle(element).display !== 'none',
@@ -141,6 +185,10 @@ export async function assertHomeLayout(page: Page, empty = false) {
 export async function exerciseHomeLayout(page: Page, empty = false, partialMeals = false) {
   await prepareHomePage(page, empty, partialMeals)
   await assertHomeLayout(page, empty)
+  const shopping = page.getByRole('region', { name: '쇼핑 목록', exact: true })
+  assert.equal(await shopping.getByRole('listitem').count(), empty ? 0 : 2)
+  assert.equal(await shopping.getByText('구매 완료한 가명 물건', { exact: true }).count(), 0)
+  assert.equal(await shopping.getByText('보관 전용 가명 물건', { exact: true }).count(), 0)
   assert.equal(await page.getByRole('region', { name: '빠른 기록' }).count(), 0)
   const growth = page.getByRole('button', {
     name: empty ? '오늘 성장 기록하기' : '성장 기록 추가',

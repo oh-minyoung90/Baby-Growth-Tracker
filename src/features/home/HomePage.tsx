@@ -46,7 +46,7 @@ const HEADER_ACTION_CLASS =
   'inline-flex min-h-11 min-w-11 shrink-0 items-center justify-center gap-1 rounded-button px-2 text-sm font-bold text-soft-text outline-none hover:bg-soft focus-visible:ring-3 focus-visible:ring-ring/40'
 
 /**
- * 홈 (SCR-03): 쇼핑 → 식단 → 오늘 기록 → 어젯밤 수면 → 최근 측정.
+ * 홈 (SCR-03): 식단 → 오늘 기록 → 어젯밤 수면 → 쇼핑 → 최근 측정.
  * 모바일·PC 모두 한 열로 배치한다 (docs/디자인.md 5.1).
  */
 export function HomePage() {
@@ -81,10 +81,10 @@ export function HomePage() {
         />
       )}
 
-      <ShoppingCard />
       <MealCard query={meals} today={today} />
       <TodayCard query={milestones} today={today} />
       <SleepCard query={sleepLogs} yesterday={yesterdayString()} />
+      <ShoppingCard />
       <MeasureCard query={measures} />
     </Page>
   )

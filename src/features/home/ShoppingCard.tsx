@@ -5,17 +5,27 @@ import { HomeCard } from './HomeCard'
 
 export function ShoppingCard() {
   const query = useShoppingItems()
-  const count = query.data?.filter((item) => item.status === 'pending').length ?? 0
+  const items = query.data?.filter((item) => item.status === 'pending') ?? []
   return (
     <HomeCard title="쇼핑 목록" icon={ShoppingBag}>
       {query.isPending ? (
         <p className="text-sm text-muted-foreground">불러오는 중…</p>
       ) : query.isError ? (
         <p className="text-sm text-muted-foreground">목록을 불러오지 못했어요</p>
-      ) : count > 0 ? (
-        <p className="text-sm text-muted-foreground">
-          살 물건 <strong className="font-bold text-foreground">{count}개</strong>
-        </p>
+      ) : items.length > 0 ? (
+        <ul className="flex min-w-0 flex-col gap-2">
+          {items.map((item) => (
+            <li key={item.id} className="min-w-0">
+              <Link
+                to={`/shopping/${item.id}/edit`}
+                className="flex min-h-11 min-w-0 items-center justify-between gap-2 rounded-input py-1.5 text-[15px] font-medium outline-none hover:bg-muted focus-visible:bg-muted"
+              >
+                <span className="min-w-0 break-words">{item.name}</span>
+                <ChevronRight className="size-4 shrink-0 text-muted-foreground" aria-hidden />
+              </Link>
+            </li>
+          ))}
+        </ul>
       ) : null}
       <Link
         to="/shopping"
