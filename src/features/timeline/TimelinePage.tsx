@@ -75,22 +75,10 @@ export function TimelinePage() {
       <div className="flex flex-col gap-2.5">
         <div className="flex items-center justify-between gap-3">
           <h2 className="text-sm font-medium text-muted-foreground">누적 기록</h2>
-          <div className="flex items-center gap-3">
-            <Button
-              type="button"
-              variant="link"
-              size="sm"
-              className="h-11 px-0 font-medium underline"
-              aria-pressed={filter.type === null}
-              onClick={() => setFilter({ ...filter, type: null })}
-            >
-              전체 보기
-            </Button>
-            <AddRecordButton
-              label="발달 기록 추가"
-              onClick={() => void navigate(newMilestonePath(filter))}
-            />
-          </div>
+          <AddRecordButton
+            label="발달 기록 추가"
+            onClick={() => void navigate(newMilestonePath(filter))}
+          />
         </div>
         <TimelineTypeCards
           counts={countTimelineRecords(milestones.data ?? [], foods.data ?? [])}

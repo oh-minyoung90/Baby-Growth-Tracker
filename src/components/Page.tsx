@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react'
 import { usePageTitle } from '@/lib/usePageTitle'
+import { ShoppingSettingsLink } from './ShoppingSettingsLink'
 import { cn } from '@/lib/utils'
 
 /**
@@ -38,7 +39,10 @@ export function Page({
             <p className="text-sm text-muted-foreground md:text-[15px]">{description}</p>
           )}
         </div>
-        {actions}
+        <div className="flex shrink-0 items-center gap-1">
+          {actions}
+          <ShoppingSettingsLink />
+        </div>
       </header>
       {children}
     </div>

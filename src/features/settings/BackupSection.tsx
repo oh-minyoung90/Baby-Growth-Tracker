@@ -90,7 +90,7 @@ export function BackupSection({ onBusyChange }: { onBusyChange?: (busy: boolean)
       </h2>
       <div className="flex min-w-0 flex-col gap-4 rounded-card border bg-surface p-4 md:p-5">
         <p className="text-sm text-muted-foreground">
-          아이 정보·성장·수면·음식·식단·레시피를 JSON 파일 하나로 보관해요.
+          아이 정보·성장·수면·음식·식단·레시피·쇼핑을 JSON 파일 하나로 보관해요.
         </p>
         <p className="text-sm text-muted-foreground">
           사진은 파일 경로만 포함돼요. 사진 파일이 저장소에 남아 있으면 다시 연결되고, 없으면 사진

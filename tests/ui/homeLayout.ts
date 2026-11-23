@@ -2,13 +2,53 @@ import assert from 'node:assert/strict'
 import type { Page } from '@playwright/test'
 import { fixtureChild, prepareFixturePage } from './fixture.ts'
 
-const sections = ['오늘의 식단', '오늘의 기록', '어젯밤 수면', '최근 측정']
+const sections = ['오늘의 식단', '오늘의 기록', '어젯밤 수면', '사야 할 물건', '최근 측정']
 
 /** 가명 데이터: 긴 음식 이름·발달 기록이 있어도 세로 카드와 버튼이 넘치지 않아야 한다. */
 export async function prepareHomePage(page: Page, empty = false, partialMeals = false) {
   await page.clock.setFixedTime(new Date('2026-11-18T09:00:00+09:00'))
   await prepareFixturePage(page, '/', {
     '/rest/v1/children': fixtureChild,
+    '/rest/v1/shopping_items': empty
+      ? []
+      : [
+          {
+            id: 'shopping-long',
+            name: 'LongShoppingItem'.repeat(5),
+            category: 'books',
+            url: null,
+            memo: null,
+            is_frequent: true,
+            status: 'pending',
+          },
+          {
+            id: 'shopping-clothes',
+            name: '아기 내복',
+            category: 'clothing',
+            url: null,
+            memo: null,
+            is_frequent: false,
+            status: 'pending',
+          },
+          {
+            id: 'shopping-completed',
+            name: '구매 완료한 가명 물건',
+            category: 'etc',
+            url: null,
+            memo: null,
+            is_frequent: false,
+            status: 'purchased',
+          },
+          {
+            id: 'shopping-saved',
+            name: '보관 전용 가명 물건',
+            category: 'etc',
+            url: null,
+            memo: null,
+            is_frequent: true,
+            status: 'saved',
+          },
+        ],
     '/rest/v1/milestones': empty
       ? []
       : [
@@ -69,6 +109,10 @@ export async function prepareHomePage(page: Page, empty = false, partialMeals = 
   await page.getByRole('heading', { name: /^가명아기/ }).waitFor()
   if (empty) await page.getByRole('button', { name: '오늘 성장 기록하기', exact: true }).waitFor()
   else await page.getByText('10시간 30분', { exact: true }).waitFor()
+  await page
+    .getByRole('region', { name: '사야 할 물건', exact: true })
+    .getByRole('link', { name: `사야 할 물건 보기, 살 물건 ${empty ? 0 : 2}개`, exact: true })
+    .waitFor()
   await page.evaluate(() => document.fonts.ready)
 }
 
@@ -94,7 +138,7 @@ export async function assertHomeLayout(page: Page, empty = false) {
         const style = getComputedStyle(title)
         if (style.fontSize !== '16px' || style.fontWeight !== '700' || style.lineHeight !== '24px')
           errors.push(`${sections[i]}: 제목 규격 불일치`)
-        if (i < 4) {
+        if (i < 5) {
           const icon = title.querySelector('svg')!.getBoundingClientRect()
           if (icon.width !== 20 || icon.height !== 20)
             errors.push(`${sections[i]}: 아이콘 규격 불일치`)
@@ -114,7 +158,7 @@ export async function assertHomeLayout(page: Page, empty = false) {
       }
       if (!empty) {
         const total = cards[2].querySelector('dd')!
-        const height = cards[3].querySelector('dd')!
+        const height = cards[4].querySelector('dd')!
         for (const value of [total, height]) {
           const style = getComputedStyle(value)
           if (style.fontSize !== '14px' || style.fontWeight !== '700')
@@ -127,7 +171,7 @@ export async function assertHomeLayout(page: Page, empty = false) {
       )!
       if (
         [...nav.querySelectorAll('a')].map((link) => link.textContent).join('|') !==
-        '홈|식사|성장|수면|설정'
+        (viewport >= 768 ? '홈|식사|성장|수면|쇼핑|설정' : '홈|식사|성장|수면|설정')
       )
         errors.push('주 메뉴 순서 불일치')
       return errors
@@ -140,6 +184,12 @@ export async function assertHomeLayout(page: Page, empty = false) {
 export async function exerciseHomeLayout(page: Page, empty = false, partialMeals = false) {
   await prepareHomePage(page, empty, partialMeals)
   await assertHomeLayout(page, empty)
+  const shopping = page.getByRole('region', { name: '사야 할 물건', exact: true })
+  assert.equal(await shopping.getByRole('listitem').count(), 0)
+  assert.equal(await shopping.getByText(`살 물건 ${empty ? 0 : 2}개`, { exact: true }).count(), 1)
+  assert.equal(await shopping.getByText('아기 내복', { exact: true }).count(), 0)
+  assert.equal(await shopping.getByText('구매 완료한 가명 물건', { exact: true }).count(), 0)
+  assert.equal(await shopping.getByText('보관 전용 가명 물건', { exact: true }).count(), 0)
   assert.equal(await page.getByRole('region', { name: '빠른 기록' }).count(), 0)
   const growth = page.getByRole('button', {
     name: empty ? '오늘 성장 기록하기' : '성장 기록 추가',

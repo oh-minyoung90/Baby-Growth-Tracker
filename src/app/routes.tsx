@@ -15,6 +15,8 @@ import { MilestoneFormPage } from '@/features/milestone/MilestoneFormPage'
 import { RecipeDetailPage } from '@/features/recipe/RecipeDetailPage'
 import { RecipeFormPage } from '@/features/recipe/RecipeFormPage'
 import { RecipesPage } from '@/features/recipe/RecipesPage'
+import { ShoppingPage } from '@/features/shopping/ShoppingPage'
+import { ShoppingFormPage } from '@/features/shopping/ShoppingFormPage'
 import { SettingsPage } from '@/features/settings/SettingsPage'
 import { SleepFormPage } from '@/features/sleep/SleepFormPage'
 import { SleepPage } from '@/features/sleep/SleepPage'
@@ -112,6 +114,17 @@ export const routes: RouteObject[] = [
                       { path: 'recipes', element: <RecipesPage /> },
                       { path: 'recipes/:id', element: <RecipeDetailPage /> },
                     ],
+                  },
+                  { path: 'shopping', element: <ShoppingPage /> },
+                  {
+                    path: 'shopping/new',
+                    element: <ShoppingFormPage />,
+                    handle: { hideBottomNav: true } satisfies AppRouteHandle,
+                  },
+                  {
+                    path: 'shopping/:id/edit',
+                    element: <ShoppingFormPage />,
+                    handle: { hideBottomNav: true } satisfies AppRouteHandle,
                   },
                   { path: 'settings', element: <SettingsPage /> },
                   { path: 'settings/child', element: <ChildEditPage /> },

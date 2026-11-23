@@ -2,11 +2,12 @@ import type { Backup } from '../lib/backupSchema'
 export const BACKUP_TEST_OWNER = '00000000-0000-4000-8000-000000000001'
 export function emptyBackup(ownerId = BACKUP_TEST_OWNER): Backup {
   return {
-    schema_version: 1,
+    schema_version: 2,
     exported_at: '2026-10-02T12:00:00Z',
     source_owner_id: ownerId,
     data: {
       children: [],
+      shopping_items: [],
       body_measures: [],
       milestones: [],
       sleep_logs: [],
@@ -124,6 +125,18 @@ export function exampleBackup(ownerId = BACKUP_TEST_OWNER): Backup {
       reaction_date: null,
       symptom_note: null,
       check_note: null,
+    },
+  ]
+  backup.data.shopping_items = [
+    {
+      id: id(),
+      name: '가명 그림책',
+      category: 'books',
+      url: 'https://example.com/book',
+      memo: '보드북',
+      is_frequent: true,
+      status: 'purchased',
+      ...stamp,
     },
   ]
   return backup

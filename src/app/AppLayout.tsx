@@ -1,7 +1,8 @@
 import { NavLink, Outlet, useMatches } from 'react-router'
 import { Sprout } from 'lucide-react'
 import { cn } from '@/lib/utils'
-import { NAV_ITEMS } from './navItems'
+import { useShoppingNavigation } from '@/lib/shoppingNavigation'
+import { NAV_ITEMS, SHOPPING_NAV_ITEM } from './navItems'
 
 /** 라우트에 붙이는 표시 (routes.tsx의 handle) */
 export interface AppRouteHandle {
@@ -50,33 +51,37 @@ function SideNav() {
           Tracker
         </strong>
       </div>
-      {NAV_ITEMS.map(({ to, label, icon: Icon, end }) => (
-        <NavLink
-          key={to}
-          to={to}
-          end={end}
-          className={({ isActive }) =>
-            cn(
-              'flex h-12 items-center gap-3 rounded-button px-3.5 text-[15px] font-medium text-muted-foreground transition-colors hover:bg-muted',
-              isActive && 'bg-soft font-bold text-primary hover:bg-soft',
-            )
-          }
-        >
-          <Icon className="size-5.5" aria-hidden />
-          {label}
-        </NavLink>
-      ))}
+      {[...NAV_ITEMS.slice(0, 4), SHOPPING_NAV_ITEM, NAV_ITEMS[4]].map(
+        ({ to, label, icon: Icon, end }) => (
+          <NavLink
+            key={to}
+            to={to}
+            end={end}
+            className={({ isActive }) =>
+              cn(
+                'flex h-12 items-center gap-3 rounded-button px-3.5 text-[15px] font-medium text-muted-foreground transition-colors hover:bg-muted',
+                isActive && 'bg-soft font-bold text-primary hover:bg-soft',
+              )
+            }
+          >
+            <Icon className="size-5.5" aria-hidden />
+            {label}
+          </NavLink>
+        ),
+      )}
     </nav>
   )
 }
 
 function BottomNav() {
+  const [shopping] = useShoppingNavigation()
+  const items = shopping ? [...NAV_ITEMS.slice(0, 4), SHOPPING_NAV_ITEM] : NAV_ITEMS
   return (
     <nav
       aria-label="주 메뉴"
       className="fixed inset-x-0 bottom-0 z-40 grid h-[calc(76px+env(safe-area-inset-bottom))] grid-cols-5 border-t bg-surface px-1 pt-1.5 pb-[calc(10px+env(safe-area-inset-bottom))] md:hidden"
     >
-      {NAV_ITEMS.map(({ to, label, icon: Icon, end }) => (
+      {items.map(({ to, label, icon: Icon, end }) => (
         <NavLink
           key={to}
           to={to}

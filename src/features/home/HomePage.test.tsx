@@ -1,3 +1,4 @@
+import { fetchShoppingItems } from '@/lib/shoppingApi'
 import { fetchMealWeek, fetchMealEntry, saveMealEntry, type MealEntry } from '@/lib/mealApi'
 import { fetchFoods } from '@/lib/foodApi'
 import { fetchRecipes } from '@/lib/recipeApi'
@@ -11,6 +12,8 @@ import { fetchMyChild } from '@/lib/childApi'
 import { fetchMilestone, fetchMilestones, type Milestone } from '@/lib/milestoneApi'
 import { fetchSleepLogs, type SleepLog } from '@/lib/sleepApi'
 import { renderApp } from '@/test/renderApp'
+
+vi.mock('@/lib/shoppingApi', () => ({ fetchShoppingItems: vi.fn() }))
 
 // 홈 (T-28, SCR-03, FR-HOME-01~06). 테스트 데이터는 가명이다.
 
@@ -98,6 +101,7 @@ beforeEach(() => {
   vi.useFakeTimers({ toFake: ['Date'] })
   vi.setSystemTime(new Date(2026, 9, 22, 9, 0))
   vi.resetAllMocks()
+  vi.mocked(fetchShoppingItems).mockResolvedValue([])
   vi.mocked(fetchMealWeek).mockResolvedValue([])
   vi.mocked(fetchMealEntry).mockResolvedValue(null)
   vi.mocked(fetchRecipes).mockResolvedValue([])
@@ -255,12 +259,12 @@ describe('최근 측정 (FR-HOME-04)', () => {
 })
 
 describe('카드별 추가·수정 (FR-HOME-05)', () => {
-  it('빠른 기록을 제거하고 카드 4개를 승인된 순서로 보여 준다', async () => {
+  it('빠른 기록을 제거하고 카드 5개를 승인된 순서로 보여 준다', async () => {
     await renderHome()
     expect(screen.queryByRole('region', { name: '빠른 기록' })).not.toBeInTheDocument()
     expect(
       screen.getAllByRole('heading', { level: 2 }).map((heading) => heading.textContent),
-    ).toEqual(['오늘의 식단', '오늘의 기록', '어젯밤 수면', '최근 측정'])
+    ).toEqual(['오늘의 식단', '오늘의 기록', '어젯밤 수면', '사야 할 물건', '최근 측정'])
     expect(
       within(card('오늘의 기록')).getByRole('button', { name: '성장 기록 추가' }),
     ).toBeVisible()
@@ -470,4 +474,39 @@ describe('오늘의 식단·끼니 추가', () => {
     expect(fetchMealWeek).toHaveBeenCalledTimes(2)
     expect(fetchSleepLogs).toHaveBeenCalledTimes(1)
   })
+})
+
+// 홈은 미구매 개수만 요약하고 상세는 쇼핑 화면에서 확인한다.
+it('빈 쇼핑 카드의 제목 아래 링크로 목록을 연다', async () => {
+  const { router } = await renderHome()
+  const region = card('사야 할 물건')
+  expect(within(region).getByRole('heading', { name: '사야 할 물건' })).toBeVisible()
+  await userEvent.click(within(region).getByRole('link', { name: /사야 할 물건 보기/ }))
+  await waitFor(() => expect(router.state.location.pathname).toBe('/shopping'))
+})
+it('쇼핑 카드는 미구매 개수만 표시하고 상세 목록으로 연결한다', async () => {
+  const base = {
+    name: '가명 물건',
+    category: 'books' as const,
+    url: null,
+    memo: null,
+    frequent: true,
+  }
+  vi.mocked(fetchShoppingItems).mockResolvedValue([
+    { ...base, id: 's1', name: '그림책', status: 'pending' },
+    { ...base, id: 's4', name: '아기 내복', status: 'pending' },
+    { ...base, id: 's2', name: '구매 완료한 물건', status: 'purchased' },
+    { ...base, id: 's3', name: '보관 전용 물건', status: 'saved' },
+  ])
+  await renderHome()
+  const region = within(card('사야 할 물건'))
+  expect(await region.findByText('살 물건 2개')).toBeVisible()
+  expect(region.queryByRole('list')).not.toBeInTheDocument()
+  expect(region.queryByText('그림책')).not.toBeInTheDocument()
+  expect(region.queryByText('아기 내복')).not.toBeInTheDocument()
+  expect(region.queryByText('구매 완료한 물건')).not.toBeInTheDocument()
+  expect(region.queryByText('보관 전용 물건')).not.toBeInTheDocument()
+  expect(
+    within(card('사야 할 물건')).getByRole('link', { name: /사야 할 물건 보기/ }),
+  ).toHaveAttribute('href', '/shopping')
 })

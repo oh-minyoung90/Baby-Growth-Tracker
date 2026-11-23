@@ -1,4 +1,5 @@
 import { z } from 'zod'
+import { isShoppingUrl } from './shoppingTypes'
 import { isValidDateString } from '../domain/date'
 export const BACKUP_MAX_BYTES = 10 * 1024 * 1024
 export const BACKUP_MAX_ROWS = 20000
@@ -17,6 +18,7 @@ const text = (max: number) =>
       `${max}자 이내의 내용을 입력해 주세요`,
     )
 export const BACKUP_LABELS = {
+  shopping_items: '사야 할 물건',
   children: '아이 정보',
   body_measures: '키·몸무게',
   milestones: '발달 기록',
@@ -33,11 +35,27 @@ export const BACKUP_LABELS = {
 export type BackupTable = keyof typeof BACKUP_LABELS
 export const backupSchema = z
   .object({
-    schema_version: z.literal(1),
+    schema_version: z.literal(2),
     exported_at: time,
     source_owner_id: uuid,
     data: z
       .object({
+        shopping_items: z.array(
+          z
+            .object({
+              id: uuid,
+              name: text(80),
+              category: z.enum(['food', 'clothing', 'supplies', 'toys', 'books', 'etc']),
+              url: z.string().max(2048).refine(isShoppingUrl).nullable(),
+              memo: z.string().max(500).nullable(),
+              is_frequent: z.boolean(),
+              status: z.enum(['pending', 'purchased', 'saved']),
+              created_at: time,
+              updated_at: time,
+            })
+            .strict()
+            .refine((row) => row.status !== 'saved' || row.is_frequent),
+        ),
         children: z.array(
           z
             .object({
