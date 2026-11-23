@@ -109,11 +109,10 @@ export async function prepareHomePage(page: Page, empty = false, partialMeals = 
   await page.getByRole('heading', { name: /^가명아기/ }).waitFor()
   if (empty) await page.getByRole('button', { name: '오늘 성장 기록하기', exact: true }).waitFor()
   else await page.getByText('10시간 30분', { exact: true }).waitFor()
-  if (!empty)
-    await page
-      .getByRole('region', { name: '사야 할 물건', exact: true })
-      .getByRole('link', { name: '아기 내복', exact: true })
-      .waitFor()
+  await page
+    .getByRole('region', { name: '사야 할 물건', exact: true })
+    .getByRole('link', { name: `사야 할 물건 보기, 살 물건 ${empty ? 0 : 2}개`, exact: true })
+    .waitFor()
   await page.evaluate(() => document.fonts.ready)
 }
 
@@ -186,7 +185,9 @@ export async function exerciseHomeLayout(page: Page, empty = false, partialMeals
   await prepareHomePage(page, empty, partialMeals)
   await assertHomeLayout(page, empty)
   const shopping = page.getByRole('region', { name: '사야 할 물건', exact: true })
-  assert.equal(await shopping.getByRole('listitem').count(), empty ? 0 : 2)
+  assert.equal(await shopping.getByRole('listitem').count(), 0)
+  assert.equal(await shopping.getByText(`살 물건 ${empty ? 0 : 2}개`, { exact: true }).count(), 1)
+  assert.equal(await shopping.getByText('아기 내복', { exact: true }).count(), 0)
   assert.equal(await shopping.getByText('구매 완료한 가명 물건', { exact: true }).count(), 0)
   assert.equal(await shopping.getByText('보관 전용 가명 물건', { exact: true }).count(), 0)
   assert.equal(await page.getByRole('region', { name: '빠른 기록' }).count(), 0)
