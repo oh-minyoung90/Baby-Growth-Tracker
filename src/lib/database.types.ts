@@ -478,6 +478,45 @@ export type Database = {
           },
         ]
       }
+      shopping_items: {
+        Row: {
+          category: string
+          created_at: string
+          id: string
+          is_frequent: boolean
+          memo: string | null
+          name: string
+          owner_id: string
+          status: string
+          updated_at: string
+          url: string | null
+        }
+        Insert: {
+          category?: string
+          created_at?: string
+          id?: string
+          is_frequent?: boolean
+          memo?: string | null
+          name: string
+          owner_id?: string
+          status?: string
+          updated_at?: string
+          url?: string | null
+        }
+        Update: {
+          category?: string
+          created_at?: string
+          id?: string
+          is_frequent?: boolean
+          memo?: string | null
+          name?: string
+          owner_id?: string
+          status?: string
+          updated_at?: string
+          url?: string | null
+        }
+        Relationships: []
+      }
       sleep_logs: {
         Row: {
           bed_time: string | null

@@ -1,3 +1,4 @@
+import { BACKUP_LABELS } from './backupSchema'
 import { RECIPE_PHOTO_BUCKET } from './photoTypes'
 import type { SupabaseClient } from '@supabase/supabase-js'
 import type { Database } from './database.types'
@@ -76,7 +77,7 @@ export async function deleteAllDataFor(supabase: SupabaseClient<Database>): Prom
           rows &&
           typeof rows === 'object' &&
           !Array.isArray(rows) &&
-          Object.keys(rows).length === 12 &&
+          Object.keys(rows).length === Object.keys(BACKUP_LABELS).length &&
           Object.values(rows).every((value) => Array.isArray(value) && value.length === 0)
         )
           return

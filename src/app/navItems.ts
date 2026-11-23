@@ -1,4 +1,4 @@
-import { House, Moon, Settings, Sprout, Utensils, type LucideIcon } from 'lucide-react'
+import { House, Moon, Settings, ShoppingBag, Sprout, Utensils, type LucideIcon } from 'lucide-react'
 
 export interface NavItem {
   to: string
@@ -16,3 +16,5 @@ export const NAV_ITEMS: NavItem[] = [
   { to: '/sleep', label: '수면', icon: Moon },
   { to: '/settings', label: '설정', icon: Settings },
 ]
+
+export const SHOPPING_NAV_ITEM: NavItem = { to: '/shopping', label: '쇼핑', icon: ShoppingBag }

@@ -65,19 +65,20 @@ describe('로그인 후 원래 가려던 화면으로 이동', () => {
 })
 
 describe('주 메뉴', () => {
-  it('메뉴 5개가 있고 현재 화면이 선택 표시된다', async () => {
+  it('모바일은 5개, PC는 쇼핑을 포함한 6개이며 현재 화면이 선택 표시된다', async () => {
     renderAt('/sleep')
     await screen.findByRole('heading', { level: 1, name: '수면' })
     // 모바일 하단 탭과 PC 왼쪽 메뉴가 함께 있다 (화면 폭에 따라 하나만 보임)
     const navs = screen.getAllByRole('navigation', { name: '주 메뉴' })
     expect(navs).toHaveLength(2)
-    for (const nav of navs) {
+    for (const [index, nav] of navs.entries()) {
       const links = within(nav).getAllByRole('link')
       expect(links.map((l) => l.textContent?.trim())).toEqual([
         expect.stringContaining('홈'),
         '식사',
         '성장',
         '수면',
+        ...(index === 0 ? ['쇼핑'] : []),
         '설정',
       ])
       expect(within(nav).getByRole('link', { name: '수면' })).toHaveAttribute(

@@ -38,9 +38,23 @@ export function validateBackup(value: unknown): Backup {
     typeof value === 'object' &&
     'schema_version' in value &&
     typeof value.schema_version === 'number' &&
-    value.schema_version > 1
+    value.schema_version > 2
   )
     throw new BackupError('newerVersion')
+  // v1에는 쇼핑 테이블이 없었다. v1에 임의의 새 테이블을 섞은 파일은 거부한다.
+  if (
+    value &&
+    typeof value === 'object' &&
+    'schema_version' in value &&
+    value.schema_version === 1 &&
+    'data' in value &&
+    value.data &&
+    typeof value.data === 'object' &&
+    !Array.isArray(value.data) &&
+    !('shopping_items' in value.data)
+  ) {
+    value = { ...value, schema_version: 2, data: { ...value.data, shopping_items: [] } }
+  }
   const parsed = backupSchema.safeParse(value)
   if (!parsed.success) {
     const issue = parsed.error.issues[0]

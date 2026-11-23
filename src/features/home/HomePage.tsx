@@ -26,6 +26,7 @@ import { useMealDay } from '@/lib/useMeals'
 import { MEAL_TYPES } from '@/lib/mealTypes'
 import type { MealEntry } from '@/lib/mealApi'
 import { useSleepLogs } from '@/lib/useSleepLogs'
+import { ShoppingShortcut } from './ShoppingShortcut'
 import { cn } from '@/lib/utils'
 
 interface RecordChoice {
@@ -79,6 +80,7 @@ export function HomePage() {
         />
       )}
 
+      <ShoppingShortcut />
       <MealCard query={meals} today={today} />
       <TodayCard query={milestones} today={today} />
       <SleepCard query={sleepLogs} yesterday={yesterdayString()} />

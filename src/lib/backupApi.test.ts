@@ -36,7 +36,7 @@ describe('백업 형식·파일·API', () => {
   ])('%s 오류를 파일 검사 단계에서 거부한다', (kind) => {
     const payload = exampleBackup() as unknown as Record<string, unknown>
     const data = payload.data as Record<string, Record<string, unknown>[]>
-    if (kind === 'version') payload.schema_version = 2
+    if (kind === 'version') payload.schema_version = 3
     if (kind === 'missing') delete data.recipes[0].name
     if (kind === 'owner') data.recipes[0].owner_id = 'other'
     if (kind === 'duplicate') data.recipes.push({ ...data.recipes[0] })
@@ -94,4 +94,19 @@ describe('백업 형식·파일·API', () => {
     click.mockRestore()
     vi.unstubAllGlobals()
   })
+})
+
+it('v1 백업은 빈 쇼핑 목록을 포함한 v2로 변환하고 v2 누락·위험한 링크는 거부한다', () => {
+  const old = structuredClone(exampleBackup()) as unknown as {
+    schema_version: number
+    data: Record<string, unknown>
+  }
+  old.schema_version = 1
+  delete old.data.shopping_items
+  expect(validateBackup(old)).toMatchObject({ schema_version: 2, data: { shopping_items: [] } })
+  old.schema_version = 2
+  expect(() => validateBackup(old)).toThrow()
+  const bad = exampleBackup()
+  bad.data.shopping_items[0].url = 'javascript:alert(1)'
+  expect(() => validateBackup(bad)).toThrow()
 })

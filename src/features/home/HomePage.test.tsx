@@ -1,3 +1,4 @@
+import { fetchShoppingItems } from '@/lib/shoppingApi'
 import { fetchMealWeek, fetchMealEntry, saveMealEntry, type MealEntry } from '@/lib/mealApi'
 import { fetchFoods } from '@/lib/foodApi'
 import { fetchRecipes } from '@/lib/recipeApi'
@@ -11,6 +12,8 @@ import { fetchMyChild } from '@/lib/childApi'
 import { fetchMilestone, fetchMilestones, type Milestone } from '@/lib/milestoneApi'
 import { fetchSleepLogs, type SleepLog } from '@/lib/sleepApi'
 import { renderApp } from '@/test/renderApp'
+
+vi.mock('@/lib/shoppingApi', () => ({ fetchShoppingItems: vi.fn() }))
 
 // 홈 (T-28, SCR-03, FR-HOME-01~06). 테스트 데이터는 가명이다.
 
@@ -98,6 +101,7 @@ beforeEach(() => {
   vi.useFakeTimers({ toFake: ['Date'] })
   vi.setSystemTime(new Date(2026, 9, 22, 9, 0))
   vi.resetAllMocks()
+  vi.mocked(fetchShoppingItems).mockResolvedValue([])
   vi.mocked(fetchMealWeek).mockResolvedValue([])
   vi.mocked(fetchMealEntry).mockResolvedValue(null)
   vi.mocked(fetchRecipes).mockResolvedValue([])

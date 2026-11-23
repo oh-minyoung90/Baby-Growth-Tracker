@@ -9,6 +9,7 @@ export async function prepareHomePage(page: Page, empty = false, partialMeals = 
   await page.clock.setFixedTime(new Date('2026-11-18T09:00:00+09:00'))
   await prepareFixturePage(page, '/', {
     '/rest/v1/children': fixtureChild,
+    '/rest/v1/shopping_items': [],
     '/rest/v1/milestones': empty
       ? []
       : [
@@ -127,7 +128,7 @@ export async function assertHomeLayout(page: Page, empty = false) {
       )!
       if (
         [...nav.querySelectorAll('a')].map((link) => link.textContent).join('|') !==
-        '홈|식사|성장|수면|설정'
+        (viewport >= 768 ? '홈|식사|성장|수면|쇼핑|설정' : '홈|식사|성장|수면|설정')
       )
         errors.push('주 메뉴 순서 불일치')
       return errors

@@ -42,7 +42,7 @@ afterAll(async () => {
 describe('본인 백업·전체 복원 (T-29·T-30)', () => {
   it('전체 테이블·시각·순서·이력·사진 경로를 내보내고 동일하게 복원한다', async () => {
     const first = await exported(a)
-    expect(Object.values(first.data).map((rows) => rows.length)).toEqual(Array(12).fill(1))
+    expect(Object.values(first.data).map((rows) => rows.length)).toEqual(Array(13).fill(1))
     expect(JSON.stringify(first).includes('owner_id')).toBe(true) // 출처 식별자만 포함된다.
     expect(first.data.foods[0]).not.toHaveProperty('owner_id')
     expect(first.data.foods[0]).not.toHaveProperty('name_key')
@@ -86,7 +86,7 @@ describe('본인 백업·전체 복원 (T-29·T-30)', () => {
     const before = await exported(a)
     const payload = structuredClone(before) as unknown as Record<string, unknown>
     const d = payload.data as Record<string, Record<string, unknown>[]>
-    if (kind === 'version') payload.schema_version = 2
+    if (kind === 'version') payload.schema_version = 3
     if (kind === 'missing') delete d.foods[0].name
     if (kind === 'owner') d.foods[0].owner_id = b.userId
     if (kind === 'type') d.foods[0].manual_tried = 'false'
@@ -130,4 +130,18 @@ describe('본인 백업·전체 복원 (T-29·T-30)', () => {
     expect((await restored(a, payload)).error).toBeNull()
     expect((await exported(a)).data.milestones.length).toBe(5000)
   })
+})
+
+it('기존 v1 파일을 복원할 때 쇼핑은 비우며 v2의 쇼핑 누락은 거부한다', async () => {
+  const original = await exported(a)
+  const old = structuredClone(original) as unknown as {
+    schema_version: number
+    data: Record<string, unknown>
+  }
+  old.schema_version = 1
+  delete old.data.shopping_items
+  expect((await restored(a, old)).error).toBeNull()
+  expect((await exported(a)).data.shopping_items).toEqual([])
+  old.schema_version = 2
+  expect((await restored(a, old)).error?.code).toBe('22023')
 })

@@ -10,8 +10,8 @@ Baby Growth Tracker는 아이의 성장(키·몸무게, 발달, 수면)과 식�
 
 ## 문서
 
-- `PRD.md`(v1.11, 확정)는 범위, 기능(F-01~F-24), 데이터 모델, 결정 사항의 기준 문서입니다. 동작을 제안하기 전에 9장 "결정 사항"을 확인하고, 이미 결정된 항목은 사용자와 협의 없이 다시 바꾸지 않습니다.
-- 설계 문서는 `docs/` 아래에 둡니다. `docs/기능요구사항서.md`(v1.26)는 화면별 요구사항(FR)과 비즈니스 규칙(BR)의 기준이며, `docs/기술요구사항서.md`(v1.38)는 시스템 구성, DB 스키마, RLS, 인증, 테스트, 배포 방식의 기준입니다. 구현 중 설계가 바뀌면 해당 문서를 함께 고칩니다. `docs/디자인.md`(v1.7)는 색·글자·간격·레이아웃·컴포넌트의 기준이며, 화면을 만들 때 디자인 시안보다 우선합니다. `docs/task.md`(v1.27)는 MVP-1(성장 기록 + 식사 기록) 태스크 목록이며, 태스크마다 GitHub Issue가 연결되어 있습니다. 설계 문서와 `PRD.md`가 서로 다르면 임의로 하나를 고르지 말고 사용자에게 알립니다.
+- `PRD.md`(v1.12, 확정)는 범위, 기능(F-01~F-25), 데이터 모델, 결정 사항의 기준 문서입니다. 동작을 제안하기 전에 9장 "결정 사항"을 확인하고, 이미 결정된 항목은 사용자와 협의 없이 다시 바꾸지 않습니다.
+- 설계 문서는 `docs/` 아래에 둡니다. `docs/기능요구사항서.md`(v1.27)는 화면별 요구사항(FR)과 비즈니스 규칙(BR)의 기준이며, `docs/기술요구사항서.md`(v1.39)는 시스템 구성, DB 스키마, RLS, 인증, 테스트, 배포 방식의 기준입니다. 구현 중 설계가 바뀌면 해당 문서를 함께 고칩니다. `docs/디자인.md`(v1.8)는 색·글자·간격·레이아웃·컴포넌트의 기준이며, 화면을 만들 때 디자인 시안보다 우선합니다. `docs/task.md`(v1.28)는 MVP-1(성장 기록 + 식사 기록) 태스크 목록이며, 태스크마다 GitHub Issue가 연결되어 있습니다. 설계 문서와 `PRD.md`가 서로 다르면 임의로 하나를 고르지 말고 사용자에게 알립니다.
 - 확실하지 않은 내용은 가정하지 말고 "확인 필요"로 표시합니다.
 
 ## 기술 스택
@@ -49,9 +49,9 @@ Baby Growth Tracker는 아이의 성장(키·몸무게, 발달, 수면)과 식�
 
 - `src/main.tsx`: 진입점. 화면 모드 적용 → `QueryClientProvider` → `AuthProvider` → `RouterProvider`
 - `src/app/`: 앱 골격. `routes.tsx`(화면 주소와 로그인 가드), `AppLayout.tsx`(모바일 하단 탭 / PC 왼쪽 메뉴), `queryClient.ts`, `dev/`(개발 서버 전용 화면)
-- `src/features/<기능>/`: 화면 단위 코드 (auth, child, home, growth, body, milestone, sleep, timeline, meal, food, recipe, settings). 다른 기능 폴더를 직접 가져다 쓰지 않고, 공통 로직은 `src/domain/`이나 `src/lib/`로 옮깁니다
+- `src/features/<기능>/`: 화면 단위 코드 (auth, child, home, growth, body, milestone, sleep, timeline, meal, food, recipe, shopping, settings). 다른 기능 폴더를 직접 가져다 쓰지 않고, 공통 로직은 `src/domain/`이나 `src/lib/`로 옮깁니다
 - `src/domain/`: 화면과 무관한 계산 규칙(생후 일수, 같은 내용 판단, 수면 계산). 순수 함수와 단위 테스트
-- `src/lib/`: Supabase 클라이언트(`supabase.ts`), DB 타입(`database.types.ts`, 자동 생성), 화면 모드(`theme.ts`), 여러 화면이 함께 쓰는 로그인 상태·로그아웃(`auth.ts`)과 아이 정보(`childApi.ts`, `useChild.ts`), 발달 기록(`milestoneApi.ts`, `useMilestones.ts`)과 키·몸무게(`bodyApi.ts`, `useBodyMeasures.ts`, `bodyFormat.ts`), 수면(`sleepApi.ts`, `useSleepLogs.ts`, 합계 계산 `sleepSummary.ts`), 음식(`foodApi.ts`, `useFoods.ts`, 상세·횟수·이력 `foodDetailApi.ts`·`useFoodDetails.ts`, 식품군·상태 이름 `foodTypes.ts`) 조회·저장, 식단(`mealApi.ts`, `useMeals.ts`, 일별 홈 식단·주간 기록 캐시, 끼니·섭취량 `mealTypes.ts`) 조회·저장·삭제, 레시피 목록·상세·일괄 저장(`recipeApi.ts`·`useRecipes.ts`)과 식단용 재료 변환(`useMealRecipes.ts`), 사진 교체·정리 재시도(`recipeEditorApi.ts`), 백업 v1 형식·순수 검사(`backupSchema.ts`·`backupValidation.ts`)와 내보내기·가져오기(`backupApi.ts`), 전체 삭제(`deleteAllData.ts`·`deleteAllDataApi.ts`), 사진 변환·비공개 저장(`prepareRecipePhoto.ts`, `recipePhotoApi.ts`, `useRecipePhoto.ts`), 발달 기록 유형·예시(`milestoneTypes.ts`), 입력 검증 규칙(`validation.ts`), DB 검증 실패 분류(`dbErrors.ts`), 저장 알림(`notify.ts`), 공통 안내 문구(`messages.ts`), 바텀 시트 열림 상태(`useSheetParam.ts`), 진입했던 화면으로 돌아가기(`useGoBack.ts`), 공통 유틸
+- `src/lib/`: Supabase 클라이언트(`supabase.ts`), DB 타입(`database.types.ts`, 자동 생성), 화면 모드(`theme.ts`), 여러 화면이 함께 쓰는 로그인 상태·로그아웃(`auth.ts`)과 아이 정보(`childApi.ts`, `useChild.ts`), 발달 기록(`milestoneApi.ts`, `useMilestones.ts`)과 키·몸무게(`bodyApi.ts`, `useBodyMeasures.ts`, `bodyFormat.ts`), 수면(`sleepApi.ts`, `useSleepLogs.ts`, 합계 계산 `sleepSummary.ts`), 음식(`foodApi.ts`, `useFoods.ts`, 상세·횟수·이력 `foodDetailApi.ts`·`useFoodDetails.ts`, 식품군·상태 이름 `foodTypes.ts`) 조회·저장, 식단(`mealApi.ts`, `useMeals.ts`, 일별 홈 식단·주간 기록 캐시, 끼니·섭취량 `mealTypes.ts`) 조회·저장·삭제, 레시피 목록·상세·일괄 저장(`recipeApi.ts`·`useRecipes.ts`)과 식단용 재료 변환(`useMealRecipes.ts`), 사진 교체·정리 재시도(`recipeEditorApi.ts`), 백업 v2 형식(v1 가져오기 호환)·순수 검사(`backupSchema.ts`·`backupValidation.ts`)와 내보내기·가져오기(`backupApi.ts`), 전체 삭제(`deleteAllData.ts`·`deleteAllDataApi.ts`), 사진 변환·비공개 저장(`prepareRecipePhoto.ts`, `recipePhotoApi.ts`, `useRecipePhoto.ts`), 발달 기록 유형·예시(`milestoneTypes.ts`), 입력 검증 규칙(`validation.ts`), DB 검증 실패 분류(`dbErrors.ts`), 저장 알림(`notify.ts`), 공통 안내 문구(`messages.ts`), 바텀 시트 열림 상태(`useSheetParam.ts`), 진입했던 화면으로 돌아가기(`useGoBack.ts`), 공통 유틸
 - `src/components/`: 화면 틀(`Page`, `SubTabs`, `FullScreenLoading`, 입력 화면용 `FormPage`·`FormActions`), 공통 입력·안내(`form/`, `ConfirmDialog`, `NoticeDialog`, `DeleteRecordButton`, `ErrorBanner`, `EmptyState`, `ListLoading`, `AddRecordButton`, `ChoiceChips`), 기본 UI(`ui/`)
 - `src/test/`: 테스트 공통 설정(`setup.ts`)과 앱 전체 화면 이동 테스트용 `renderApp()` (로그인 상태를 직접 넣고, `*Api.ts`는 `vi.mock`으로 바꿔 끼움)
 - `supabase/migrations/`: DB 구조(테이블, 제약, 트리거, RLS). 화면 규칙과 같은 검증을 DB에도 둡니다
@@ -80,3 +80,5 @@ Baby Growth Tracker는 아이의 성장(키·몸무게, 발달, 수면)과 식�
 - 응답과 문서는 한국어로 작성합니다. CLAUDE.md를 포함한 저장소의 모든 문서에 적용합니다.
 - 비밀값은 코드에 하드코딩하지 않습니다. Supabase 접속 정보는 `.env.local`(예시 `.env.example`), 테스트 계정은 `.env.test.local`(예시 `.env.test.example`)에 둡니다. 브라우저에는 Publishable key(`sb_publishable_`)만 사용하고, Secret key(`sb_secret_`)는 어떤 파일에도 넣지 않습니다. 허용 이메일은 코드가 아니라 Supabase Auth 사용자 목록으로 관리합니다.
 - 아이 정보(알러지 정보, 사진 포함)는 민감 정보입니다. 로그에 남기지 않고, 테스트와 예시에는 가명 데이터를 사용합니다.
+
+- 쇼핑 기능의 화면·상태·메뉴·백업 기준은 `docs/쇼핑리스트.md`를 따른다. 쇼핑 쿼리는 `lib/useShopping.ts`, 계정별 브라우저 메뉴 선택은 `lib/shoppingNavigation.ts`다.
