@@ -120,7 +120,8 @@ export async function exerciseTimelineLayout(page: Page) {
   await period.getByRole('radio', { name: '지난 달', exact: true }).click()
   await page.getByText('조건에 맞는 기록이 없어요', { exact: true }).waitFor()
   assert.equal(await food.getAttribute('aria-pressed'), 'true')
-  await page.getByRole('button', { name: '전체 보기', exact: true }).click()
+  assert.equal(await page.getByRole('button', { name: '전체 보기', exact: true }).count(), 0)
+  await food.click()
   assert.equal(
     await period.getByRole('radio', { name: '지난 달', exact: true }).getAttribute('aria-checked'),
     'true',

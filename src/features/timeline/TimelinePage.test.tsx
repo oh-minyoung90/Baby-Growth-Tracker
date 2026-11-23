@@ -127,10 +127,12 @@ describe('목록 (FR-TL-01~02, 07)', () => {
   it('이전 측정 전용 필터 주소도 빈 결과 대신 지원하는 기록을 보여 준다', async () => {
     await renderTimeline('/growth/timeline?types=measure')
     expect(titles()).toEqual(['네', '소리 내어 웃기', '잡고 서기', '엄마'])
-    expect(screen.getByRole('button', { name: '전체 보기' })).toHaveAttribute(
-      'aria-pressed',
-      'true',
-    )
+    expect(screen.queryByRole('button', { name: '전체 보기' })).not.toBeInTheDocument()
+    for (const button of within(screen.getByRole('group', { name: '유형별 개수' })).getAllByRole(
+      'button',
+    )) {
+      expect(button).toHaveAttribute('aria-pressed', 'false')
+    }
     expect(screen.getByRole('link', { name: '키·몸무게' })).toHaveAttribute('href', '/growth/body')
   })
 })
@@ -215,7 +217,7 @@ describe('유형별 개수와 추가 버튼 (FR-TL-08~10)', () => {
     expect(router.state.location.search).toBe('')
   })
 
-  it('개수는 누적 기준이며 카드·전체 보기를 눌러도 선택한 기간을 유지한다', async () => {
+  it('개수는 누적 기준이며 선택된 카드를 다시 눌러 전체 유형으로 돌아가도 기간을 유지한다', async () => {
     const { router } = await renderTimeline('/growth/timeline?period=this')
     expect(titles()).toEqual(['네', '소리 내어 웃기'])
     await userEvent.click(countCard('행동 1개'))
@@ -224,7 +226,7 @@ describe('유형별 개수와 추가 버튼 (FR-TL-08~10)', () => {
     expect(screen.getByText('조건에 맞는 기록이 없어요')).toBeVisible()
     await userEvent.click(periodChip('지난 달'))
     expect(titles()).toEqual(['잡고 서기'])
-    await userEvent.click(screen.getByRole('button', { name: '전체 보기' }))
+    await userEvent.click(countCard('행동 1개'))
     expect(titles()).toEqual(['잡고 서기', '엄마'])
     expect(periodChip('지난 달')).toBeChecked()
     expect(router.state.location.search).toBe('?period=last')
