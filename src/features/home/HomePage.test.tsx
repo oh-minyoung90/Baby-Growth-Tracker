@@ -259,12 +259,12 @@ describe('최근 측정 (FR-HOME-04)', () => {
 })
 
 describe('카드별 추가·수정 (FR-HOME-05)', () => {
-  it('빠른 기록을 제거하고 카드 4개를 승인된 순서로 보여 준다', async () => {
+  it('빠른 기록을 제거하고 카드 5개를 승인된 순서로 보여 준다', async () => {
     await renderHome()
     expect(screen.queryByRole('region', { name: '빠른 기록' })).not.toBeInTheDocument()
     expect(
       screen.getAllByRole('heading', { level: 2 }).map((heading) => heading.textContent),
-    ).toEqual(['오늘의 식단', '오늘의 기록', '어젯밤 수면', '최근 측정'])
+    ).toEqual(['쇼핑 목록', '오늘의 식단', '오늘의 기록', '어젯밤 수면', '최근 측정'])
     expect(
       within(card('오늘의 기록')).getByRole('button', { name: '성장 기록 추가' }),
     ).toBeVisible()
@@ -474,4 +474,33 @@ describe('오늘의 식단·끼니 추가', () => {
     expect(fetchMealWeek).toHaveBeenCalledTimes(2)
     expect(fetchSleepLogs).toHaveBeenCalledTimes(1)
   })
+})
+
+// 쇼핑도 다른 요약과 같은 카드로 표시하되, 실제 구매할 물건만 집계한다.
+it('빈 쇼핑 카드의 제목 아래 링크로 목록을 연다', async () => {
+  const { router } = await renderHome()
+  const region = card('쇼핑 목록')
+  expect(within(region).getByRole('heading', { name: '쇼핑 목록' })).toBeVisible()
+  await userEvent.click(within(region).getByRole('link', { name: '쇼핑 목록 보기' }))
+  await waitFor(() => expect(router.state.location.pathname).toBe('/shopping'))
+})
+it('쇼핑 카드에는 보관 전용·구매 완료를 제외한 살 물건 개수를 보여 준다', async () => {
+  const base = {
+    name: '가명 물건',
+    category: 'books' as const,
+    url: null,
+    memo: null,
+    frequent: true,
+  }
+  vi.mocked(fetchShoppingItems).mockResolvedValue([
+    { ...base, id: 's1', status: 'pending' },
+    { ...base, id: 's2', status: 'purchased' },
+    { ...base, id: 's3', status: 'saved' },
+  ])
+  await renderHome()
+  expect(await within(card('쇼핑 목록')).findByText('1개')).toBeVisible()
+  expect(within(card('쇼핑 목록')).getByRole('link', { name: '쇼핑 목록 보기' })).toHaveAttribute(
+    'href',
+    '/shopping',
+  )
 })

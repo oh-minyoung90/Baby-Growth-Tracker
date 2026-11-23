@@ -66,7 +66,7 @@ export async function exerciseShoppingLayout(page: Page) {
   await page.getByRole('button', { name: '추가하기', exact: true }).click()
   await page.getByText('물건 이름을 입력해 주세요', { exact: true }).waitFor()
   await page.getByRole('button', { name: '취소', exact: true }).click()
-  await page.getByRole('heading', { name: '쇼핑 리스트', exact: true }).waitFor()
+  await page.getByRole('heading', { name: '쇼핑 목록', exact: true }).waitFor()
   const visibleNav = page.getByRole('navigation', { name: '주 메뉴', exact: true }).first()
   await visibleNav.getByRole('link', { name: '설정', exact: true }).click()
   const toggle = page.getByRole('switch', { name: '하단 메뉴에 쇼핑 표시', exact: true })
@@ -80,5 +80,5 @@ export async function exerciseShoppingLayout(page: Page) {
     )
   await page.reload()
   await visibleNav.getByRole('link', { name: '쇼핑', exact: true }).waitFor()
-  await page.getByRole('heading', { name: '쇼핑 리스트', exact: true }).waitFor()
+  await page.getByRole('heading', { name: '쇼핑 목록', exact: true }).waitFor()
 }

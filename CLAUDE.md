@@ -81,4 +81,4 @@ Baby Growth Tracker는 아이의 성장(키·몸무게, 발달, 수면)과 식�
 - 비밀값은 코드에 하드코딩하지 않습니다. Supabase 접속 정보는 `.env.local`(예시 `.env.example`), 테스트 계정은 `.env.test.local`(예시 `.env.test.example`)에 둡니다. 브라우저에는 Publishable key(`sb_publishable_`)만 사용하고, Secret key(`sb_secret_`)는 어떤 파일에도 넣지 않습니다. 허용 이메일은 코드가 아니라 Supabase Auth 사용자 목록으로 관리합니다.
 - 아이 정보(알러지 정보, 사진 포함)는 민감 정보입니다. 로그에 남기지 않고, 테스트와 예시에는 가명 데이터를 사용합니다.
 
-- 쇼핑 기능의 화면·상태·메뉴·백업 기준은 `docs/쇼핑리스트.md`를 따른다. 쇼핑 쿼리는 `lib/useShopping.ts`, 계정별 브라우저 메뉴 선택은 `lib/shoppingNavigation.ts`다.
+- 쇼핑 기능의 화면·상태·메뉴·백업 기준은 `docs/쇼핑목록.md`를 따른다. 쇼핑 쿼리는 `lib/useShopping.ts`, 계정별 브라우저 메뉴 선택은 `lib/shoppingNavigation.ts`다.

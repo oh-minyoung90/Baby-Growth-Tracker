@@ -1,4 +1,4 @@
-import { useId, useRef, useState, type ReactNode } from 'react'
+import { useRef, useState, type ReactNode } from 'react'
 import type { UseQueryResult } from '@tanstack/react-query'
 import type { LucideIcon } from 'lucide-react'
 import { ChevronRight, Moon, Ruler, Utensils, Check, NotebookPen, Plus } from 'lucide-react'
@@ -26,7 +26,8 @@ import { useMealDay } from '@/lib/useMeals'
 import { MEAL_TYPES } from '@/lib/mealTypes'
 import type { MealEntry } from '@/lib/mealApi'
 import { useSleepLogs } from '@/lib/useSleepLogs'
-import { ShoppingShortcut } from './ShoppingShortcut'
+import { ShoppingCard } from './ShoppingCard'
+import { HomeCard as Card } from './HomeCard'
 import { cn } from '@/lib/utils'
 
 interface RecordChoice {
@@ -45,7 +46,7 @@ const HEADER_ACTION_CLASS =
   'inline-flex min-h-11 min-w-11 shrink-0 items-center justify-center gap-1 rounded-button px-2 text-sm font-bold text-soft-text outline-none hover:bg-soft focus-visible:ring-3 focus-visible:ring-ring/40'
 
 /**
- * 홈 (SCR-03): 식단 → 오늘 기록 → 어젯밤 수면 → 최근 측정.
+ * 홈 (SCR-03): 쇼핑 → 식단 → 오늘 기록 → 어젯밤 수면 → 최근 측정.
  * 모바일·PC 모두 한 열로 배치한다 (docs/디자인.md 5.1).
  */
 export function HomePage() {
@@ -80,47 +81,12 @@ export function HomePage() {
         />
       )}
 
-      <ShoppingShortcut />
+      <ShoppingCard />
       <MealCard query={meals} today={today} />
       <TodayCard query={milestones} today={today} />
       <SleepCard query={sleepLogs} yesterday={yesterdayString()} />
       <MeasureCard query={measures} />
     </Page>
-  )
-}
-
-/** 카드 틀: 제목(아이콘) + 내용 */
-function Card({
-  title,
-  icon: Icon,
-  action,
-  className,
-  children,
-}: {
-  title: string
-  icon: LucideIcon
-  action?: ReactNode
-  className?: string
-  children: ReactNode
-}) {
-  const id = useId()
-  return (
-    <section
-      aria-labelledby={id}
-      className={cn('flex min-w-0 flex-col gap-3 rounded-card border bg-surface p-4', className)}
-    >
-      <div className="flex min-w-0 items-center justify-between gap-2">
-        <h2
-          id={id}
-          className="flex min-w-0 items-center gap-2 text-base leading-6 font-bold text-foreground"
-        >
-          <Icon className="size-5 shrink-0 text-soft-text" aria-hidden />
-          {title}
-        </h2>
-        {action}
-      </div>
-      {children}
-    </section>
   )
 }
 

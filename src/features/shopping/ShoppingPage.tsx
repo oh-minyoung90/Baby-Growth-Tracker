@@ -142,7 +142,7 @@ export function ShoppingPage() {
       </p>
     )
   return (
-    <Page title="쇼핑 리스트">
+    <Page title="쇼핑 목록">
       <div
         role="tablist"
         aria-label="쇼핑 목록 종류"

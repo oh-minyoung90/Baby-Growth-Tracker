@@ -2,7 +2,7 @@ import assert from 'node:assert/strict'
 import type { Page } from '@playwright/test'
 import { fixtureChild, prepareFixturePage } from './fixture.ts'
 
-const sections = ['오늘의 식단', '오늘의 기록', '어젯밤 수면', '최근 측정']
+const sections = ['쇼핑 목록', '오늘의 식단', '오늘의 기록', '어젯밤 수면', '최근 측정']
 
 /** 가명 데이터: 긴 음식 이름·발달 기록이 있어도 세로 카드와 버튼이 넘치지 않아야 한다. */
 export async function prepareHomePage(page: Page, empty = false, partialMeals = false) {
@@ -95,7 +95,7 @@ export async function assertHomeLayout(page: Page, empty = false) {
         const style = getComputedStyle(title)
         if (style.fontSize !== '16px' || style.fontWeight !== '700' || style.lineHeight !== '24px')
           errors.push(`${sections[i]}: 제목 규격 불일치`)
-        if (i < 4) {
+        if (i < 5) {
           const icon = title.querySelector('svg')!.getBoundingClientRect()
           if (icon.width !== 20 || icon.height !== 20)
             errors.push(`${sections[i]}: 아이콘 규격 불일치`)
@@ -114,14 +114,14 @@ export async function assertHomeLayout(page: Page, empty = false) {
           errors.push('카드 제목·동작 버튼 겹침')
       }
       if (!empty) {
-        const total = cards[2].querySelector('dd')!
-        const height = cards[3].querySelector('dd')!
+        const total = cards[3].querySelector('dd')!
+        const height = cards[4].querySelector('dd')!
         for (const value of [total, height]) {
           const style = getComputedStyle(value)
           if (style.fontSize !== '14px' || style.fontWeight !== '700')
             errors.push('수면·측정 값 크기 불일치')
         }
-        if (cards[2].querySelector('dt')?.textContent !== '총') errors.push('수면 총 라벨 누락')
+        if (cards[3].querySelector('dt')?.textContent !== '총') errors.push('수면 총 라벨 누락')
       }
       const nav = [...document.querySelectorAll<HTMLElement>('nav[aria-label="주 메뉴"]')].find(
         (element) => getComputedStyle(element).display !== 'none',
