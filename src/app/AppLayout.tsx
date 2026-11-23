@@ -45,11 +45,7 @@ function SideNav() {
         <span className="flex size-9 items-center justify-center rounded-input bg-primary text-primary-foreground">
           <Sprout className="size-5" aria-hidden />
         </span>
-        <strong className="text-base leading-tight">
-          Baby Growth
-          <br />
-          Tracker
-        </strong>
+        <strong className="text-base leading-tight">MyBabyLog</strong>
       </div>
       {[...NAV_ITEMS.slice(0, 4), SHOPPING_NAV_ITEM, NAV_ITEMS[4]].map(
         ({ to, label, icon: Icon, end }) => (
