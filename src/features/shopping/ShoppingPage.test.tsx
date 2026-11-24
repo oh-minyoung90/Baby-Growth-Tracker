@@ -109,7 +109,7 @@ async function open(path = '/shopping') {
         ? '물건 수정'
         : path === '/settings'
           ? '설정'
-          : '사야 할 물건',
+          : '준비 목록',
   })
   return result
 }
@@ -183,13 +183,13 @@ it('수정 저장 오류에도 입력을 유지하며 재저장·삭제 확인�
 })
 it('하단 탭 설정은 설정 접근을 유지하고 이 브라우저의 해당 계정에만 저장한다', async () => {
   await open('/settings')
-  await userEvent.click(screen.getByRole('switch', { name: '하단 메뉴에 쇼핑 표시' }))
+  await userEvent.click(screen.getByRole('switch', { name: '하단 메뉴에 준비 목록 표시' }))
   const nav = screen.getAllByRole('navigation', { name: '주 메뉴' })[1]
   expect(within(nav).getAllByRole('link')).toHaveLength(5)
-  expect(within(nav).getByRole('link', { name: '쇼핑' })).toBeInTheDocument()
+  expect(within(nav).getByRole('link', { name: '준비' })).toBeInTheDocument()
   expect(within(nav).queryByRole('link', { name: '설정' })).not.toBeInTheDocument()
   expect(localStorage.getItem(shoppingNavKey(auth.session.user.id))).toBe('true')
   expect(screen.getAllByRole('link', { name: '설정' }).length).toBeGreaterThan(0)
-  await userEvent.click(screen.getByRole('switch', { name: '하단 메뉴에 쇼핑 표시' }))
+  await userEvent.click(screen.getByRole('switch', { name: '하단 메뉴에 준비 목록 표시' }))
   expect(within(nav).getByRole('link', { name: '설정' })).toBeInTheDocument()
 })

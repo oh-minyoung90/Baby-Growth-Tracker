@@ -42,7 +42,7 @@ afterAll(async () => {
 describe('본인 백업·전체 복원 (T-29·T-30)', () => {
   it('전체 테이블·시각·순서·이력·사진 경로를 내보내고 동일하게 복원한다', async () => {
     const first = await exported(a)
-    expect(Object.values(first.data).map((rows) => rows.length)).toEqual(Array(13).fill(1))
+    expect(Object.values(first.data).map((rows) => rows.length)).toEqual(Array(14).fill(1))
     expect(JSON.stringify(first).includes('owner_id')).toBe(true) // 출처 식별자만 포함된다.
     expect(first.data.foods[0]).not.toHaveProperty('owner_id')
     expect(first.data.foods[0]).not.toHaveProperty('name_key')
@@ -86,7 +86,7 @@ describe('본인 백업·전체 복원 (T-29·T-30)', () => {
     const before = await exported(a)
     const payload = structuredClone(before) as unknown as Record<string, unknown>
     const d = payload.data as Record<string, Record<string, unknown>[]>
-    if (kind === 'version') payload.schema_version = 3
+    if (kind === 'version') payload.schema_version = 4
     if (kind === 'missing') delete d.foods[0].name
     if (kind === 'owner') d.foods[0].owner_id = b.userId
     if (kind === 'type') d.foods[0].manual_tried = 'false'
@@ -140,8 +140,66 @@ it('기존 v1 파일을 복원할 때 쇼핑은 비우며 v2의 쇼핑 누락은
   }
   old.schema_version = 1
   delete old.data.shopping_items
+  delete old.data.preparation_tasks
   expect((await restored(a, old)).error).toBeNull()
   expect((await exported(a)).data.shopping_items).toEqual([])
   old.schema_version = 2
   expect((await restored(a, old)).error?.code).toBe('22023')
+})
+
+it('v2 복원은 할 일을 비우고 잘못된 v3 할 일은 전체 복원을 취소한다', async () => {
+  const original = await exported(a)
+  const old = structuredClone(original) as unknown as {
+    schema_version: number
+    data: Record<string, unknown>
+  }
+  old.schema_version = 2
+  delete old.data.preparation_tasks
+  expect((await restored(a, old)).error).toBeNull()
+  expect((await exported(a)).data.preparation_tasks).toEqual([])
+  expect((await restored(a, original)).error).toBeNull()
+  const bad = structuredClone(original)
+  bad.data.preparation_tasks[0].url = 'javascript:alert(1)'
+  expect((await restored(a, bad)).error?.code).toBe('22023')
+  expect((await exported(a)).data).toEqual(original.data)
+})
+
+it('발달 일괄 추가도 같은 유형·내용 중복을 거부하고 문장 전체를 되돌린다', async () => {
+  const first = crypto.randomUUID(),
+    second = crypto.randomUUID()
+  const response = await a.client.from('milestones').insert([
+    { id: first, date: '2026-10-03', type: 'word', title: 'Batch Word' },
+    { id: second, date: '2026-10-03', type: 'word', title: ' batch  WORD ' },
+  ])
+  expect(response.error?.code).toBe('23505')
+  expect((await a.client.from('milestones').select('id').in('id', [first, second])).data).toEqual(
+    [],
+  )
+})
+it('발달 추가와 수정에서 기존 중복 규칙·계정 경계를 유지한다', async () => {
+  expect(
+    (
+      await a.client
+        .from('milestones')
+        .insert({ date: '2026-10-03', type: 'word', title: ' 안녕 ' })
+    ).error?.code,
+  ).toBe('23505')
+  const added = await a.client
+    .from('milestones')
+    .insert({ date: '2026-10-03', type: 'word', title: '빠이' })
+    .select()
+    .single()
+  expect(added.error).toBeNull()
+  expect(
+    (await a.client.from('milestones').update({ title: '안녕' }).eq('id', added.data!.id)).error
+      ?.code,
+  ).toBe('23505')
+  expect(
+    (await a.client.from('milestones').update({ memo: '수정 가능' }).eq('id', added.data!.id))
+      .error,
+  ).toBeNull()
+  expect(
+    (await b.client.from('milestones').insert({ date: '2026-10-03', type: 'word', title: '빠이' }))
+      .error,
+  ).toBeNull()
 })

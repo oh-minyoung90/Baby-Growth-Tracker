@@ -1,3 +1,4 @@
+import { fetchTasks } from '@/lib/taskApi'
 import { fetchShoppingItems } from '@/lib/shoppingApi'
 import { fetchMealWeek, fetchMealEntry, saveMealEntry, type MealEntry } from '@/lib/mealApi'
 import { fetchFoods } from '@/lib/foodApi'
@@ -13,6 +14,7 @@ import { fetchMilestone, fetchMilestones, type Milestone } from '@/lib/milestone
 import { fetchSleepLogs, type SleepLog } from '@/lib/sleepApi'
 import { renderApp } from '@/test/renderApp'
 
+vi.mock('@/lib/taskApi', () => ({ fetchTasks: vi.fn() }))
 vi.mock('@/lib/shoppingApi', () => ({ fetchShoppingItems: vi.fn() }))
 
 // 홈 (T-28, SCR-03, FR-HOME-01~06). 테스트 데이터는 가명이다.
@@ -102,6 +104,7 @@ beforeEach(() => {
   vi.setSystemTime(new Date(2026, 9, 22, 9, 0))
   vi.resetAllMocks()
   vi.mocked(fetchShoppingItems).mockResolvedValue([])
+  vi.mocked(fetchTasks).mockResolvedValue([])
   vi.mocked(fetchMealWeek).mockResolvedValue([])
   vi.mocked(fetchMealEntry).mockResolvedValue(null)
   vi.mocked(fetchRecipes).mockResolvedValue([])
@@ -264,7 +267,7 @@ describe('카드별 추가·수정 (FR-HOME-05)', () => {
     expect(screen.queryByRole('region', { name: '빠른 기록' })).not.toBeInTheDocument()
     expect(
       screen.getAllByRole('heading', { level: 2 }).map((heading) => heading.textContent),
-    ).toEqual(['오늘의 식단', '오늘의 기록', '어젯밤 수면', '사야 할 물건', '최근 측정'])
+    ).toEqual(['오늘의 식단', '오늘의 기록', '어젯밤 수면', '준비 목록', '최근 측정'])
     expect(
       within(card('오늘의 기록')).getByRole('button', { name: '성장 기록 추가' }),
     ).toBeVisible()
@@ -479,12 +482,16 @@ describe('오늘의 식단·끼니 추가', () => {
 // 홈은 미구매 개수만 요약하고 상세는 쇼핑 화면에서 확인한다.
 it('빈 쇼핑 카드의 제목 아래 링크로 목록을 연다', async () => {
   const { router } = await renderHome()
-  const region = card('사야 할 물건')
-  expect(within(region).getByRole('heading', { name: '사야 할 물건' })).toBeVisible()
-  await userEvent.click(within(region).getByRole('link', { name: /사야 할 물건 보기/ }))
-  await waitFor(() => expect(router.state.location.pathname).toBe('/shopping'))
+  const region = card('준비 목록')
+  expect(within(region).getByRole('heading', { name: '준비 목록' })).toBeVisible()
+  await userEvent.click(within(region).getByRole('link', { name: /준비 목록 보기/ }))
+  await waitFor(() => expect(router.state.location.pathname).toBe('/preparation'))
 })
 it('쇼핑 카드는 미구매 개수만 표시하고 상세 목록으로 연결한다', async () => {
+  vi.mocked(fetchTasks).mockResolvedValue([
+    { id: 't1', name: '문화센터 등록', dueDate: null, memo: null, url: null, completed: false },
+    { id: 't2', name: '완료한 일', dueDate: null, memo: null, url: null, completed: true },
+  ])
   const base = {
     name: '가명 물건',
     category: 'books' as const,
@@ -499,14 +506,28 @@ it('쇼핑 카드는 미구매 개수만 표시하고 상세 목록으로 연결
     { ...base, id: 's3', name: '보관 전용 물건', status: 'saved' },
   ])
   await renderHome()
-  const region = within(card('사야 할 물건'))
+  const region = within(card('준비 목록'))
   expect(await region.findByText('살 물건 2개')).toBeVisible()
+  expect(region.getByText('할 일 1개')).toBeVisible()
   expect(region.queryByRole('list')).not.toBeInTheDocument()
   expect(region.queryByText('그림책')).not.toBeInTheDocument()
   expect(region.queryByText('아기 내복')).not.toBeInTheDocument()
   expect(region.queryByText('구매 완료한 물건')).not.toBeInTheDocument()
   expect(region.queryByText('보관 전용 물건')).not.toBeInTheDocument()
-  expect(
-    within(card('사야 할 물건')).getByRole('link', { name: /사야 할 물건 보기/ }),
-  ).toHaveAttribute('href', '/shopping')
+  expect(within(card('준비 목록')).getByRole('link', { name: /준비 목록 보기/ })).toHaveAttribute(
+    'href',
+    '/preparation',
+  )
+})
+
+it('할 일 조회가 실패하면 0개로 표시하지 않고 실패한 조회만 재시도한다', async () => {
+  vi.mocked(fetchTasks).mockRejectedValueOnce(new Error('offline'))
+  await renderHome()
+  const region = within(card('준비 목록'))
+  const alert = await region.findByRole('alert')
+  expect(region.queryByText('할 일 0개')).not.toBeInTheDocument()
+  await userEvent.click(within(alert).getByRole('button', { name: '다시 시도' }))
+  await region.findByText('할 일 0개')
+  expect(fetchTasks).toHaveBeenCalledTimes(2)
+  expect(fetchShoppingItems).toHaveBeenCalledTimes(1)
 })

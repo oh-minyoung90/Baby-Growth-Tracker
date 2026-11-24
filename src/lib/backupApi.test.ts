@@ -36,7 +36,7 @@ describe('백업 형식·파일·API', () => {
   ])('%s 오류를 파일 검사 단계에서 거부한다', (kind) => {
     const payload = exampleBackup() as unknown as Record<string, unknown>
     const data = payload.data as Record<string, Record<string, unknown>[]>
-    if (kind === 'version') payload.schema_version = 3
+    if (kind === 'version') payload.schema_version = 4
     if (kind === 'missing') delete data.recipes[0].name
     if (kind === 'owner') data.recipes[0].owner_id = 'other'
     if (kind === 'duplicate') data.recipes.push({ ...data.recipes[0] })
@@ -103,10 +103,32 @@ it('v1 백업은 비어 있는 물건 목록을 포함한 v2로 변환하고 v2 
   }
   old.schema_version = 1
   delete old.data.shopping_items
-  expect(validateBackup(old)).toMatchObject({ schema_version: 2, data: { shopping_items: [] } })
+  delete old.data.preparation_tasks
+  expect(validateBackup(old)).toMatchObject({
+    schema_version: 3,
+    data: { shopping_items: [], preparation_tasks: [] },
+  })
   old.schema_version = 2
   expect(() => validateBackup(old)).toThrow()
   const bad = exampleBackup()
   bad.data.shopping_items[0].url = 'javascript:alert(1)'
+  expect(() => validateBackup(bad)).toThrow()
+})
+
+it('v2 파일의 할 일은 비우고 v3의 누락·잘못된 마감일·위험한 링크는 거부한다', () => {
+  const old = structuredClone(exampleBackup()) as unknown as {
+    schema_version: number
+    data: Record<string, unknown>
+  }
+  old.schema_version = 2
+  delete old.data.preparation_tasks
+  expect(validateBackup(old)).toMatchObject({ schema_version: 3, data: { preparation_tasks: [] } })
+  old.schema_version = 3
+  expect(() => validateBackup(old)).toThrow()
+  const bad = exampleBackup()
+  bad.data.preparation_tasks[0].due_date = '2026-02-30'
+  expect(() => validateBackup(bad)).toThrow()
+  bad.data.preparation_tasks[0].due_date = null
+  bad.data.preparation_tasks[0].url = 'javascript:alert(1)'
   expect(() => validateBackup(bad)).toThrow()
 })

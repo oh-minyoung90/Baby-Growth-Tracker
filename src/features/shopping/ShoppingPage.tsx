@@ -4,7 +4,6 @@ import { ChevronDown, ChevronRight, ExternalLink, Link as LinkIcon, Plus, Star }
 import { ChoiceChips } from '@/components/ChoiceChips'
 import { ErrorBanner } from '@/components/ErrorBanner'
 import { ListLoading } from '@/components/ListLoading'
-import { Page } from '@/components/Page'
 import { Button } from '@/components/ui/button'
 import { Checkbox } from '@/components/ui/checkbox'
 import type { ShoppingItem } from '@/lib/shoppingApi'
@@ -142,30 +141,16 @@ export function ShoppingPage() {
       </p>
     )
   return (
-    <Page title="사야 할 물건">
-      <div
-        role="tablist"
-        aria-label="사야 할 물건 종류"
-        className="grid grid-cols-2 gap-1 rounded-button bg-soft p-1"
-      >
-        {[
-          ['todo', query.isSuccess ? `살 물건 ${pending.length}` : '살 물건'],
-          ['frequent', query.isSuccess ? `자주 사는 물건 ${saved.length}` : '자주 사는 물건'],
-        ].map(([tab, label]) => (
-          <button
-            key={tab}
-            id={`shopping-${tab}-tab`}
-            role="tab"
-            aria-controls="shopping-panel"
-            aria-selected={frequent === (tab === 'frequent')}
-            type="button"
-            onClick={() => setParam('tab', tab, 'todo')}
-            className="min-h-11 rounded-md px-2 text-sm font-bold text-soft-text aria-selected:bg-surface aria-selected:text-primary"
-          >
-            {label}
-          </button>
-        ))}
-      </div>
+    <>
+      <ChoiceChips
+        label="물건 종류"
+        options={[
+          { value: 'todo', label: '살 물건' },
+          { value: 'frequent', label: '자주 사는 물건' },
+        ]}
+        value={frequent ? 'frequent' : 'todo'}
+        onChange={(value) => setParam('tab', value, 'todo')}
+      />
       <ChoiceChips
         label="카테고리"
         options={[{ value: 'all', label: '전체' }, ...SHOPPING_CATEGORIES]}
@@ -184,8 +169,7 @@ export function ShoppingPage() {
       )}
       <section
         id="shopping-panel"
-        role="tabpanel"
-        aria-labelledby={`shopping-${frequent ? 'frequent' : 'todo'}-tab`}
+        aria-label={frequent ? '자주 사는 물건' : '살 물건'}
         className="flex min-w-0 flex-col gap-4"
       >
         {query.isPending ? (
@@ -210,7 +194,7 @@ export function ShoppingPage() {
                 </p>
               ) : (
                 <details className="group border-t pt-3">
-                  <summary className="flex min-h-11 cursor-pointer list-none items-center gap-2 text-sm text-muted-foreground outline-none focus-visible:ring-3 focus-visible:ring-ring/40">
+                  <summary className="flex min-h-11 cursor-pointer list-none items-center gap-2 text-sm text-muted-foreground outline-none focus-visible:ring-3 focus-visible:ring-ring/40 [&::-webkit-details-marker]:hidden">
                     구매 완료 {completed.length}개
                     <ChevronDown className="size-4 group-open:rotate-180" aria-hidden />
                   </summary>
@@ -227,6 +211,6 @@ export function ShoppingPage() {
           )
         )}
       </section>
-    </Page>
+    </>
   )
 }

@@ -78,7 +78,7 @@ describe('주 메뉴', () => {
         '식사',
         '성장',
         '수면',
-        ...(index === 0 ? ['쇼핑'] : []),
+        ...(index === 0 ? ['준비'] : []),
         '설정',
       ])
       expect(within(nav).getByRole('link', { name: '수면' })).toHaveAttribute(

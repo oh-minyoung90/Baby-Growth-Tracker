@@ -18,6 +18,7 @@ const text = (max: number) =>
       `${max}자 이내의 내용을 입력해 주세요`,
     )
 export const BACKUP_LABELS = {
+  preparation_tasks: '해야 할 일',
   shopping_items: '사야 할 물건',
   children: '아이 정보',
   body_measures: '키·몸무게',
@@ -35,11 +36,25 @@ export const BACKUP_LABELS = {
 export type BackupTable = keyof typeof BACKUP_LABELS
 export const backupSchema = z
   .object({
-    schema_version: z.literal(2),
+    schema_version: z.literal(3),
     exported_at: time,
     source_owner_id: uuid,
     data: z
       .object({
+        preparation_tasks: z.array(
+          z
+            .object({
+              id: uuid,
+              name: text(80),
+              due_date: date.nullable(),
+              memo: z.string().max(500).nullable(),
+              url: z.string().max(2048).refine(isShoppingUrl).nullable(),
+              completed: z.boolean(),
+              created_at: time,
+              updated_at: time,
+            })
+            .strict(),
+        ),
         shopping_items: z.array(
           z
             .object({

@@ -478,6 +478,42 @@ export type Database = {
           },
         ]
       }
+      preparation_tasks: {
+        Row: {
+          id: string
+          owner_id: string
+          name: string
+          due_date: string | null
+          memo: string | null
+          url: string | null
+          completed: boolean
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          owner_id?: string
+          name: string
+          due_date?: string | null
+          memo?: string | null
+          url?: string | null
+          completed?: boolean
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          owner_id?: string
+          name?: string
+          due_date?: string | null
+          memo?: string | null
+          url?: string | null
+          completed?: boolean
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       shopping_items: {
         Row: {
           category: string
