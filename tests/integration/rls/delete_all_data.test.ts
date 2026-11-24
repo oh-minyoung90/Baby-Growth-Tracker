@@ -92,7 +92,7 @@ afterAll(async () => {
   await b?.client.auth.signOut({ scope: 'local' })
 })
 describe('전체 삭제·권한·사진 정리 (T-31)', () => {
-  it('본인 12개 테이블만 비우고 다른 계정·로그인은 유지하며 반복 호출도 성공한다', async () => {
+  it('본인 14개 테이블만 비우고 다른 계정·로그인은 유지하며 반복 호출도 성공한다', async () => {
     const marker = await b.client.rpc('add_food', {
       name: '보존 검증' + crypto.randomUUID().slice(0, 5),
       food_group: 'grain',

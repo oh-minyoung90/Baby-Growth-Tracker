@@ -1,7 +1,7 @@
 import { Link } from 'react-router'
 import { Settings } from 'lucide-react'
 import { useShoppingNavigation } from '@/lib/shoppingNavigation'
-/** 하단 설정 탭 대신 쇼핑을 표시할 때 모든 기본 화면에서 설정에 접근한다. */
+/** 하단 설정 탭 대신 준비 목록을 표시할 때 모든 기본 화면에서 설정에 접근한다. */
 export function ShoppingSettingsLink() {
   const [enabled] = useShoppingNavigation()
   return enabled ? (

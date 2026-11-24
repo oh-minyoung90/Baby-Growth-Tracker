@@ -15,6 +15,9 @@ import { MilestoneFormPage } from '@/features/milestone/MilestoneFormPage'
 import { RecipeDetailPage } from '@/features/recipe/RecipeDetailPage'
 import { RecipeFormPage } from '@/features/recipe/RecipeFormPage'
 import { RecipesPage } from '@/features/recipe/RecipesPage'
+import { PreparationLayout } from '@/features/preparation/PreparationLayout'
+import { TasksPage } from '@/features/preparation/TasksPage'
+import { TaskFormPage } from '@/features/preparation/TaskFormPage'
 import { ShoppingPage } from '@/features/shopping/ShoppingPage'
 import { ShoppingFormPage } from '@/features/shopping/ShoppingFormPage'
 import { SettingsPage } from '@/features/settings/SettingsPage'
@@ -115,7 +118,23 @@ export const routes: RouteObject[] = [
                       { path: 'recipes/:id', element: <RecipeDetailPage /> },
                     ],
                   },
-                  { path: 'shopping', element: <ShoppingPage /> },
+                  {
+                    element: <PreparationLayout />,
+                    children: [
+                      { path: 'preparation', element: <TasksPage /> },
+                      { path: 'shopping', element: <ShoppingPage /> },
+                    ],
+                  },
+                  {
+                    path: 'preparation/tasks/new',
+                    element: <TaskFormPage />,
+                    handle: { hideBottomNav: true } satisfies AppRouteHandle,
+                  },
+                  {
+                    path: 'preparation/tasks/:id/edit',
+                    element: <TaskFormPage />,
+                    handle: { hideBottomNav: true } satisfies AppRouteHandle,
+                  },
                   {
                     path: 'shopping/new',
                     element: <ShoppingFormPage />,

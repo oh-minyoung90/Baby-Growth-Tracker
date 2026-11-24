@@ -2,13 +2,14 @@ import assert from 'node:assert/strict'
 import type { Page } from '@playwright/test'
 import { fixtureChild, prepareFixturePage } from './fixture.ts'
 
-const sections = ['오늘의 식단', '오늘의 기록', '어젯밤 수면', '사야 할 물건', '최근 측정']
+const sections = ['오늘의 식단', '오늘의 기록', '어젯밤 수면', '준비 목록', '최근 측정']
 
 /** 가명 데이터: 긴 음식 이름·발달 기록이 있어도 세로 카드와 버튼이 넘치지 않아야 한다. */
 export async function prepareHomePage(page: Page, empty = false, partialMeals = false) {
   await page.clock.setFixedTime(new Date('2026-11-18T09:00:00+09:00'))
   await prepareFixturePage(page, '/', {
     '/rest/v1/children': fixtureChild,
+    '/rest/v1/preparation_tasks': [],
     '/rest/v1/shopping_items': empty
       ? []
       : [
@@ -110,8 +111,11 @@ export async function prepareHomePage(page: Page, empty = false, partialMeals = 
   if (empty) await page.getByRole('button', { name: '오늘 성장 기록하기', exact: true }).waitFor()
   else await page.getByText('10시간 30분', { exact: true }).waitFor()
   await page
-    .getByRole('region', { name: '사야 할 물건', exact: true })
-    .getByRole('link', { name: `사야 할 물건 보기, 살 물건 ${empty ? 0 : 2}개`, exact: true })
+    .getByRole('region', { name: '준비 목록', exact: true })
+    .getByRole('link', {
+      name: `준비 목록 보기, 할 일 0개 · 살 물건 ${empty ? 0 : 2}개`,
+      exact: true,
+    })
     .waitFor()
   await page.evaluate(() => document.fonts.ready)
 }
@@ -171,7 +175,7 @@ export async function assertHomeLayout(page: Page, empty = false) {
       )!
       if (
         [...nav.querySelectorAll('a')].map((link) => link.textContent).join('|') !==
-        (viewport >= 768 ? '홈|식사|성장|수면|쇼핑|설정' : '홈|식사|성장|수면|설정')
+        (viewport >= 768 ? '홈|식사|성장|수면|준비|설정' : '홈|식사|성장|수면|설정')
       )
         errors.push('주 메뉴 순서 불일치')
       return errors
@@ -184,7 +188,7 @@ export async function assertHomeLayout(page: Page, empty = false) {
 export async function exerciseHomeLayout(page: Page, empty = false, partialMeals = false) {
   await prepareHomePage(page, empty, partialMeals)
   await assertHomeLayout(page, empty)
-  const shopping = page.getByRole('region', { name: '사야 할 물건', exact: true })
+  const shopping = page.getByRole('region', { name: '준비 목록', exact: true })
   assert.equal(await shopping.getByRole('listitem').count(), 0)
   assert.equal(await shopping.getByText(`살 물건 ${empty ? 0 : 2}개`, { exact: true }).count(), 1)
   assert.equal(await shopping.getByText('아기 내복', { exact: true }).count(), 0)

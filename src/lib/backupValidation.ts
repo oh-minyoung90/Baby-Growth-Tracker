@@ -38,7 +38,7 @@ export function validateBackup(value: unknown): Backup {
     typeof value === 'object' &&
     'schema_version' in value &&
     typeof value.schema_version === 'number' &&
-    value.schema_version > 2
+    value.schema_version > 3
   )
     throw new BackupError('newerVersion')
   // v1에는 쇼핑 테이블이 없었다. v1에 임의의 새 테이블을 섞은 파일은 거부한다.
@@ -54,6 +54,20 @@ export function validateBackup(value: unknown): Backup {
     !('shopping_items' in value.data)
   ) {
     value = { ...value, schema_version: 2, data: { ...value.data, shopping_items: [] } }
+  }
+  // v1·v2 전체 복원에는 할 일이 없으므로 빈 목록으로 확장한다. 숨겨진 새 테이블은 허용하지 않는다.
+  if (
+    value &&
+    typeof value === 'object' &&
+    'schema_version' in value &&
+    value.schema_version === 2 &&
+    'data' in value &&
+    value.data &&
+    typeof value.data === 'object' &&
+    !Array.isArray(value.data) &&
+    !('preparation_tasks' in value.data)
+  ) {
+    value = { ...value, schema_version: 3, data: { ...value.data, preparation_tasks: [] } }
   }
   const parsed = backupSchema.safeParse(value)
   if (!parsed.success) {

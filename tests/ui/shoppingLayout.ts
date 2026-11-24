@@ -27,6 +27,7 @@ export async function exerciseShoppingLayout(page: Page) {
   ]
   await prepareFixturePage(page, '/shopping?tab=frequent', {
     '/rest/v1/children': fixtureChild,
+    '/rest/v1/preparation_tasks': [],
     '/rest/v1/shopping_items': items,
   })
   await page.getByRole('link', { name: /아기와 함께/ }).waitFor()
@@ -58,7 +59,7 @@ export async function exerciseShoppingLayout(page: Page) {
     return errors
   })
   assert.deepEqual(problems, [])
-  await page.getByRole('tab', { name: /살 물건/ }).click()
+  await page.getByRole('radio', { name: '살 물건', exact: true }).click()
   assert.equal(new URL(page.url()).searchParams.get('category'), 'books')
   await filters.getByRole('radio', { name: '전체', exact: true }).click()
   await page.getByRole('link', { name: '살 물건 추가', exact: true }).click()
@@ -66,19 +67,21 @@ export async function exerciseShoppingLayout(page: Page) {
   await page.getByRole('button', { name: '추가하기', exact: true }).click()
   await page.getByText('물건 이름을 입력해 주세요', { exact: true }).waitFor()
   await page.getByRole('button', { name: '취소', exact: true }).click()
-  await page.getByRole('heading', { name: '사야 할 물건', exact: true }).waitFor()
+  await page.getByRole('heading', { name: '준비 목록', exact: true }).waitFor()
   const visibleNav = page.getByRole('navigation', { name: '주 메뉴', exact: true }).first()
   await visibleNav.getByRole('link', { name: '설정', exact: true }).click()
-  const toggle = page.getByRole('switch', { name: '하단 메뉴에 쇼핑 표시', exact: true })
+  const toggle = page.getByRole('switch', { name: '하단 메뉴에 준비 목록 표시', exact: true })
   await toggle.click()
   assert.equal(await page.locator('nav[aria-label="주 메뉴"]').last().locator('a').count(), 5)
-  await visibleNav.getByRole('link', { name: '쇼핑', exact: true }).click()
+  await visibleNav.getByRole('link', { name: '준비', exact: true }).click()
   if (page.viewportSize()!.width < 768)
     assert.equal(
       await page.getByRole('link', { name: '설정', exact: true }).last().isVisible(),
       true,
     )
+  await page.getByText('할 일 0개', { exact: true }).waitFor()
   await page.reload()
-  await visibleNav.getByRole('link', { name: '쇼핑', exact: true }).waitFor()
-  await page.getByRole('heading', { name: '사야 할 물건', exact: true }).waitFor()
+  await visibleNav.getByRole('link', { name: '준비', exact: true }).waitFor()
+  await page.getByRole('heading', { name: '준비 목록', exact: true }).waitFor()
+  await page.getByText('할 일 0개', { exact: true }).waitFor()
 }

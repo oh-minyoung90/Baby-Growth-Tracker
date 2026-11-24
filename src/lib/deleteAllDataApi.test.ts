@@ -89,7 +89,7 @@ describe('전체 사진·기록 삭제 순서와 재시도', () => {
     mock.rpc.mockResolvedValueOnce({ error: { message: 'delete_photos_remaining' } })
     await expect(deleteAllData()).rejects.toMatchObject({ reason: 'photos' })
   })
-  it('DB 응답이 유실됐어도 같은 계정의 13개 테이블이 비었으면 성공으로 확인한다', async () => {
+  it('DB 응답이 유실됐어도 같은 계정의 14개 테이블이 비었으면 성공으로 확인한다', async () => {
     mock.rpc
       .mockResolvedValueOnce({ error: { message: 'offline' } })
       .mockResolvedValueOnce({ data: emptyBackup(uid), error: null })
