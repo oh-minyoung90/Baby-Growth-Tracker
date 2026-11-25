@@ -55,8 +55,8 @@ function SideNav() {
             end={end}
             className={({ isActive }) =>
               cn(
-                'flex h-12 items-center gap-3 rounded-button px-3.5 text-[15px] font-medium text-muted-foreground transition-colors hover:bg-muted',
-                isActive && 'bg-soft font-bold text-primary hover:bg-soft',
+                'flex h-12 items-center gap-3 rounded-button px-3.5 text-[15px] font-medium text-muted-foreground transition-colors',
+                isActive ? 'bg-soft font-bold text-primary' : 'hover:bg-soft-hover',
               )
             }
           >
@@ -89,7 +89,7 @@ function BottomNav() {
             )
           }
         >
-          <span className="flex h-7.5 w-13 items-center justify-center rounded-full group-aria-[current=page]:bg-soft">
+          <span className="flex h-7.5 w-13 items-center justify-center rounded-full group-hover:bg-soft-hover group-aria-[current=page]:bg-soft group-aria-[current=page]:group-hover:bg-soft">
             <Icon className="size-5.5" aria-hidden />
           </span>
           {label}

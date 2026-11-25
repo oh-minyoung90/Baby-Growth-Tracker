@@ -41,9 +41,11 @@
   /* 디자인 토큰 그대로 쓰는 이름 (bg-soft, text-soft-text, bg-danger-soft …) */
   --color-surface: var(--surface);
   --color-soft: var(--soft);
+  --color-soft-hover: color-mix(in srgb, var(--soft) 55%, var(--surface));
   --color-soft-text: var(--soft-text);
   --color-line: var(--line);
   --color-cream: var(--cream);
+  --color-cream-hover: var(--cream-hover);
   --color-cream-text: var(--cream-text);
   --color-quick-line: var(--quick-line);
   --color-danger: var(--danger);
@@ -97,6 +99,7 @@
   --text: #322e3b;
   --muted: #6f6a76;
   --cream: #fffefa;
+  --cream-hover: #fff5d9;
   --cream-text: #655474;
   --quick-line: #dde0e6;
   --scrim: rgb(41 38 58 / 0.4);
@@ -140,6 +143,7 @@
   --text: #f2f1f7;
   --muted: #b6b1be;
   --cream: #282724;
+  --cream-hover: #393428;
   --cream-text: #d6c8ea;
   --quick-line: #454751;
   --scrim: rgb(0 0 0 / 0.55);

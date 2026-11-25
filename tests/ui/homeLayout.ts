@@ -140,11 +140,11 @@ export async function assertHomeLayout(page: Page, empty = false) {
           errors.push(`${sections[i]}: 별도 행 누락`)
         const title = card.querySelector('h2')!
         const style = getComputedStyle(title)
-        if (style.fontSize !== '16px' || style.fontWeight !== '700' || style.lineHeight !== '24px')
+        if (style.fontSize !== '15px' || style.fontWeight !== '700' || style.lineHeight !== '24px')
           errors.push(`${sections[i]}: 제목 규격 불일치`)
         if (i < 5) {
-          const icon = title.querySelector('svg')!.getBoundingClientRect()
-          if (icon.width !== 20 || icon.height !== 20)
+          const icon = title.querySelector('img')!.getBoundingClientRect()
+          if (icon.width !== 34 || icon.height !== 34)
             errors.push(`${sections[i]}: 아이콘 규격 불일치`)
         }
         for (const link of card.querySelectorAll<HTMLElement>('a, button')) {
@@ -161,14 +161,14 @@ export async function assertHomeLayout(page: Page, empty = false) {
           errors.push('카드 제목·동작 버튼 겹침')
       }
       if (!empty) {
-        const total = cards[2].querySelector('dd')!
-        const height = cards[4].querySelector('dd')!
-        for (const value of [total, height]) {
-          const style = getComputedStyle(value)
-          if (style.fontSize !== '14px' || style.fontWeight !== '700')
-            errors.push('수면·측정 값 크기 불일치')
+        for (const card of cards.slice(2)) {
+          const link = card.querySelector('a')!
+          const style = getComputedStyle(link)
+          if (style.fontSize !== '14px' || style.fontWeight !== '400')
+            errors.push('홈 요약 값의 크기·굵기 불일치')
         }
-        if (cards[2].querySelector('dt')?.textContent !== '총') errors.push('수면 총 라벨 누락')
+        if (!cards[2].querySelector('a')?.textContent?.startsWith('총'))
+          errors.push('수면 총 라벨 누락')
       }
       const nav = [...document.querySelectorAll<HTMLElement>('nav[aria-label="주 메뉴"]')].find(
         (element) => getComputedStyle(element).display !== 'none',
@@ -250,13 +250,13 @@ export async function exerciseHomeLayout(page: Page, empty = false, partialMeals
       1,
     )
   } else {
-    await page.getByRole('link', { name: '어젯밤 수면 수정', exact: true }).click()
+    await page.getByRole('link', { name: /^어젯밤 수면 수정/ }).click()
     await page.getByLabel('수면일', { exact: true }).waitFor()
     assert.equal(await page.getByLabel('수면일', { exact: true }).inputValue(), '2026-11-17')
     assert.equal(new URL(page.url()).pathname, '/sleep/sleep-fixture')
     await page.getByRole('button', { name: '취소', exact: true }).click()
     await page.waitForURL('http://127.0.0.1:4180/')
-    await page.getByRole('link', { name: '키·몸무게 기록 추가', exact: true }).click()
+    await page.getByRole('link', { name: /^키·몸무게 기록 추가/ }).click()
     const editor = page.getByRole('dialog', { name: '키·몸무게 기록', exact: true })
     await editor.waitFor()
     assert.equal(await editor.getByLabel('측정 날짜', { exact: true }).inputValue(), '2026-11-18')

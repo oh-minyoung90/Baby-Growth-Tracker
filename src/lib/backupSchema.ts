@@ -78,6 +78,11 @@ export const backupSchema = z
               created_at: time,
               id: uuid,
               nickname: text(20),
+              profile_photo: z
+                .string()
+                .max(98304)
+                .regex(/^data:image\/jpeg;base64,\/9j\/[A-Za-z0-9+/]+={0,2}$/)
+                .nullish(),
               updated_at: time,
             })
             .strict(),

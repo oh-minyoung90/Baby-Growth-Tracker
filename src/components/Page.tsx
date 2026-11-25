@@ -9,6 +9,7 @@ import { cn } from '@/lib/utils'
 export function Page({
   title,
   heading,
+  profileHeader,
   description,
   wide = false,
   actions,
@@ -18,6 +19,7 @@ export function Page({
   title: string
   /** 화면 제목 자리에 title 대신 보여 줄 내용 (홈: 아이 이름 · 생후 일수) */
   heading?: ReactNode
+  profileHeader?: ReactNode
   /** 제목 아래 한 줄 (홈: 오늘 날짜) */
   description?: ReactNode
   wide?: boolean
@@ -32,14 +34,21 @@ export function Page({
         wide ? 'max-w-320' : 'max-w-240',
       )}
     >
-      <header className="flex items-center justify-between gap-4">
-        <div className="flex min-w-0 flex-col gap-1">
-          <h1 className="text-2xl font-bold tracking-tight md:text-[28px]">{heading ?? title}</h1>
-          {description && (
-            <p className="text-sm text-muted-foreground md:text-[15px]">{description}</p>
+      <header className={profileHeader ? 'relative' : 'flex items-center justify-between gap-4'}>
+        {profileHeader ?? (
+          <div className="flex min-w-0 flex-col gap-1">
+            <h1 className="text-2xl font-bold tracking-tight md:text-[28px]">{heading ?? title}</h1>
+            {description && (
+              <p className="text-sm text-muted-foreground md:text-[15px]">{description}</p>
+            )}
+          </div>
+        )}
+        <div
+          className={cn(
+            'flex shrink-0 items-center gap-1',
+            profileHeader && 'absolute right-0 top-0',
           )}
-        </div>
-        <div className="flex shrink-0 items-center gap-1">
+        >
           {actions}
           <ShoppingSettingsLink />
         </div>

@@ -1,8 +1,11 @@
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { Sprout } from 'lucide-react'
 import { useForm, useWatch } from 'react-hook-form'
 import { z } from 'zod'
+import { ChildAvatar } from '@/components/ChildAvatar'
+import { prepareProfilePhoto } from '@/lib/prepareRecipePhoto'
+import { PhotoError, PHOTO_MESSAGES } from '@/lib/photoTypes'
 import { ConfirmDialog } from '@/components/ConfirmDialog'
 import { ErrorBanner } from '@/components/ErrorBanner'
 import { DateField } from '@/components/form/DateField'
@@ -48,6 +51,23 @@ export function ChildForm({
   const save = useSaveChild({ withDefaultFoods: mode === 'create' })
   const [confirmInput, setConfirmInput] = useState<ChildInput | null>(null)
   const [networkError, setNetworkError] = useState(false)
+  const pickerRef = useRef<HTMLInputElement>(null)
+  const [photoChange, setPhotoChange] = useState<string | null>()
+  const [photoError, setPhotoError] = useState('')
+  const [preparing, setPreparing] = useState(false)
+  const photo = photoChange === undefined ? initial?.profilePhoto : photoChange
+
+  async function choosePhoto(file: File) {
+    setPhotoError('')
+    setPreparing(true)
+    try {
+      setPhotoChange(await prepareProfilePhoto(file))
+    } catch (error) {
+      setPhotoError(PHOTO_MESSAGES[error instanceof PhotoError ? error.reason : 'decode'])
+    } finally {
+      setPreparing(false)
+    }
+  }
 
   const { control, handleSubmit, setError } = useForm<FormValues, unknown, z.output<typeof schema>>(
     {
@@ -59,9 +79,14 @@ export function ChildForm({
   const preview = agePreview(nickname, birthDate)
 
   const submit = async (input: ChildInput) => {
+    if (preparing || save.isPending) return
     setNetworkError(false)
     try {
-      onSaved(await save.mutateAsync(input))
+      onSaved(
+        await save.mutateAsync(
+          photoChange === undefined ? input : { ...input, profilePhoto: photoChange },
+        ),
+      )
     } catch (error) {
       // 서버(DB) 검증에 걸리면 화면 검증과 같은 자리에 같은 문구로 알린다 (FR-COM-13)
       const reason = error instanceof ChildSaveError ? error.reason : 'network'
@@ -85,6 +110,55 @@ export function ChildForm({
     <form onSubmit={onSubmit} noValidate className="flex flex-1 flex-col gap-5">
       {/* 네트워크 오류: 입력값은 그대로 두고 다시 시도할 수 있게 한다 (기능요구사항서 3.4) */}
       {networkError && <ErrorBanner onRetry={() => void onSubmit()} retrying={save.isPending} />}
+
+      <section aria-label="아이 프로필 사진" className="flex flex-col items-start gap-2">
+        <span className="text-sm font-bold">
+          프로필 사진 <span className="font-normal text-muted-foreground">(선택)</span>
+        </span>
+        <div className="flex flex-wrap items-center gap-3">
+          <ChildAvatar photo={photo} />
+          <input
+            ref={pickerRef}
+            type="file"
+            aria-label="아이 사진 파일"
+            accept="image/jpeg,image/png,image/heic,image/heif,.heic,.heif"
+            hidden
+            onChange={(event) => {
+              const file = event.currentTarget.files?.[0]
+              event.currentTarget.value = ''
+              if (file) void choosePhoto(file)
+            }}
+          />
+          <Button
+            type="button"
+            variant="soft"
+            size="sm"
+            disabled={preparing || save.isPending}
+            onClick={() => pickerRef.current?.click()}
+          >
+            {preparing ? '사진 준비 중…' : photo ? '사진 변경' : '사진 등록'}
+          </Button>
+          {photo && (
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              disabled={preparing || save.isPending}
+              onClick={() => {
+                setPhotoChange(null)
+                setPhotoError('')
+              }}
+            >
+              사진 삭제
+            </Button>
+          )}
+        </div>
+        {photoError && (
+          <p role="alert" className="text-sm text-danger-text">
+            {photoError}
+          </p>
+        )}
+      </section>
 
       <TextField
         control={control}
@@ -113,7 +187,7 @@ export function ChildForm({
       )}
 
       <div className={cn('flex flex-col gap-2.5', mode === 'create' && 'mt-auto pt-4')}>
-        <Button type="submit" size="lg" disabled={save.isPending}>
+        <Button type="submit" size="lg" disabled={preparing || save.isPending}>
           {save.isPending ? '저장하는 중…' : mode === 'create' ? '시작하기' : '저장'}
         </Button>
         {mode === 'create' && (

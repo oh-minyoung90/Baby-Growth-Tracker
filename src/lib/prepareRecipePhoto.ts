@@ -60,12 +60,31 @@ async function decodeHeic(file: File): Promise<DecodedPhoto> {
 }
 
 /** 방향을 반영해 그린 뒤 긴 변 1,280px 이하·JPEG로 저장한다. PNG 투명 부분은 흰색으로 채운다. */
-export async function prepareRecipePhoto(file: File): Promise<Blob> {
+export function prepareRecipePhoto(file: File): Promise<Blob> {
+  return prepareJpeg(file, false)
+}
+
+export async function prepareProfilePhoto(file: File): Promise<string> {
+  const jpeg = await prepareJpeg(file, true)
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader()
+    reader.onload = () =>
+      typeof reader.result === 'string' && reader.result.length <= 98304
+        ? resolve(reader.result)
+        : reject(new PhotoError('encode'))
+    reader.onerror = () => reject(new PhotoError('encode'))
+    reader.readAsDataURL(jpeg)
+  })
+}
+
+async function prepareJpeg(file: File, profile: boolean): Promise<Blob> {
   const format = await recipePhotoFormat(file)
   const image = format === 'heic' ? await decodeHeic(file) : await decodeRaster(file)
   const canvas = document.createElement('canvas')
   try {
-    const size = fitPhotoSize(image.width, image.height)
+    const side = Math.min(image.width, image.height)
+    const edge = Math.min(192, side)
+    const size = profile ? { width: edge, height: edge } : fitPhotoSize(image.width, image.height)
     canvas.width = size.width
     canvas.height = size.height
     const context = canvas.getContext('2d')
@@ -73,7 +92,21 @@ export async function prepareRecipePhoto(file: File): Promise<Blob> {
     context.fillStyle = '#ffffff'
     context.fillRect(0, 0, size.width, size.height)
     context.imageSmoothingQuality = 'high'
-    context.drawImage(image.source, 0, 0, size.width, size.height)
+    if (profile) {
+      context.drawImage(
+        image.source,
+        (image.width - side) / 2,
+        (image.height - side) / 2,
+        side,
+        side,
+        0,
+        0,
+        edge,
+        edge,
+      )
+    } else {
+      context.drawImage(image.source, 0, 0, size.width, size.height)
+    }
     return await new Promise<Blob>((resolve, reject) =>
       canvas.toBlob(
         (blob) => {

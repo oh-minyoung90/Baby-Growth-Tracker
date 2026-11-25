@@ -93,8 +93,8 @@ export function BackupSection({ onBusyChange }: { onBusyChange?: (busy: boolean)
           아이 정보·성장·수면·음식·식단·레시피·준비 목록을 JSON 파일 하나로 보관해요.
         </p>
         <p className="text-sm text-muted-foreground">
-          사진은 파일 경로만 포함돼요. 사진 파일이 저장소에 남아 있으면 다시 연결되고, 없으면 사진
-          없음으로 표시돼요.
+          아이 프로필 사진은 백업에 포함돼요. 레시피 사진은 파일 경로만 포함돼요. 사진 파일이
+          저장소에 남아 있으면 다시 연결되고, 없으면 사진 없음으로 표시돼요.
         </p>
         {failure && (
           <ErrorBanner
@@ -183,7 +183,7 @@ export function BackupSection({ onBusyChange }: { onBusyChange?: (busy: boolean)
         open={confirm}
         onOpenChange={setConfirm}
         title="현재 데이터를 백업 내용으로 바꿀까요?"
-        description="현재 데이터가 모두 지워지고 파일 내용으로 바뀌어요. 사진 파일 자체는 가져오지 않아요."
+        description="현재 데이터가 모두 지워지고 파일 내용으로 바뀌어요. 레시피 사진은 저장소에 남아 있어야 다시 연결돼요."
         confirmLabel="전체 바꾸고 가져오기"
         destructive
         onConfirm={() => void onImport()}
