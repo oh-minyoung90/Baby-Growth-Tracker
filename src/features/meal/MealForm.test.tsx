@@ -169,7 +169,7 @@ describe('식단 입력·검증·화면 이동 (T-43)', () => {
       undefined,
     )
     const day = screen.getByRole('region', { name: formatDateLabel('2026-11-12') })
-    expect(within(day).getByText('계획')).toBeInTheDocument()
+    expect(within(day).getByText('예정')).toBeInTheDocument()
   })
   it('선택 없이 저장할 수 없고 여러 음식을 골라 저장하면 목록에 바로 반영한다', async () => {
     await openNew()

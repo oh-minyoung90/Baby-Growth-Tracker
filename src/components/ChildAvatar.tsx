@@ -1,8 +1,16 @@
 import { Baby } from 'lucide-react'
 
-export function ChildAvatar({ photo }: { photo?: string | null }) {
+export function ChildAvatar({
+  photo,
+  compact = false,
+}: {
+  photo?: string | null
+  compact?: boolean
+}) {
   return (
-    <span className="inline-flex size-16 shrink-0 items-center justify-center overflow-hidden rounded-full border border-border bg-soft text-soft-text">
+    <span
+      className={`${compact ? 'size-11' : 'size-16'} inline-flex shrink-0 items-center justify-center overflow-hidden rounded-full border border-border bg-soft text-soft-text`}
+    >
       {photo ? (
         <img
           src={photo}
@@ -12,7 +20,7 @@ export function ChildAvatar({ photo }: { photo?: string | null }) {
           className="size-full object-cover"
         />
       ) : (
-        <Baby aria-hidden className="size-[34px]" />
+        <Baby aria-hidden className={compact ? 'size-6' : 'size-[34px]'} />
       )}
     </span>
   )

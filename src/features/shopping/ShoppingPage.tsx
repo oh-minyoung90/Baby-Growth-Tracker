@@ -183,7 +183,7 @@ export function ShoppingPage() {
               {rows(selected, frequent)}
               <Link
                 to={newPath}
-                className="flex min-h-12 items-center justify-center gap-2 rounded-button border bg-soft px-4 text-sm font-bold text-soft-text outline-none focus-visible:ring-3 focus-visible:ring-ring/40"
+                className="flex min-h-12 items-center justify-center gap-2 rounded-button border bg-soft-hover px-4 text-sm font-bold text-soft-text outline-none transition-colors hover:bg-soft focus-visible:ring-3 focus-visible:ring-ring/40"
               >
                 <Plus className="size-5" aria-hidden />
                 {frequent ? '자주 사는 물건 추가' : '살 물건 추가'}

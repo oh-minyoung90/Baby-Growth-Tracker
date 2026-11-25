@@ -94,7 +94,7 @@ export function MealWeekBoard({
           )
           setActive(days[nearest])
         }}
-        className="relative flex snap-x snap-mandatory gap-3 overflow-x-auto overscroll-x-contain pb-2 md:grid md:grid-cols-[repeat(7,minmax(8rem,1fr))] md:gap-2"
+        className="relative flex snap-x snap-mandatory gap-3 overflow-x-auto overscroll-x-contain pb-2 md:grid md:grid-cols-[repeat(7,minmax(11rem,1fr))] md:has-[[data-variant=plan]+[data-variant=caution]]:grid-cols-[repeat(7,minmax(15rem,1fr))] md:gap-2"
       >
         {days.map((date, index) => (
           <section
@@ -231,22 +231,19 @@ function MealCell({
   const names = entry ? [...entry.foods, ...entry.recipes].map((item) => item.name).join(', ') : ''
   const content = entry ? (
     <>
-      <span className="text-[15px] leading-relaxed break-words md:text-sm">{names}</span>
-      <span className="flex flex-wrap items-center gap-1.5">
-        {!entry.eaten && <Badge variant="plan">계획</Badge>}
-        {caution && (
-          <Badge variant="caution">
-            <TriangleAlert aria-hidden />
-            주의
-          </Badge>
-        )}
-        {entry.intake && (
-          <span className="text-xs text-muted-foreground">{mealIntakeLabel(entry.intake)}</span>
-        )}
-        {entry.memo && (
-          <MessageSquare className="size-3.5 text-muted-foreground" aria-label="메모 있음" />
-        )}
+      <span className="max-w-full text-[15px] leading-relaxed wrap-anywhere md:text-sm">
+        {names}
       </span>
+      {(entry.intake || entry.memo) && (
+        <span className="flex flex-wrap items-center gap-1.5">
+          {entry.intake && (
+            <span className="text-xs text-muted-foreground">{mealIntakeLabel(entry.intake)}</span>
+          )}
+          {entry.memo && (
+            <MessageSquare className="size-3.5 text-muted-foreground" aria-label="메모 있음" />
+          )}
+        </span>
+      )}
     </>
   ) : (
     <>
@@ -257,21 +254,23 @@ function MealCell({
       </span>
     </>
   )
-  const contentClass =
-    'flex w-full min-w-0 flex-1 flex-col gap-2 rounded-button p-3 text-left md:p-2'
+  const contentClass = cn(
+    'flex min-h-11 w-full min-w-0 flex-1 gap-2 rounded-button px-3 py-2 md:px-2',
+    entry ? 'flex-col items-start justify-center text-left' : 'items-center justify-between',
+  )
   return (
     <div
       onDragOver={onDragOver}
       onDrop={onDrop}
       className={cn(
-        'flex min-h-28 w-full flex-col rounded-button border md:min-h-44',
+        'flex min-h-12 w-full flex-col rounded-button border md:min-h-44',
         !entry || !entry.eaten ? 'border-dashed bg-muted/40' : 'bg-surface',
         dropActive && 'ring-2 ring-primary bg-soft',
       )}
     >
       {entry && (
-        <div className="flex min-h-11 items-center justify-between gap-1 pl-3 md:pl-2">
-          <span className="flex min-w-0 items-center gap-1">
+        <div className="flex min-h-11 items-center gap-x-1 pl-3 md:px-2">
+          <span className="flex shrink-0 items-center gap-1">
             {' '}
             {onDragStart && (
               <Button
@@ -291,8 +290,15 @@ function MealCell({
             )}
             <span className="text-sm font-bold">{label}</span>
           </span>
+          {!entry.eaten && <Badge variant="plan">예정</Badge>}
+          {caution && (
+            <Badge variant="caution">
+              <TriangleAlert aria-hidden />
+              주의
+            </Badge>
+          )}
           {onEatenChange ? (
-            <span className="grid size-11 shrink-0 place-items-center">
+            <span className="ml-auto grid size-11 shrink-0 place-items-center md:w-7">
               <Checkbox
                 checked={entry.eaten}
                 disabled={disabled}
@@ -302,9 +308,9 @@ function MealCell({
               />
             </span>
           ) : entry.eaten ? (
-            <Check className="mr-2 size-4 text-tried-text" aria-label="먹음" />
+            <Check className="mr-2 ml-auto size-4 text-tried-text" aria-label="먹음" />
           ) : (
-            <Square className="mr-2 size-4 text-muted-foreground" aria-label="계획" />
+            <Square className="mr-2 ml-auto size-4 text-muted-foreground" aria-label="예정" />
           )}
         </div>
       )}
@@ -315,7 +321,7 @@ function MealCell({
           aria-label={`${label} ${entry ? `식단 수정: ${names}` : '식단 추가'}`}
           className={cn(
             contentClass,
-            'outline-none transition-colors hover:bg-soft focus-visible:ring-2 focus-visible:ring-ring',
+            'outline-none transition-colors focus-visible:ring-2 focus-visible:ring-ring enabled:hover:bg-soft-hover',
           )}
           onClick={onSelect}
         >
