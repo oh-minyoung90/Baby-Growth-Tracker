@@ -22,7 +22,7 @@ export function SubTabs({
           className={({ isActive }) =>
             cn(
               'flex h-10 items-center justify-center rounded-md px-4.5 text-sm font-medium text-soft-text',
-              isActive && 'bg-surface font-bold text-primary',
+              isActive ? 'bg-surface font-bold text-primary' : 'hover:bg-soft-hover',
             )
           }
         >

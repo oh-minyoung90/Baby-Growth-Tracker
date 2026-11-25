@@ -1,8 +1,9 @@
 import { useRef, useState, type ReactNode } from 'react'
 import type { UseQueryResult } from '@tanstack/react-query'
 import type { LucideIcon } from 'lucide-react'
-import { ChevronRight, Moon, Ruler, Utensils, Check, NotebookPen, Plus } from 'lucide-react'
+import { ChevronRight, Camera, Plus } from 'lucide-react'
 import { Link } from 'react-router'
+import { ChildAvatar } from '@/components/ChildAvatar'
 import { ErrorBanner } from '@/components/ErrorBanner'
 import { ListLoading } from '@/components/ListLoading'
 import { Page } from '@/components/Page'
@@ -11,12 +12,12 @@ import { Button } from '@/components/ui/button'
 import { Sheet, SheetContent, SheetDescription, SheetTitle } from '@/components/ui/sheet'
 import { ageLabel } from '@/domain/age'
 import { formatDateLabel, todayString, yesterdayString } from '@/domain/date'
-import { formatNapSleep, formatNightSleep, formatTotalSleep } from '@/domain/sleep'
+import { formatTotalSleep } from '@/domain/sleep'
 import type { BodyMeasure } from '@/lib/bodyApi'
 import { formatMeasureValue } from '@/lib/bodyFormat'
 import { NETWORK_ERROR_MESSAGES } from '@/lib/messages'
 import type { Milestone } from '@/lib/milestoneApi'
-import { MILESTONE_TYPES, milestoneTypeInfo } from '@/lib/milestoneTypes'
+import { MILESTONE_TYPES } from '@/lib/milestoneTypes'
 import type { SleepLog } from '@/lib/sleepApi'
 import { summarizeSleepLog } from '@/lib/sleepSummary'
 import { useBodyMeasures } from '@/lib/useBodyMeasures'
@@ -43,7 +44,7 @@ const GROWTH_RECORDS: readonly RecordChoice[] = MILESTONE_TYPES.map(({ value, la
 }))
 
 const HEADER_ACTION_CLASS =
-  'inline-flex min-h-11 min-w-11 shrink-0 items-center justify-center gap-1 rounded-button px-2 text-sm font-bold text-soft-text outline-none hover:bg-soft focus-visible:ring-3 focus-visible:ring-ring/40'
+  'inline-flex min-h-11 min-w-11 shrink-0 items-center justify-center gap-1 rounded-button px-2 text-sm font-bold text-soft-text outline-none hover:bg-soft-hover focus-visible:bg-soft-hover focus-visible:ring-3 focus-visible:ring-ring/40'
 
 /**
  * 홈 (SCR-03): 식단 → 오늘 기록 → 어젯밤 수면 → 준비 목록 → 최근 측정.
@@ -63,15 +64,28 @@ export function HomePage() {
   return (
     <Page
       title="홈"
-      heading={
+      profileHeader={
         child && (
-          <>
-            {child.nickname}
-            {age && <span className="text-soft-text"> · {age}</span>}
-          </>
+          <div className="flex flex-col items-center px-12 text-center">
+            <Link
+              to="/settings/child"
+              state={{ fromHome: true }}
+              aria-label="아이 프로필 사진 편집"
+              className="relative mb-2.5 rounded-full focus-visible:ring-3 focus-visible:ring-ring"
+            >
+              <ChildAvatar photo={child.profilePhoto} />
+              <span className="absolute right-0 bottom-0 rounded-full border border-surface bg-soft p-1 text-soft-text">
+                <Camera className="size-3" aria-hidden />
+              </span>
+            </Link>
+            <h1 className="max-w-full text-[17px] font-bold break-all">{child.nickname}</h1>
+            {age && <p className="mt-[5px] text-sm font-bold">{age}</p>}
+            <time dateTime={child.birthDate} className="mt-1 text-xs text-muted-foreground">
+              ({child.birthDate.replaceAll('-', '.')})
+            </time>
+          </div>
         )
       }
-      description={formatDateLabel(today)}
     >
       {failed.length > 0 && (
         <ErrorBanner
@@ -83,9 +97,11 @@ export function HomePage() {
 
       <MealCard query={meals} today={today} />
       <TodayCard query={milestones} today={today} />
-      <SleepCard query={sleepLogs} yesterday={yesterdayString()} />
-      <ShoppingCard />
-      <MeasureCard query={measures} />
+      <div>
+        <SleepCard query={sleepLogs} yesterday={yesterdayString()} />
+        <ShoppingCard />
+        <MeasureCard query={measures} />
+      </div>
     </Page>
   )
 }
@@ -117,30 +133,6 @@ function CardAction({ to, children }: { to: string; children: ReactNode }) {
 }
 
 /**
- * 이름(흐린 글자) + 값(진한 글자). 값이 시간이 아니면("없음", "계산 불가") 흐리게.
- */
-function LabeledValue({
-  label,
-  value,
-  muted = false,
-  className,
-}: {
-  label: string
-  value: string
-  muted?: boolean
-  className?: string
-}) {
-  return (
-    <div className="flex flex-wrap items-baseline gap-x-1.5 text-sm">
-      <dt className="text-muted-foreground">{label}</dt>
-      <dd className={cn('font-bold', className, muted && 'font-normal text-muted-foreground')}>
-        {value}
-      </dd>
-    </div>
-  )
-}
-
-/**
  * 오늘의 기록 (FR-HOME-02, 06): 기록 날짜가 오늘인 발달 기록. 입력한 시각이 아니라 기록 날짜 기준이다.
  * 누르면 그 기록의 수정 화면이 열린다 (FR-COM-30)
  */
@@ -149,7 +141,8 @@ function TodayCard({ query, today }: { query: UseQueryResult<Milestone[]>; today
   return (
     <Card
       title="오늘의 기록"
-      icon={NotebookPen}
+      icon="growth"
+      className={hasRecords ? 'bg-cream' : undefined}
       action={
         hasRecords && (
           <GrowthRecordAction className={HEADER_ACTION_CLASS} ariaLabel="성장 기록 추가">
@@ -170,89 +163,34 @@ function TodayCard({ query, today }: { query: UseQueryResult<Milestone[]>; today
               </GrowthRecordAction>
             )
           }
+          const rows = MILESTONE_TYPES.flatMap(({ value, label }) => {
+            const record = records.find((item) => item.type === value)
+            return record ? [{ record, label }] : []
+          })
           return (
-            <ul className="flex flex-col gap-2">
-              {records.map((record) => {
-                const { icon: Icon, label } = milestoneTypeInfo(record.type)
-                return (
-                  <li key={record.id}>
+            <div>
+              <ul className="divide-y rounded-input border bg-surface">
+                {rows.map(({ record, label }) => (
+                  <li key={record.id} className="flex min-h-12 items-baseline gap-2.5 px-3 text-sm">
+                    <strong className="shrink-0 text-[15px]">{label}</strong>
                     <Link
+                      aria-label={`${label} ${record.title}`}
+                      className="min-w-0 rounded-input py-3 wrap-anywhere hover:underline focus-visible:underline"
                       to={`/milestones/${record.id}`}
-                      className="flex min-h-11 items-start gap-2.5 rounded-input py-1.5 outline-none hover:bg-muted focus-visible:bg-muted"
                     >
-                      <span className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-soft text-soft-text">
-                        <Icon className="size-4.5" aria-hidden />
-                      </span>
-                      <span className="min-w-0 flex-1">
-                        <span className="sr-only">{label}</span>
-                        <span className="block text-[15px] font-medium break-words">
-                          {record.title}
-                        </span>
-                        {record.memo && (
-                          <span className="mt-0.5 line-clamp-2 text-[13px] break-words text-muted-foreground">
-                            {record.memo}
-                          </span>
-                        )}
-                      </span>
+                      {record.title}
                     </Link>
                   </li>
-                )
-              })}
-            </ul>
-          )
-        }}
-      </QueryContent>
-    </Card>
-  )
-}
-
-/**
- * 어젯밤 수면 (FR-HOME-03): 수면일이 어제인 기록의 총 수면과 밤잠·낮잠.
- * 잠든·일어난 시간 중 하나만 있으면 총 수면은 "계산 불가" (BR-07, R44)
- */
-function SleepCard({ query, yesterday }: { query: UseQueryResult<SleepLog[]>; yesterday: string }) {
-  const existing = query.isSuccess ? query.data.find((log) => log.date === yesterday) : undefined
-  return (
-    <Card
-      title="어젯밤 수면"
-      icon={Moon}
-      action={
-        existing && (
-          <Link
-            to={`/sleep/${existing.id}`}
-            className={HEADER_ACTION_CLASS}
-            aria-label="어젯밤 수면 수정"
-          >
-            수정
-          </Link>
-        )
-      }
-    >
-      <QueryContent query={query}>
-        {(logs) => {
-          const log = logs.find((item) => item.date === yesterday)
-          if (!log) return <CardAction to="/sleep/new">어젯밤 수면 기록하기</CardAction>
-          const result = summarizeSleepLog(log)
-          const total = result ? result.totalMinutes : null
-          return (
-            <div className="flex flex-col gap-1">
-              <dl>
-                <LabeledValue label="총" value={formatTotalSleep(total)} muted={total === null} />
-              </dl>
-              <dl className="flex flex-wrap gap-x-4 gap-y-1">
-                <LabeledValue
-                  label="밤잠"
-                  value={result ? formatNightSleep(result) : '계산 불가'}
-                  muted={result?.nightMinutes == null}
-                  className="text-[13px] font-normal text-muted-foreground"
-                />
-                <LabeledValue
-                  label="낮잠"
-                  value={result ? formatNapSleep(result) : '계산 불가'}
-                  muted={!result || result.naps.length === 0}
-                  className="text-[13px] font-normal text-muted-foreground"
-                />
-              </dl>
+                ))}
+              </ul>
+              {records.length > rows.length && (
+                <Link
+                  className={CARD_ACTION_CLASS}
+                  to={`/growth/timeline?period=custom&from=${today}&to=${today}`}
+                >
+                  오늘 기록 {records.length}개 보기 <ChevronRight aria-hidden className="size-4" />
+                </Link>
+              )}
             </div>
           )
         }}
@@ -261,54 +199,63 @@ function SleepCard({ query, yesterday }: { query: UseQueryResult<SleepLog[]>; ye
   )
 }
 
-/** 최근 측정 (FR-HOME-04): 가장 최근 키·몸무게와 측정 날짜. 한쪽만 있으면 빈 값은 "-" (FR-BODY-05) */
-function MeasureCard({ query }: { query: UseQueryResult<BodyMeasure[]> }) {
-  const hasRecords = query.isSuccess && query.data.length > 0
+const SUMMARY_LINK_CLASS =
+  'inline-flex min-h-11 min-w-11 flex-wrap items-center justify-end gap-x-1 text-right text-sm font-normal text-foreground hover:underline focus-visible:underline'
+
+function SleepCard({ query, yesterday }: { query: UseQueryResult<SleepLog[]>; yesterday: string }) {
+  const log = query.isSuccess && query.data.find((item) => item.date === yesterday)
+  const total = log ? formatTotalSleep(summarizeSleepLog(log)?.totalMinutes ?? null) : null
   return (
     <Card
-      title="최근 측정"
-      icon={Ruler}
+      title="어젯밤 수면"
+      icon="sleep"
+      summary
       action={
-        hasRecords && (
+        log && (
           <Link
-            to="/growth/body?record=new"
-            className={HEADER_ACTION_CLASS}
-            aria-label="키·몸무게 기록 추가"
+            to={`/sleep/${log.id}`}
+            className={SUMMARY_LINK_CLASS}
+            aria-label={`어젯밤 수면 수정, 총 ${total}`}
           >
-            <Plus className="size-4" aria-hidden />
-            기록
+            총 <span>{total}</span>
           </Link>
         )
       }
     >
-      <QueryContent query={query}>
-        {(measures) => {
-          // 측정 날짜 최신순으로 받는다
-          const latest = measures[0]
-          if (!latest)
-            return <CardAction to="/growth/body?record=new">키·몸무게 기록하기</CardAction>
-          return (
-            <>
-              <dl className="flex flex-wrap gap-x-5 gap-y-2">
-                <LabeledValue
-                  label="키"
-                  value={formatMeasureValue(latest.heightCm, 'cm')}
-                  muted={latest.heightCm === null}
-                />
-                <LabeledValue
-                  label="몸무게"
-                  value={formatMeasureValue(latest.weightKg, 'kg')}
-                  muted={latest.weightKg === null}
-                />
-              </dl>
-              {/* 좁은 화면에서는 날짜 중간이나 "측·정" 사이가 아니라 날짜와 "측정" 사이에서 줄을 바꾼다 */}
-              <p className="text-[13px] break-keep text-muted-foreground">
-                <span className="whitespace-nowrap">{formatDateLabel(latest.date)}</span> 측정
-              </p>
-            </>
-          )
-        }}
-      </QueryContent>
+      {!log && (
+        <QueryContent query={query}>
+          {() => <CardAction to="/sleep/new">어젯밤 수면 기록하기</CardAction>}
+        </QueryContent>
+      )}
+    </Card>
+  )
+}
+
+function MeasureCard({ query }: { query: UseQueryResult<BodyMeasure[]> }) {
+  const latest = query.isSuccess && query.data[0]
+  return (
+    <Card
+      title="최근 측정"
+      icon="measure"
+      summary
+      action={
+        latest && (
+          <Link
+            to="/growth/body?record=new"
+            className={SUMMARY_LINK_CLASS}
+            aria-label={`키·몸무게 기록 추가, 최근 측정 ${formatMeasureValue(latest.heightCm, 'cm')} · ${formatMeasureValue(latest.weightKg, 'kg')}`}
+          >
+            <span>{formatMeasureValue(latest.heightCm, 'cm')}</span> ·{' '}
+            <span>{formatMeasureValue(latest.weightKg, 'kg')}</span>
+          </Link>
+        )
+      }
+    >
+      {!latest && (
+        <QueryContent query={query}>
+          {() => <CardAction to="/growth/body?record=new">키·몸무게 기록하기</CardAction>}
+        </QueryContent>
+      )}
     </Card>
   )
 }
@@ -428,7 +375,7 @@ function MealCard({ query, today }: { query: UseQueryResult<MealEntry[]>; today:
   return (
     <Card
       title="오늘의 식단"
-      icon={Utensils}
+      icon="meal"
       className="bg-cream"
       action={
         showAdd && (
@@ -452,7 +399,7 @@ function MealCard({ query, today }: { query: UseQueryResult<MealEntry[]>; today:
               <ChevronRight className="size-4" aria-hidden />
             </MealRecordAction>
           ) : (
-            <ul className="flex flex-col gap-2">
+            <ul className="divide-y overflow-hidden rounded-input border bg-surface">
               {MEAL_TYPES.flatMap(({ value, label }) => {
                 const entry = entries.find((item) => item.type === value)
                 return entry
@@ -460,19 +407,16 @@ function MealCard({ query, today }: { query: UseQueryResult<MealEntry[]>; today:
                       <li key={entry.id}>
                         <Link
                           to={`/meals/week?date=${today}&record=${entry.id}`}
-                          className="flex min-h-16 min-w-0 items-center gap-3 rounded-input border bg-surface px-3 py-3 text-sm outline-none hover:bg-soft focus-visible:bg-soft"
+                          className="flex min-h-12 min-w-0 items-center gap-2.5 px-3 py-2 text-sm outline-none hover:bg-cream-hover focus-visible:bg-cream-hover"
                         >
-                          <span className="shrink-0 text-sm font-bold">{label}</span>
+                          <span className="shrink-0 text-[15px] font-bold">{label}</span>
                           <span className="min-w-0 flex-1 break-words">
                             {[...entry.foods, ...entry.recipes].map((item) => item.name).join(', ')}
                           </span>
                           {entry.eaten ? (
-                            <Badge variant="tried">
-                              <Check aria-hidden />
-                              먹음
-                            </Badge>
+                            <Badge variant="tried">먹음</Badge>
                           ) : (
-                            <Badge variant="plan">계획</Badge>
+                            <Badge variant="soft">예정</Badge>
                           )}
                         </Link>
                       </li>,

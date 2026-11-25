@@ -151,10 +151,11 @@ function card(name: string) {
 }
 
 describe('머리말 (FR-HOME-01)', () => {
-  it('아이 이름, 오늘 기준 생후 일수, 오늘 날짜를 보여 준다', async () => {
+  it('아이 이름, 오늘 기준 생후 일수, 생년월일를 보여 준다', async () => {
     await renderHome()
-    expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent('하늘이 · 생후 9개월 14일')
-    expect(screen.getByText('2026. 10. 22. (목)')).toBeInTheDocument()
+    expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent('하늘이')
+    expect(screen.getByText('생후 9개월 14일')).toBeVisible()
+    expect(screen.getByText('(2026.01.08)')).toBeInTheDocument()
     expect(document.title).toBe('홈 · MyBabyLog')
   })
 })
@@ -167,15 +168,18 @@ describe('오늘의 기록 (FR-HOME-02, 06)', () => {
       within(today).queryByRole('button', { name: '오늘 성장 기록하기' }),
     ).not.toBeInTheDocument()
     const links = await within(today).findAllByRole('link')
-    expect(links.map((link) => link.textContent)).toEqual(['단어물컵을 가리키며', '행동혼자 서기'])
+    expect(within(today).getByText('단어').closest('a')).toBeNull()
+    expect(links[0]).toHaveTextContent(/^물$/)
+    expect(links[0]).toHaveAccessibleName('단어 물')
+    expect(links[1]).toHaveAccessibleName('행동 혼자 서기')
+    expect(links).toHaveLength(2)
+    expect(within(today).queryByText('표정')).not.toBeInTheDocument()
   })
 
   it('기록을 누르면 수정 화면이 열리고, 취소하면 홈으로 돌아온다 (FR-COM-30)', async () => {
     const { router } = await renderHome()
-    await userEvent.click(
-      await within(card('오늘의 기록')).findByRole('link', { name: /혼자 서기/ }),
-    )
-    expect(router.state.location.pathname).toBe('/milestones/bh2')
+    await userEvent.click(await within(card('오늘의 기록')).findByRole('link', { name: /단어 물/ }))
+    expect(router.state.location.pathname).toBe('/milestones/w3')
     expect(await screen.findByRole('heading', { level: 1, name: '발달 기록 수정' })).toBeVisible()
     await userEvent.click(screen.getByRole('button', { name: '취소' }))
     await waitFor(() => expect(router.state.location.pathname).toBe('/'))
@@ -210,12 +214,14 @@ describe('오늘의 기록 (FR-HOME-02, 06)', () => {
 })
 
 describe('어젯밤 수면 (FR-HOME-03)', () => {
-  it('수면일이 어제인 기록의 총 수면과 밤잠·낮잠을 보여 준다', async () => {
+  it('수면일이 어제인 기록의 총 수면을 보여 준다', async () => {
     await renderHome()
     const sleep = card('어젯밤 수면')
     expect(await within(sleep).findByText('11시간 50분')).toBeVisible()
-    expect(within(sleep).getByText('9시간 30분')).toBeVisible()
-    expect(within(sleep).getByText('2회 · 2시간 20분')).toBeVisible()
+    expect(within(sleep).getByRole('link', { name: /총 11시간 50분/ })).toHaveAttribute(
+      'href',
+      '/sleep/s2',
+    )
   })
 
   it('잠든·일어난 시간 중 하나만 있으면 총 수면과 밤잠은 계산 불가다 (R44)', async () => {
@@ -224,8 +230,7 @@ describe('어젯밤 수면 (FR-HOME-03)', () => {
     ] satisfies SleepLog[])
     await renderHome()
     const sleep = card('어젯밤 수면')
-    expect(await within(sleep).findAllByText('계산 불가')).toHaveLength(2)
-    expect(within(sleep).getByText('없음')).toBeVisible()
+    expect(await within(sleep).findByText('계산 불가')).toBeVisible()
   })
 
   it('어젯밤 기록이 없으면 기록하기 버튼으로 수면일이 어제인 입력 화면을 연다', async () => {
@@ -240,14 +245,12 @@ describe('어젯밤 수면 (FR-HOME-03)', () => {
 })
 
 describe('최근 측정 (FR-HOME-04)', () => {
-  it('가장 최근 측정의 키·몸무게와 측정 날짜를 보여 준다. 없는 값은 "-"', async () => {
+  it('가장 최근 측정의 키·몸무게를 보여 준다. 없는 값은 "-"', async () => {
     await renderHome()
     const measure = card('최근 측정')
     expect(await within(measure).findByText('72.5cm')).toBeVisible()
     expect(within(measure).getByText('-')).toBeVisible()
-    expect(within(measure).getByText('2026. 10. 15. (목)').closest('p')).toHaveTextContent(
-      '2026. 10. 15. (목) 측정',
-    )
+    expect(within(measure).getByRole('link')).toHaveAttribute('href', '/growth/body?record=new')
   })
 
   it('측정 기록이 없으면 기록하기 버튼으로 입력 시트를 연다', async () => {
@@ -311,7 +314,7 @@ describe('카드별 추가·수정 (FR-HOME-05)', () => {
   it('어젯밤 수면은 기존 기록을 수정하고 취소하면 홈으로 돌아온다', async () => {
     const { router } = await renderHome()
     await userEvent.click(
-      within(card('어젯밤 수면')).getByRole('link', { name: '어젯밤 수면 수정' }),
+      within(card('어젯밤 수면')).getByRole('link', { name: /^어젯밤 수면 수정/ }),
     )
     expect(router.state.location.pathname).toBe('/sleep/s2')
     expect(await screen.findByLabelText('수면일')).toHaveValue('2026-10-21')
@@ -323,7 +326,7 @@ describe('카드별 추가·수정 (FR-HOME-05)', () => {
   it('측정이 있어도 새 측정 입력을 열고 취소하면 홈으로 돌아온다', async () => {
     const { router } = await renderHome()
     await userEvent.click(
-      within(card('최근 측정')).getByRole('link', { name: '키·몸무게 기록 추가' }),
+      within(card('최근 측정')).getByRole('link', { name: /^키·몸무게 기록 추가/ }),
     )
     const sheet = await screen.findByRole('dialog', { name: '키·몸무게 기록' })
     expect(within(sheet).getByLabelText('측정 날짜')).toHaveValue('2026-10-22')
@@ -465,7 +468,7 @@ describe('오늘의 식단·끼니 추가', () => {
     ])
     await renderHome()
     const links = await within(card('오늘의 식단')).findAllByRole('link')
-    expect(links.map((link) => link.textContent)).toEqual(['아침쌀죽계획', '저녁삭제된 음식먹음'])
+    expect(links.map((link) => link.textContent)).toEqual(['아침쌀죽예정', '저녁삭제된 음식먹음'])
     expect(links[0]).toHaveAttribute('href', '/meals/week?date=2026-10-22&record=breakfast')
   })
   it('오늘 식단 조회 실패 시 기존 카드는 유지하고 실패한 조회만 재시도한다', async () => {

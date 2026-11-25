@@ -1,33 +1,41 @@
 import { useId, type ReactNode } from 'react'
-import type { LucideIcon } from 'lucide-react'
+import meal from '@/assets/home/meal.svg'
+import growth from '@/assets/home/growth.svg'
+import sleep from '@/assets/home/sleep.svg'
+import prep from '@/assets/home/prep.svg'
+import measure from '@/assets/home/measure.svg'
 import { cn } from '@/lib/utils'
 
-/** 홈 요약 카드의 폭·제목·아이콘·간격을 통일한다. */
+const icons = { meal, growth, sleep, prep, measure }
+
 export function HomeCard({
   title,
-  icon: Icon,
+  icon,
   action,
   className,
+  summary,
   children,
 }: {
   title: string
-  icon: LucideIcon
+  icon: keyof typeof icons
   action?: ReactNode
+  summary?: boolean
   className?: string
-  children: ReactNode
+  children?: ReactNode
 }) {
   const id = useId()
   return (
     <section
       aria-labelledby={id}
-      className={cn('flex min-w-0 flex-col gap-3 rounded-card border bg-surface p-4', className)}
+      className={cn(
+        'flex min-w-0 flex-col',
+        summary ? 'border-b py-1' : 'gap-2 rounded-card border bg-surface p-4',
+        className,
+      )}
     >
-      <div className="flex min-w-0 items-center justify-between gap-2">
-        <h2
-          id={id}
-          className="flex min-w-0 items-center gap-2 text-base leading-6 font-bold text-foreground"
-        >
-          <Icon className="size-5 shrink-0 text-soft-text" aria-hidden />
+      <div className="flex min-h-11 min-w-0 items-center justify-between gap-2">
+        <h2 id={id} className="flex shrink-0 items-center gap-2 text-[15px] leading-6 font-bold">
+          <img alt="" src={icons[icon]} className="size-[34px] shrink-0" />
           {title}
         </h2>
         {action}

@@ -6,11 +6,13 @@ export interface Child {
   nickname: string
   /** 'YYYY-MM-DD' */
   birthDate: string
+  profilePhoto?: string | null
 }
 
 export interface ChildInput {
   nickname: string
   birthDate: string
+  profilePhoto?: string | null
 }
 
 /** 저장 실패 이유. 화면은 이 값으로 안내 문구를 고른다 */
@@ -25,12 +27,16 @@ export class ChildSaveError extends Error {
 
 /** 로그인한 사용자의 아이 정보. 없으면 null (RLS로 본인 것만 조회된다) */
 export async function fetchMyChild(): Promise<Child | null> {
-  const { data, error } = await supabase
-    .from('children')
-    .select('id, nickname, birth_date')
-    .maybeSingle()
+  const { data, error } = await supabase.from('children').select('*').maybeSingle()
   if (error) throw error
-  return data && { id: data.id, nickname: data.nickname, birthDate: data.birth_date }
+  return (
+    data && {
+      id: data.id,
+      nickname: data.nickname,
+      birthDate: data.birth_date,
+      profilePhoto: data.profile_photo ?? null,
+    }
+  )
 }
 
 /** 아이 정보를 등록하거나 수정한다 (계정당 1건이라 owner_id 기준으로 덮어쓴다) */
@@ -38,10 +44,15 @@ export async function saveChild(ownerId: string, input: ChildInput): Promise<Chi
   const { data, error } = await supabase
     .from('children')
     .upsert(
-      { owner_id: ownerId, nickname: input.nickname.trim(), birth_date: input.birthDate },
+      {
+        owner_id: ownerId,
+        nickname: input.nickname.trim(),
+        birth_date: input.birthDate,
+        ...(input.profilePhoto !== undefined && { profile_photo: input.profilePhoto }),
+      },
       { onConflict: 'owner_id' },
     )
-    .select('id, nickname, birth_date')
+    .select('*')
     .single()
   if (error) {
     // DB 검증(T-08): 22007 미래 날짜, 23514 이름 길이
@@ -49,5 +60,10 @@ export async function saveChild(ownerId: string, input: ChildInput): Promise<Chi
     if (error.code === '23514') throw new ChildSaveError('invalid')
     throw new ChildSaveError('network')
   }
-  return { id: data.id, nickname: data.nickname, birthDate: data.birth_date }
+  return {
+    id: data.id,
+    nickname: data.nickname,
+    birthDate: data.birth_date,
+    profilePhoto: data.profile_photo ?? null,
+  }
 }

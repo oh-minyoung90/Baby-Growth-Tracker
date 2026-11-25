@@ -80,8 +80,8 @@ export function DeleteAllSection({ onBusyChange }: { onBusyChange?: (busy: boole
       <div className="flex min-w-0 flex-col gap-3 rounded-card border border-danger/30 bg-surface p-4 md:p-5">
         <p className="font-bold">삭제 전에 데이터를 내보내 두세요</p>
         <p className="text-sm text-muted-foreground">
-          아이 정보와 모든 기록·사진이 삭제돼요. 로그인 계정은 남아요. JSON 백업에는 사진 파일이
-          포함되지 않으므로 삭제한 사진은 JSON만으로 복구할 수 없어요.
+          아이 정보와 모든 기록·사진이 삭제돼요. 로그인 계정은 남아요. JSON 백업에는 레시피 사진
+          파일이 포함되지 않으므로 삭제한 사진은 JSON만으로 복구할 수 없어요.
         </p>
         {failure?.action === 'export' && (
           <ErrorBanner
