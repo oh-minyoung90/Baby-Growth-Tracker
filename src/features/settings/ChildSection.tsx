@@ -1,4 +1,5 @@
-import { ChevronRight, Sprout } from 'lucide-react'
+import { ChevronRight } from 'lucide-react'
+import { ChildAvatar } from '@/components/ChildAvatar'
 import { Link } from 'react-router'
 import { calculateAge, formatAge } from '@/domain/age'
 import { formatDateLabel, todayString } from '@/domain/date'
@@ -20,9 +21,7 @@ export function ChildSection() {
         aria-label={`아이 정보 수정: ${child.nickname}`}
         className="flex items-center gap-3 rounded-[18px] border bg-card px-4 py-3.5 hover:bg-muted"
       >
-        <span className="flex size-11 shrink-0 items-center justify-center rounded-button bg-soft text-soft-text">
-          <Sprout className="size-5.5" aria-hidden />
-        </span>
+        <ChildAvatar photo={child.profilePhoto} compact />
         <span className="flex min-w-0 flex-1 flex-col gap-0.5">
           <strong className="truncate text-base">{child.nickname}</strong>
           <span className="text-[13px] text-muted-foreground">

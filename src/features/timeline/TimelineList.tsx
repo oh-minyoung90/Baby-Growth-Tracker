@@ -1,5 +1,4 @@
 import { Link } from 'react-router'
-import { Badge } from '@/components/ui/badge'
 import { ageLabel } from '@/domain/age'
 import { formatDateLabel } from '@/domain/date'
 import { cn } from '@/lib/utils'
@@ -50,15 +49,15 @@ function TimelineRow({ item, age }: { item: TimelineItem; age: string | null }) 
     >
       <span
         className={cn(
-          'flex size-9 items-center justify-center rounded-xl',
+          'flex size-9 items-center justify-center self-center rounded-xl',
           item.memo ? 'row-span-3' : 'row-span-2',
           TYPE_COLORS[item.type],
         )}
       >
         <Icon className="size-5" aria-hidden />
+        <span className="sr-only">{label}</span>
       </span>
       <span className="flex flex-wrap items-center gap-x-2 gap-y-1">
-        <Badge variant={item.type}>{label}</Badge>
         <span className="text-[13px] text-muted-foreground">
           <span>{formatDateLabel(item.date)}</span>
           {age && (
