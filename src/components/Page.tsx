@@ -30,7 +30,8 @@ export function Page({
   return (
     <div
       className={cn(
-        'mx-auto flex w-full flex-col gap-5 px-5 pt-5 pb-6 md:px-12 md:pt-10',
+        'mx-auto flex w-full flex-col gap-5 px-5 pb-6 md:px-12 md:pt-10',
+        !profileHeader && 'pt-5',
         wide ? 'max-w-320' : 'max-w-240',
       )}
     >
@@ -46,11 +47,11 @@ export function Page({
         <div
           className={cn(
             'flex shrink-0 items-center gap-1',
-            profileHeader && 'absolute right-0 top-0',
+            profileHeader && 'absolute right-0 top-1',
           )}
         >
           {actions}
-          <ShoppingSettingsLink />
+          <ShoppingSettingsLink className={profileHeader ? 'text-muted-foreground' : undefined} />
         </div>
       </header>
       {children}

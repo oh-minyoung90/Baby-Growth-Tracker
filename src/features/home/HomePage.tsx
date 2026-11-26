@@ -1,7 +1,7 @@
 import { useRef, useState, type ReactNode } from 'react'
 import type { UseQueryResult } from '@tanstack/react-query'
 import type { LucideIcon } from 'lucide-react'
-import { ChevronRight, Camera, Plus } from 'lucide-react'
+import { ChevronRight, Camera, Plus, Sprout } from 'lucide-react'
 import { Link } from 'react-router'
 import { ChildAvatar } from '@/components/ChildAvatar'
 import { ErrorBanner } from '@/components/ErrorBanner'
@@ -66,24 +66,30 @@ export function HomePage() {
       title="홈"
       profileHeader={
         child && (
-          <div className="flex flex-col items-center px-12 text-center">
-            <Link
-              to="/settings/child"
-              state={{ fromHome: true }}
-              aria-label="아이 프로필 사진 편집"
-              className="relative mb-2.5 rounded-full focus-visible:ring-3 focus-visible:ring-ring"
-            >
-              <ChildAvatar photo={child.profilePhoto} />
-              <span className="absolute right-0 bottom-0 rounded-full border border-surface bg-soft p-1 text-soft-text">
-                <Camera className="size-3" aria-hidden />
-              </span>
-            </Link>
-            <h1 className="max-w-full text-[17px] font-bold break-all">{child.nickname}</h1>
-            {age && <p className="mt-[5px] text-sm font-bold">{age}</p>}
-            <time dateTime={child.birthDate} className="mt-1 text-xs text-muted-foreground">
-              ({child.birthDate.replaceAll('-', '.')})
-            </time>
-          </div>
+          <>
+            <div className="flex h-[52px] items-center gap-[7px] md:hidden">
+              <Sprout className="size-5.5 text-primary" aria-hidden />
+              <span className="text-[17px] font-bold tracking-[-0.045em]">MyBabyLog</span>
+            </div>
+            <div className="flex flex-col items-center px-12 pt-3 text-center md:pt-0">
+              <Link
+                to="/settings/child"
+                state={{ fromHome: true }}
+                aria-label="아이 프로필 사진 편집"
+                className="relative mb-2.5 rounded-full focus-visible:ring-3 focus-visible:ring-ring"
+              >
+                <ChildAvatar photo={child.profilePhoto} />
+                <span className="absolute right-0 bottom-0 rounded-full border border-surface bg-soft p-1 text-soft-text">
+                  <Camera className="size-3" aria-hidden />
+                </span>
+              </Link>
+              <h1 className="max-w-full text-[17px] font-bold break-all">{child.nickname}</h1>
+              {age && <p className="mt-[5px] text-sm font-bold">{age}</p>}
+              <time dateTime={child.birthDate} className="mt-1 text-xs text-muted-foreground">
+                ({child.birthDate.replaceAll('-', '.')})
+              </time>
+            </div>
+          </>
         )
       }
     >
