@@ -89,17 +89,10 @@ export async function exerciseShoppingLayout(page: Page) {
   await page.getByRole('button', { name: '취소', exact: true }).click()
   await page.getByRole('heading', { name: '준비 목록', exact: true }).waitFor()
   const visibleNav = page.getByRole('navigation', { name: '주 메뉴', exact: true }).first()
-  await visibleNav.getByRole('link', { name: '설정', exact: true }).click()
-  const toggle = page.getByRole('switch', { name: '하단 메뉴에 준비 목록 표시', exact: true })
-  await toggle.click()
   assert.equal(await page.locator('nav[aria-label="주 메뉴"]').last().locator('a').count(), 5)
   await visibleNav.getByRole('link', { name: '준비', exact: true }).click()
-  if (page.viewportSize()!.width < 768)
-    assert.equal(
-      await page.getByRole('link', { name: '설정', exact: true }).last().isVisible(),
-      true,
-    )
   await page.getByText('할 일 0개', { exact: true }).waitFor()
+  assert.equal(await page.locator('main header a[aria-label="설정"]').count(), 0)
   await page.reload()
   await visibleNav.getByRole('link', { name: '준비', exact: true }).waitFor()
   await page.getByRole('heading', { name: '준비 목록', exact: true }).waitFor()

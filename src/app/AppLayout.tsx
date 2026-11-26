@@ -1,8 +1,7 @@
 import { NavLink, Outlet, useMatches } from 'react-router'
 import { Sprout } from 'lucide-react'
 import { cn } from '@/lib/utils'
-import { useShoppingNavigation } from '@/lib/shoppingNavigation'
-import { NAV_ITEMS, SHOPPING_NAV_ITEM } from './navItems'
+import { NAV_ITEMS, SETTINGS_NAV_ITEM } from './navItems'
 
 /** 라우트에 붙이는 표시 (routes.tsx의 handle) */
 export interface AppRouteHandle {
@@ -47,37 +46,33 @@ function SideNav() {
         </span>
         <strong className="text-base leading-tight">MyBabyLog</strong>
       </div>
-      {[...NAV_ITEMS.slice(0, 4), SHOPPING_NAV_ITEM, NAV_ITEMS[4]].map(
-        ({ to, label, icon: Icon, end }) => (
-          <NavLink
-            key={to}
-            to={to}
-            end={end}
-            className={({ isActive }) =>
-              cn(
-                'flex h-12 items-center gap-3 rounded-button px-3.5 text-[15px] font-medium text-muted-foreground transition-colors',
-                isActive ? 'bg-soft font-bold text-primary' : 'hover:bg-soft-hover',
-              )
-            }
-          >
-            <Icon className="size-5.5" aria-hidden />
-            {label}
-          </NavLink>
-        ),
-      )}
+      {[...NAV_ITEMS, SETTINGS_NAV_ITEM].map(({ to, label, icon: Icon, end }) => (
+        <NavLink
+          key={to}
+          to={to}
+          end={end}
+          className={({ isActive }) =>
+            cn(
+              'flex h-12 items-center gap-3 rounded-button px-3.5 text-[15px] font-medium text-muted-foreground transition-colors',
+              isActive ? 'bg-soft font-bold text-primary' : 'hover:bg-soft-hover',
+            )
+          }
+        >
+          <Icon className="size-5.5" aria-hidden />
+          {label}
+        </NavLink>
+      ))}
     </nav>
   )
 }
 
 function BottomNav() {
-  const [shopping] = useShoppingNavigation()
-  const items = shopping ? [...NAV_ITEMS.slice(0, 4), SHOPPING_NAV_ITEM] : NAV_ITEMS
   return (
     <nav
       aria-label="주 메뉴"
       className="fixed inset-x-3.5 bottom-[calc(12px+env(safe-area-inset-bottom))] z-40 grid h-[66px] grid-cols-5 gap-0.5 rounded-full border bg-surface p-[5px] shadow-[0_4px_14px_#31235214] md:hidden dark:shadow-black/30"
     >
-      {items.map(({ to, label, icon: Icon, end }) => (
+      {NAV_ITEMS.map(({ to, label, icon: Icon, end }) => (
         <NavLink
           key={to}
           to={to}

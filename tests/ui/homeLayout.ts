@@ -181,12 +181,12 @@ export async function assertHomeLayout(page: Page, empty = false) {
         errors.push('모바일 홈 브랜드 표시 불일치')
       if (
         [...nav.querySelectorAll('a')].map((link) => link.textContent).join('|') !==
-        (viewport >= 768 ? '홈|식사|성장|수면|준비|설정' : '홈|식사|성장|수면|설정')
+        (viewport >= 768 ? '홈|식사|성장|수면|준비|설정' : '홈|식사|성장|수면|준비')
       )
         errors.push('주 메뉴 순서 불일치')
       if (viewport < 768) {
-        if (header.querySelector('a[aria-label="설정"]'))
-          errors.push('하단 설정 탭과 헤더 설정 버튼 중복')
+        if (!header.querySelector('a[aria-label="설정"]')?.getClientRects().length)
+          errors.push('모바일 홈 헤더 설정 버튼 누락')
         const bar = nav.getBoundingClientRect()
         if (bar.left < 12 || viewport - bar.right < 12 || innerHeight - bar.bottom < 11)
           errors.push('하단 탭 화면 가장자리 여백 부족')

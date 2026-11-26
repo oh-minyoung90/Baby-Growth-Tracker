@@ -1,6 +1,6 @@
 import { test, expect, exported } from './fixtures.ts'
 
-test('쇼핑: 입력·구매 체크·다시 담기·링크 수정·메뉴 설정·삭제', async ({ page, data }) => {
+test('쇼핑: 입력·구매 체크·다시 담기·링크 수정·준비 탭·삭제', async ({ page, data }) => {
   await page.goto('/')
   await page.getByRole('link', { name: /준비 목록 보기/ }).click()
   await page.getByRole('link', { name: '사야 할 물건', exact: true }).click()
@@ -36,12 +36,6 @@ test('쇼핑: 입력·구매 체크·다시 담기·링크 수정·메뉴 설정
   await page
     .getByRole('navigation', { name: '주 메뉴', exact: true })
     .first()
-    .getByRole('link', { name: '설정', exact: true })
-    .click()
-  await page.getByRole('switch', { name: '하단 메뉴에 준비 목록 표시', exact: true }).click()
-  await page
-    .getByRole('navigation', { name: '주 메뉴', exact: true })
-    .first()
     .getByRole('link', { name: '준비', exact: true })
     .click()
   await page.reload()
@@ -51,10 +45,9 @@ test('쇼핑: 입력·구매 체크·다시 담기·링크 수정·메뉴 설정
       .first()
       .getByRole('link', { name: '준비', exact: true }),
   ).toBeVisible()
-  if (page.viewportSize()!.width < 768)
-    await expect(
-      page.locator('main header').getByRole('link', { name: '설정', exact: true }),
-    ).toBeVisible()
+  await expect(
+    page.locator('main header').getByRole('link', { name: '설정', exact: true }),
+  ).toHaveCount(0)
   await page.getByRole('link', { name: '사야 할 물건', exact: true }).click()
   await page.getByRole('radio', { name: '자주 사는 물건', exact: true }).click()
   await page.getByRole('link', { name: /검증 그림책/ }).click()

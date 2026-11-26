@@ -65,7 +65,7 @@ describe('로그인 후 원래 가려던 화면으로 이동', () => {
 })
 
 describe('주 메뉴', () => {
-  it('모바일은 5개, PC는 쇼핑을 포함한 6개이며 현재 화면이 선택 표시된다', async () => {
+  it('준비는 두 메뉴에 있고, 설정은 PC 메뉴에만 있으며 현재 화면이 선택된다', async () => {
     renderAt('/sleep')
     await screen.findByRole('heading', { level: 1, name: '수면' })
     // 모바일 하단 탭과 PC 왼쪽 메뉴가 함께 있다 (화면 폭에 따라 하나만 보임)
@@ -78,8 +78,8 @@ describe('주 메뉴', () => {
         '식사',
         '성장',
         '수면',
-        ...(index === 0 ? ['준비'] : []),
-        '설정',
+        '준비',
+        ...(index === 0 ? ['설정'] : []),
       ])
       expect(within(nav).getByRole('link', { name: '수면' })).toHaveAttribute(
         'aria-current',

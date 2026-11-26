@@ -12,7 +12,6 @@ import {
   type ShoppingItem,
 } from '@/lib/shoppingApi'
 import { renderApp } from '@/test/renderApp'
-import { shoppingNavKey } from '@/lib/shoppingNavigation'
 vi.mock('@/lib/shoppingApi', () => ({
   fetchShoppingItems: vi.fn(),
   fetchShoppingItem: vi.fn(),
@@ -42,7 +41,6 @@ const auth = {
 let items: ShoppingItem[]
 beforeEach(() => {
   vi.resetAllMocks()
-  localStorage.removeItem(shoppingNavKey(auth.session.user.id))
   items = [
     {
       id: 's1',
@@ -181,15 +179,9 @@ it('수정 저장 오류에도 입력을 유지하며 재저장·삭제 확인�
   await userEvent.click(within(dialog).getByRole('button', { name: '삭제' }))
   await waitFor(() => expect(deleteShoppingItem).toHaveBeenCalledWith('s1'))
 })
-it('하단 탭 설정은 설정 접근을 유지하고 이 브라우저의 해당 계정에만 저장한다', async () => {
-  await open('/settings')
-  await userEvent.click(screen.getByRole('switch', { name: '하단 메뉴에 준비 목록 표시' }))
+it('준비 목록은 모바일 하단 메뉴에서 기본으로 열 수 있다', async () => {
+  await open('/shopping')
   const nav = screen.getAllByRole('navigation', { name: '주 메뉴' })[1]
-  expect(within(nav).getAllByRole('link')).toHaveLength(5)
-  expect(within(nav).getByRole('link', { name: '준비' })).toBeInTheDocument()
-  expect(within(nav).queryByRole('link', { name: '설정' })).not.toBeInTheDocument()
-  expect(localStorage.getItem(shoppingNavKey(auth.session.user.id))).toBe('true')
-  expect(screen.getAllByRole('link', { name: '설정' }).length).toBeGreaterThan(0)
-  await userEvent.click(screen.getByRole('switch', { name: '하단 메뉴에 준비 목록 표시' }))
-  expect(within(nav).getByRole('link', { name: '설정' })).toBeInTheDocument()
+  await userEvent.click(within(nav).getByRole('link', { name: '준비' }))
+  expect(await screen.findByRole('link', { name: '해야 할 일', current: 'page' })).toBeVisible()
 })
