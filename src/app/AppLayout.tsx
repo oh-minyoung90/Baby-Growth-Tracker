@@ -25,7 +25,7 @@ export function AppLayout() {
       <main
         className={cn(
           'min-w-0 flex-1 md:pb-0',
-          !hideBottomNav && 'pb-[calc(76px+env(safe-area-inset-bottom))]',
+          !hideBottomNav && 'pb-[calc(90px+env(safe-area-inset-bottom))]',
         )}
       >
         <Outlet />
@@ -75,7 +75,7 @@ function BottomNav() {
   return (
     <nav
       aria-label="주 메뉴"
-      className="fixed inset-x-0 bottom-0 z-40 grid h-[calc(76px+env(safe-area-inset-bottom))] grid-cols-5 border-t bg-surface px-1 pt-1.5 pb-[calc(10px+env(safe-area-inset-bottom))] md:hidden"
+      className="fixed inset-x-3.5 bottom-[calc(12px+env(safe-area-inset-bottom))] z-40 grid h-[66px] grid-cols-5 gap-0.5 rounded-full border bg-surface p-[5px] shadow-[0_4px_14px_#31235214] md:hidden dark:shadow-black/30"
     >
       {items.map(({ to, label, icon: Icon, end }) => (
         <NavLink
@@ -84,14 +84,12 @@ function BottomNav() {
           end={end}
           className={({ isActive }) =>
             cn(
-              'group flex flex-col items-center justify-center gap-1 text-xs font-medium text-muted-foreground',
-              isActive && 'font-bold text-primary',
+              'flex flex-col items-center justify-center gap-[3px] rounded-full text-xs font-medium text-muted-foreground transition-colors outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset',
+              isActive ? 'bg-soft font-bold text-primary' : 'hover:bg-soft-hover',
             )
           }
         >
-          <span className="flex h-7.5 w-13 items-center justify-center rounded-full group-hover:bg-soft-hover group-aria-[current=page]:bg-soft group-aria-[current=page]:group-hover:bg-soft">
-            <Icon className="size-5.5" aria-hidden />
-          </span>
+          <Icon className="size-5.5" aria-hidden />
           {label}
         </NavLink>
       ))}

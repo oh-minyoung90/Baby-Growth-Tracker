@@ -93,6 +93,11 @@ export async function assertTimelineLayout(page: Page) {
 export async function exerciseTimelineLayout(page: Page) {
   await prepareTimelinePage(page)
   await assertTimelineLayout(page)
+  if (page.viewportSize()!.width < 768) {
+    const bar = await page.getByRole('navigation', { name: '주 메뉴' }).boundingBox()
+    const add = await page.getByRole('button', { name: '발달 기록 추가' }).boundingBox()
+    assert.ok(bar && add && bar.y - (add.y + add.height) >= 19, '추가 버튼과 하단 탭의 여백')
+  }
   const waitRecords = async (count: number) => {
     await page.waitForFunction(
       (expected) => document.querySelectorAll('main li > a').length === expected,
