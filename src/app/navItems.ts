@@ -22,11 +22,11 @@ export const NAV_ITEMS: NavItem[] = [
   { to: '/meals', label: '식사', icon: Utensils },
   { to: '/growth', label: '성장', icon: Sprout },
   { to: '/sleep', label: '수면', icon: Moon },
-  { to: '/settings', label: '설정', icon: Settings },
+  { to: '/preparation', label: '준비', icon: ClipboardCheck },
 ]
 
-export const SHOPPING_NAV_ITEM: NavItem = {
-  to: '/preparation',
-  label: '준비',
-  icon: ClipboardCheck,
+export const SETTINGS_NAV_ITEM: NavItem = {
+  to: '/settings',
+  label: '설정',
+  icon: Settings,
 }

@@ -11,14 +11,43 @@ for (const width of [320, 375, 393, 430, 768, 1440]) {
       })
     }
     if (width === 393) {
-      test('준비 탭을 표시하면 홈 헤더에서 설정을 연다', async ({ page }) => {
+      test('홈과 아이 정보에서 설정을 열고 기본 탭에는 설정 버튼을 표시하지 않는다', async ({
+        page,
+      }) => {
         await prepareHomePage(page)
         const nav = page.getByRole('navigation', { name: '주 메뉴' })
-        await nav.getByRole('link', { name: '설정' }).click()
-        await page.getByRole('switch', { name: '하단 메뉴에 준비 목록 표시' }).click()
-        await nav.getByRole('link', { name: '홈' }).click()
         await expect(nav.getByRole('link', { name: '준비' })).toBeVisible()
         const settings = page.locator('main header').getByRole('link', { name: '설정' })
+        await settings.click()
+        await expect(page.getByRole('heading', { name: '설정', exact: true })).toBeVisible()
+        for (const [tab, title] of [
+          ['식사', '식사'],
+          ['성장', '성장'],
+          ['수면', '수면'],
+          ['준비', '준비 목록'],
+        ]) {
+          await nav.getByRole('link', { name: tab, exact: true }).click()
+          await expect(
+            page.getByRole('heading', { level: 1, name: title, exact: true }),
+          ).toBeVisible()
+          await expect(settings).toHaveCount(0)
+        }
+        await nav.getByRole('link', { name: '홈' }).click()
+        const profile = page.getByRole('link', { name: '아이 프로필 사진 편집' })
+        await profile.click()
+        const home = page.locator('main header').getByRole('link', { name: '홈으로' })
+        const title = page.getByRole('heading', { level: 1, name: '아이 정보' })
+        await expect(title).toBeVisible()
+        await expect(home).toBeVisible()
+        const [homeBox, settingsBox, titleBox] = await Promise.all([
+          home.boundingBox(),
+          settings.boundingBox(),
+          title.boundingBox(),
+        ])
+        expect(homeBox!.y).toBeCloseTo(settingsBox!.y)
+        expect(titleBox!.y).toBeGreaterThan(homeBox!.y + homeBox!.height)
+        await home.click()
+        await profile.click()
         await settings.click()
         await expect(page.getByRole('heading', { name: '설정', exact: true })).toBeVisible()
       })

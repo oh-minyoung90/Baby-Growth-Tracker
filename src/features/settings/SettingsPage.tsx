@@ -1,4 +1,3 @@
-import { ShoppingNavigationSection } from './ShoppingNavigationSection'
 import { useState } from 'react'
 import { Page } from '@/components/Page'
 import { DeleteAllSection } from './DeleteAllSection'
@@ -13,7 +12,6 @@ export function SettingsPage() {
     <Page title="설정">
       <fieldset disabled={busy} className="contents">
         <ChildSection />
-        <ShoppingNavigationSection />
         <section aria-labelledby="settings-theme" className="flex flex-col gap-2">
           <h2 id="settings-theme" className="text-[13px] font-bold text-muted-foreground">
             화면 모드

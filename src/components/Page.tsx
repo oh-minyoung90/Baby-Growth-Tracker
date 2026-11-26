@@ -1,6 +1,5 @@
 import type { ReactNode } from 'react'
 import { usePageTitle } from '@/lib/usePageTitle'
-import { ShoppingSettingsLink } from './ShoppingSettingsLink'
 import { cn } from '@/lib/utils'
 
 /**
@@ -10,6 +9,7 @@ export function Page({
   title,
   heading,
   profileHeader,
+  toolbar,
   description,
   wide = false,
   actions,
@@ -20,6 +20,7 @@ export function Page({
   /** 화면 제목 자리에 title 대신 보여 줄 내용 (홈: 아이 이름 · 생후 일수) */
   heading?: ReactNode
   profileHeader?: ReactNode
+  toolbar?: ReactNode
   /** 제목 아래 한 줄 (홈: 오늘 날짜) */
   description?: ReactNode
   wide?: boolean
@@ -31,27 +32,24 @@ export function Page({
     <div
       className={cn(
         'mx-auto flex w-full flex-col gap-5 px-5 pb-6 md:px-12 md:pt-10',
-        !profileHeader && 'pt-5',
+        !toolbar && 'pt-5',
         wide ? 'max-w-320' : 'max-w-240',
       )}
     >
-      <header className={profileHeader ? 'relative' : 'flex items-center justify-between gap-4'}>
-        {profileHeader ?? (
-          <div className="flex min-w-0 flex-col gap-1">
-            <h1 className="text-2xl font-bold tracking-tight md:text-[28px]">{heading ?? title}</h1>
-            {description && (
-              <p className="text-sm text-muted-foreground md:text-[15px]">{description}</p>
-            )}
-          </div>
-        )}
-        <div
-          className={cn(
-            'flex shrink-0 items-center gap-1',
-            profileHeader && 'absolute right-0 top-1',
+      <header>
+        {toolbar}
+        <div className={profileHeader ? undefined : 'flex items-center justify-between gap-4'}>
+          {profileHeader ?? (
+            <div className="flex min-w-0 flex-col gap-1">
+              <h1 className="text-2xl font-bold tracking-tight md:text-[28px]">
+                {heading ?? title}
+              </h1>
+              {description && (
+                <p className="text-sm text-muted-foreground md:text-[15px]">{description}</p>
+              )}
+            </div>
           )}
-        >
-          {actions}
-          <ShoppingSettingsLink className={profileHeader ? 'text-muted-foreground' : undefined} />
+          {actions && <div className="flex shrink-0 items-center gap-1">{actions}</div>}
         </div>
       </header>
       {children}
