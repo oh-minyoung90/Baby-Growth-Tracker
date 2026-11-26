@@ -1,13 +1,13 @@
 import { useState } from 'react'
 import { Link, useSearchParams } from 'react-router'
-import { ChevronDown, ChevronRight, ExternalLink, Link as LinkIcon, Plus, Star } from 'lucide-react'
+import { ChevronDown, ChevronRight, Link as LinkIcon, Plus, Star } from 'lucide-react'
 import { ChoiceChips } from '@/components/ChoiceChips'
 import { ErrorBanner } from '@/components/ErrorBanner'
 import { ListLoading } from '@/components/ListLoading'
 import { Button } from '@/components/ui/button'
 import { Checkbox } from '@/components/ui/checkbox'
 import type { ShoppingItem } from '@/lib/shoppingApi'
-import { SHOPPING_CATEGORIES, shoppingCategoryLabel } from '@/lib/shoppingTypes'
+import { SHOPPING_CATEGORIES } from '@/lib/shoppingTypes'
 import { useShoppingItems, useSetShoppingStatus } from '@/lib/useShopping'
 import { NETWORK_ERROR_MESSAGES } from '@/lib/messages'
 import { cn } from '@/lib/utils'
@@ -50,7 +50,10 @@ export function ShoppingPage() {
     values.length ? (
       <ul className="divide-y overflow-hidden rounded-card border bg-surface">
         {values.map((item) => (
-          <li key={item.id} className="flex min-w-0 items-start gap-3 p-4">
+          <li
+            key={item.id}
+            className={cn('flex min-w-0 items-start gap-3 p-4', item.memo && item.url && 'pb-2')}
+          >
             {!showRebuy && (
               <div className="flex h-11 w-6 shrink-0 items-center justify-center">
                 <Checkbox
@@ -69,39 +72,43 @@ export function ShoppingPage() {
             <div className="min-w-0 flex-1">
               <Link
                 to={`/shopping/${item.id}/edit`}
-                className="flex min-h-11 flex-col gap-1 rounded-sm py-1 outline-none focus-visible:ring-3 focus-visible:ring-ring/40"
+                className={cn(
+                  'flex min-h-11 flex-col gap-1 rounded-sm py-1 outline-none focus-visible:ring-3 focus-visible:ring-ring/40',
+                  !item.memo && !item.url && 'justify-center',
+                )}
               >
                 <span
                   className={cn(
-                    'flex items-start gap-1.5 text-[15px] font-bold break-words',
+                    'min-w-0 text-[15px] font-bold wrap-anywhere',
                     item.status === 'purchased' && !showRebuy && 'text-muted-foreground',
                   )}
                 >
-                  <span className="min-w-0 break-words">{item.name}</span>
+                  {item.name}
                   {item.frequent && (
                     <Star
-                      className="mt-0.5 size-4 shrink-0 fill-type-food-icon text-type-food-icon-text"
+                      className="ml-1 inline size-4 fill-type-food-icon text-type-food-icon-text"
                       aria-label="자주 사는 물건"
                     />
                   )}
                 </span>
-                <span className="flex flex-wrap items-baseline gap-2 text-xs text-muted-foreground">
-                  <span className="shrink-0 rounded-md bg-muted px-1.5 py-0.5">
-                    {shoppingCategoryLabel(item.category)}
+                {item.memo && (
+                  <span className="text-xs wrap-anywhere whitespace-pre-line text-muted-foreground">
+                    {item.memo}
                   </span>
-                  {item.memo && <span className="min-w-0 break-words">{item.memo}</span>}
-                </span>
+                )}
               </Link>
               {item.url ? (
                 <a
                   href={item.url}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="inline-flex min-h-11 max-w-full items-center gap-1 text-xs font-medium text-soft-text underline-offset-4 hover:underline"
+                  className={cn(
+                    'inline-flex min-h-11 max-w-full gap-1 text-xs font-medium text-soft-text underline-offset-4 hover:underline',
+                    item.memo ? 'items-start pt-1 [&>svg]:mt-px' : 'items-center',
+                  )}
                 >
                   <LinkIcon className="size-3.5" aria-hidden />
                   구매 링크
-                  <ExternalLink className="size-3.5" aria-hidden />
                   <span className="sr-only"> (새 탭)</span>
                 </a>
               ) : item.status === 'purchased' && !showRebuy ? (

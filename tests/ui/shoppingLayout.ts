@@ -3,13 +3,14 @@ import type { Page } from '@playwright/test'
 import { fixtureChild, prepareFixturePage } from './fixture.ts'
 export async function exerciseShoppingLayout(page: Page) {
   const stamp = { created_at: '2026-11-23T01:00:00Z', updated_at: '2026-11-23T01:00:00Z' }
+  const bookMemo = '보드북 · 표지가 튼튼한 책을 고르기'
   const items = [
     {
       id: 'shopping-book',
       name: '아기와 함께 읽을 긴 제목의 그림책'.repeat(3),
       category: 'books',
       url: 'https://example.com/books',
-      memo: '보드북 · 표지가 튼튼한 책을 고르기',
+      memo: bookMemo,
       is_frequent: true,
       status: 'saved',
       ...stamp,
@@ -44,7 +45,19 @@ export async function exerciseShoppingLayout(page: Page) {
   await filters.getByRole('radio', { name: '장난감', exact: true }).click()
   await page.getByText('이 카테고리에 등록된 물건이 없어요', { exact: true }).waitFor()
   await filters.getByRole('radio', { name: '도서', exact: true }).click()
-  await page.getByRole('link', { name: /아기와 함께/ }).waitFor()
+  const editLink = page.getByRole('link', { name: /아기와 함께/ })
+  await editLink.waitFor()
+  assert.equal(await editLink.getByText('도서', { exact: true }).count(), 0)
+  const [name, memo] = await Promise.all([
+    editLink.getByText(items[0].name, { exact: true }).boundingBox(),
+    editLink.getByText(bookMemo, { exact: true }).boundingBox(),
+  ])
+  assert.ok(name && memo)
+  assert.ok(memo.y >= name.y + name.height)
+  const purchaseLink = page.getByRole('link', { name: '구매 링크 (새 탭)', exact: true })
+  assert.equal(await purchaseLink.locator('svg').count(), 1)
+  const purchaseIcon = await purchaseLink.locator('svg.lucide-link').boundingBox()
+  assert.ok(purchaseIcon && purchaseIcon.y - (memo.y + memo.height) <= 12)
   const problems = await page.evaluate(() => {
     const errors: string[] = []
     if (document.documentElement.scrollWidth > document.documentElement.clientWidth + 1)
@@ -62,6 +75,13 @@ export async function exerciseShoppingLayout(page: Page) {
   await page.getByRole('radio', { name: '살 물건', exact: true }).click()
   assert.equal(new URL(page.url()).searchParams.get('category'), 'books')
   await filters.getByRole('radio', { name: '전체', exact: true }).click()
+  const foodName = await page.getByText('플레인 요거트', { exact: true }).boundingBox()
+  const checkbox = await page
+    .getByRole('checkbox', { name: '플레인 요거트 구매 완료' })
+    .boundingBox()
+  assert.ok(foodName && checkbox)
+  const centerDifference = foodName.y + foodName.height / 2 - (checkbox.y + checkbox.height / 2)
+  assert.ok(Math.abs(centerDifference) <= 1)
   await page.getByRole('link', { name: '살 물건 추가', exact: true }).click()
   await page.getByLabel('물건 이름', { exact: true }).waitFor()
   await page.getByRole('button', { name: '추가하기', exact: true }).click()

@@ -178,6 +178,24 @@ export async function assertHomeLayout(page: Page, empty = false) {
         (viewport >= 768 ? '홈|식사|성장|수면|준비|설정' : '홈|식사|성장|수면|설정')
       )
         errors.push('주 메뉴 순서 불일치')
+      if (viewport < 768) {
+        const bar = nav.getBoundingClientRect()
+        if (bar.left < 12 || viewport - bar.right < 12 || innerHeight - bar.bottom < 11)
+          errors.push('하단 탭 화면 가장자리 여백 부족')
+        if (parseFloat(getComputedStyle(nav).borderTopLeftRadius) < bar.height / 2)
+          errors.push('하단 바 캡슐 모서리 누락')
+        const active = nav.querySelector<HTMLAnchorElement>('a[aria-current="page"]')
+        if (!active || getComputedStyle(active).backgroundColor === 'rgba(0, 0, 0, 0)')
+          errors.push('선택 탭 배경 누락')
+        for (const link of nav.querySelectorAll('a')) {
+          const box = link.getBoundingClientRect()
+          if (box.width < 44 || box.height < 44) errors.push('하단 탭 터치 영역 부족')
+        }
+        window.scrollTo(0, document.documentElement.scrollHeight)
+        if (cards.at(-1)!.getBoundingClientRect().bottom > bar.top + 1)
+          errors.push('마지막 카드가 하단 탭에 가려짐')
+        window.scrollTo(0, 0)
+      }
       return errors
     },
     { sections, empty },

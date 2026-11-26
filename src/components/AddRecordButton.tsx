@@ -11,7 +11,7 @@ export function AddRecordButton({ label, onClick }: { label: string; onClick: ()
     <Button
       type="button"
       onClick={onClick}
-      className="fixed right-5 bottom-[calc(96px+env(safe-area-inset-bottom))] z-30 size-15 rounded-[20px] shadow-lg shadow-primary/35 md:static md:h-12 md:w-auto md:rounded-button md:px-5 md:shadow-none"
+      className="fixed right-5 bottom-[calc(98px+env(safe-area-inset-bottom))] z-30 size-15 rounded-[20px] shadow-lg shadow-primary/35 md:static md:h-12 md:w-auto md:rounded-button md:px-5 md:shadow-none"
     >
       <Plus className="size-7 md:size-5" aria-hidden />
       <span className="sr-only md:not-sr-only">{label}</span>
