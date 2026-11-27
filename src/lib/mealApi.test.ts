@@ -5,7 +5,7 @@ import {
   fetchMealWeek,
   MealSaveError,
   saveMealEntry,
-  setMealEaten,
+  setMealStatus,
   moveMealEntry,
   copyMealEntry,
   type MealInput,
@@ -135,13 +135,16 @@ describe('식단 API (T-42·T-43)', () => {
   })
 })
 
-describe('먹음 체크 API (T-44)', () => {
-  it('체크는 내용 저장을 거치지 않고 전용 RPC 결과의 첫 시도 목록을 반환한다', async () => {
-    expect(await setMealEaten('m1', true)).toEqual({
+describe('식사 상태 API', () => {
+  it('상태 변경은 내용 저장을 거치지 않고 전용 RPC 결과의 첫 시도 목록을 반환한다', async () => {
+    expect(await setMealStatus('m1', 'good')).toEqual({
       id: 'm1',
       firstTriedFoods: [{ id: 'f1', name: '쌀' }],
     })
-    expect(mock.rpc).toHaveBeenCalledExactlyOnceWith('set_meal_eaten', { id: 'm1', eaten: true })
+    expect(mock.rpc).toHaveBeenCalledExactlyOnceWith('set_meal_status', {
+      id: 'm1',
+      status: 'good',
+    })
   })
   it('미래 날짜·삭제된 기록 오류와 잘못된 응답을 전파한다', async () => {
     for (const [code, reason] of [
@@ -149,13 +152,13 @@ describe('먹음 체크 API (T-44)', () => {
       ['P0002', 'notFound'],
     ]) {
       mock.rpc.mockResolvedValueOnce({ data: null, error: { code, message: '' } })
-      await expect(setMealEaten('m1', true)).rejects.toMatchObject({ reason })
+      await expect(setMealStatus('m1', 'good')).rejects.toMatchObject({ reason })
     }
     mock.rpc.mockResolvedValueOnce({
       data: { id: 'm1', first_tried_foods: [{ id: 'f1' }] },
       error: null,
     })
-    await expect(setMealEaten('m1', false)).rejects.toMatchObject({ reason: 'network' })
+    await expect(setMealStatus('m1', 'refused')).rejects.toMatchObject({ reason: 'network' })
   })
 })
 

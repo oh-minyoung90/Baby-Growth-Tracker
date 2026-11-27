@@ -1,13 +1,20 @@
 import { useEffect, useRef, useState, type DragEventHandler } from 'react'
 import { format } from 'date-fns'
 import { ko } from 'date-fns/locale'
-import { Check, MessageSquare, Plus, Square, TriangleAlert, GripVertical } from 'lucide-react'
-import { Checkbox } from '@/components/ui/checkbox'
+import { MessageSquare, Plus, TriangleAlert, GripVertical } from 'lucide-react'
+import { MealStatusBadge } from '@/components/MealStatusBadge'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { formatDateLabel, parseDate } from '@/domain/date'
 import type { MealEntry } from '@/lib/mealApi'
-import { MEAL_TYPES, mealIntakeLabel, type MealType } from '@/lib/mealTypes'
+import {
+  MEAL_STATUSES,
+  MEAL_TYPES,
+  getMealStatus,
+  mealStatusFields,
+  type MealStatus,
+  type MealType,
+} from '@/lib/mealTypes'
 import { cn } from '@/lib/utils'
 
 /** 모바일은 수평 스냅, PC는 7열. 주가 바뀌면 key로 다시 열어 이번 주는 오늘, 다른 주는 월요일부터 본다. */
@@ -16,7 +23,7 @@ export function MealWeekBoard({
   today,
   entries,
   onSelect,
-  onEatenChange,
+  onStatusChange,
   pendingId,
   warningsReady = true,
   cautionIds = new Set<string>(),
@@ -29,7 +36,7 @@ export function MealWeekBoard({
   today: string
   entries: MealEntry[]
   onSelect?: (date: string, type: MealType, entry?: MealEntry) => void
-  onEatenChange?: (entry: MealEntry, eaten: boolean) => void
+  onStatusChange?: (entry: MealEntry, status: MealStatus) => void
   pendingId?: string
   warningsReady?: boolean
   onMove?: (entry: MealEntry) => void
@@ -94,7 +101,7 @@ export function MealWeekBoard({
           )
           setActive(days[nearest])
         }}
-        className="relative flex snap-x snap-mandatory gap-3 overflow-x-auto overscroll-x-contain pb-2 md:grid md:grid-cols-[repeat(7,minmax(11rem,1fr))] md:has-[[data-variant=plan]+[data-variant=caution]]:grid-cols-[repeat(7,minmax(15rem,1fr))] md:gap-2"
+        className="relative flex snap-x snap-mandatory gap-3 overflow-x-auto overscroll-x-contain pb-2 md:grid md:grid-cols-[repeat(7,minmax(11rem,1fr))] md:has-[[data-variant=caution]]:grid-cols-[repeat(7,minmax(15rem,1fr))] md:gap-2"
       >
         {days.map((date, index) => (
           <section
@@ -168,11 +175,14 @@ export function MealWeekBoard({
                     }}
                     dropActive={dropTarget === `${date}:${type.value}`}
                     label={type.label}
-                    checkLabel={`${formatDateLabel(date)} ${type.label} 먹음`}
-                    onEatenChange={
-                      entry && onEatenChange ? (eaten) => onEatenChange(entry, eaten) : undefined
+                    statusLabel={`${formatDateLabel(date)} ${type.label} 식사 상태`}
+                    onStatusChange={
+                      entry && onStatusChange
+                        ? (status) => onStatusChange(entry, status)
+                        : undefined
                     }
-                    disabled={!!pendingId || date > today || (!entry?.eaten && !warningsReady)}
+                    future={date > today}
+                    warningsReady={warningsReady}
                     editingDisabled={!!pendingId}
                     pending={!!entry && entry.id === pendingId}
                     caution={!!entry && cautionIds.has(entry.id)}
@@ -195,9 +205,10 @@ function MealCell({
   entry,
   label,
   onSelect,
-  onEatenChange,
-  checkLabel,
-  disabled,
+  onStatusChange,
+  statusLabel,
+  future,
+  warningsReady,
   pending,
   editingDisabled,
   caution,
@@ -213,9 +224,10 @@ function MealCell({
   entry?: MealEntry
   label: string
   onSelect?: () => void
-  onEatenChange?: (eaten: boolean) => void
-  checkLabel: string
-  disabled: boolean
+  onStatusChange?: (status: MealStatus) => void
+  statusLabel: string
+  future: boolean
+  warningsReady: boolean
   pending: boolean
   editingDisabled: boolean
   caution: boolean
@@ -229,20 +241,14 @@ function MealCell({
   dropActive: boolean
 }) {
   const names = entry ? [...entry.foods, ...entry.recipes].map((item) => item.name).join(', ') : ''
+  const status = entry && !future ? getMealStatus(entry) : 'planned'
   const content = entry ? (
     <>
       <span className="max-w-full text-[15px] leading-relaxed wrap-anywhere md:text-sm">
         {names}
       </span>
-      {(entry.intake || entry.memo) && (
-        <span className="flex flex-wrap items-center gap-1.5">
-          {entry.intake && (
-            <span className="text-xs text-muted-foreground">{mealIntakeLabel(entry.intake)}</span>
-          )}
-          {entry.memo && (
-            <MessageSquare className="size-3.5 text-muted-foreground" aria-label="메모 있음" />
-          )}
-        </span>
+      {entry.memo && (
+        <MessageSquare className="size-3.5 text-muted-foreground" aria-label="메모 있음" />
       )}
     </>
   ) : (
@@ -264,7 +270,7 @@ function MealCell({
       onDrop={onDrop}
       className={cn(
         'flex min-h-12 w-full flex-col rounded-button border md:min-h-44',
-        !entry || !entry.eaten ? 'border-dashed bg-muted/40' : 'bg-surface',
+        status === 'planned' ? 'border-dashed bg-muted/40' : 'bg-surface',
         dropActive && 'ring-2 ring-primary bg-soft',
       )}
     >
@@ -290,28 +296,39 @@ function MealCell({
             )}
             <span className="text-sm font-bold">{label}</span>
           </span>
-          {!entry.eaten && <Badge variant="plan">예정</Badge>}
           {caution && (
             <Badge variant="caution">
               <TriangleAlert aria-hidden />
               주의
             </Badge>
           )}
-          {onEatenChange ? (
-            <span className="ml-auto grid size-11 shrink-0 place-items-center md:w-7">
-              <Checkbox
-                checked={entry.eaten}
-                disabled={disabled}
-                aria-label={checkLabel}
-                aria-busy={pending}
-                onCheckedChange={(checked) => onEatenChange(checked === true)}
-              />
-            </span>
-          ) : entry.eaten ? (
-            <Check className="mr-2 ml-auto size-4 text-tried-text" aria-label="먹음" />
-          ) : (
-            <Square className="mr-2 ml-auto size-4 text-muted-foreground" aria-label="예정" />
-          )}
+          <span className="ml-auto flex h-11 shrink-0 items-center pr-1 md:pr-0">
+            {onStatusChange && !future ? (
+              <span className="relative inline-flex h-11 min-w-11 items-center justify-center rounded-full focus-within:ring-2 focus-within:ring-ring">
+                <MealStatusBadge status={status} selectable />
+                <select
+                  aria-label={statusLabel}
+                  aria-busy={pending}
+                  className="absolute inset-0 size-full cursor-pointer text-base opacity-0 disabled:cursor-not-allowed"
+                  value={status}
+                  disabled={editingDisabled}
+                  onChange={(event) => onStatusChange(event.currentTarget.value as MealStatus)}
+                >
+                  {MEAL_STATUSES.map(({ value, label }) => (
+                    <option
+                      key={value}
+                      value={value}
+                      disabled={!warningsReady && mealStatusFields(value).eaten}
+                    >
+                      {label}
+                    </option>
+                  ))}
+                </select>
+              </span>
+            ) : (
+              <MealStatusBadge status={status} />
+            )}
+          </span>
         </div>
       )}
       {onSelect ? (

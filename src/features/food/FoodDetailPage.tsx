@@ -17,7 +17,7 @@ import {
   foodGroupLabel,
   foodPreferenceLabel,
 } from '@/lib/foodTypes'
-import { mealIntakeLabel, mealTypeLabel } from '@/lib/mealTypes'
+import { getMealStatus, mealStatusLabel, mealTypeLabel } from '@/lib/mealTypes'
 import { notifyDone, notifySaved } from '@/lib/notify'
 import { useChild } from '@/lib/useChild'
 import {
@@ -219,7 +219,7 @@ function FoodDetail({ food }: { food: Food }) {
                           {formatDateLabel(meal.date)} · {mealTypeLabel(meal.type)}
                         </span>
                         <span className="text-muted-foreground">
-                          {meal.intake ? mealIntakeLabel(meal.intake) : '먹은 정도 미입력'}
+                          {mealStatusLabel(getMealStatus({ eaten: true, intake: meal.intake }))}
                         </span>
                       </Link>
                     </li>

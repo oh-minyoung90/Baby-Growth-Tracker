@@ -1,3 +1,4 @@
+import { mealStatusFields } from '@/lib/mealTypes'
 import { fetchRecipes, saveRecipe, type Recipe } from '@/lib/recipeApi'
 import { act, fireEvent, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
@@ -12,7 +13,7 @@ import {
   fetchMealWeek,
   MealSaveError,
   saveMealEntry,
-  setMealEaten,
+  setMealStatus,
   type MealEntry,
 } from '@/lib/mealApi'
 import { notifyDone, notifySaved } from '@/lib/notify'
@@ -38,7 +39,7 @@ vi.mock('@/lib/mealApi', async (original) => ({
   fetchMealWeek: vi.fn(),
   fetchMealEntry: vi.fn(),
   saveMealEntry: vi.fn(),
-  setMealEaten: vi.fn(),
+  setMealStatus: vi.fn(),
   deleteMealEntry: vi.fn(),
 }))
 // jsdom에는 Radix 체크박스의 크기 관찰 API가 없어 이 파일에서만 대체한다.
@@ -107,8 +108,10 @@ beforeEach(() => {
     entries = [...entries.filter((entry) => entry.id !== saved.id), saved]
     return { id: saved.id, firstTriedFoods: [] }
   })
-  vi.mocked(setMealEaten).mockImplementation(async (id, eaten) => {
-    entries = entries.map((entry) => (entry.id === id ? { ...entry, eaten } : entry))
+  vi.mocked(setMealStatus).mockImplementation(async (id, status) => {
+    entries = entries.map((entry) =>
+      entry.id === id ? { ...entry, ...mealStatusFields(status) } : entry,
+    )
     return { id, firstTriedFoods: [] }
   })
   vi.mocked(deleteMealEntry).mockImplementation(async (id) => {
@@ -151,16 +154,16 @@ describe('식단 입력·검증·화면 이동 (T-43)', () => {
   it('빈 칸의 날짜·끼니는 표시만 하고 오늘·과거는 먹음을 기본으로 켠다', async () => {
     const { router } = await openNew('2026-11-10', '저녁')
     expect(dialog()).toHaveTextContent('2026. 11. 10. (화) · 저녁')
-    expect(screen.getByRole('checkbox', { name: '먹음' })).toBeChecked()
+    expect(screen.getByRole('radio', { name: '먹음' })).toBeChecked()
     expect(router.state.location.search).toContain('record=new')
     expect(router.state.location.search).toContain('date=2026-11-10')
     expect(screen.queryByRole('button', { name: '삭제' })).not.toBeInTheDocument()
   })
   it('미래 칸은 계획으로 시작하고 먹음을 체크할 수 없다', async () => {
     await openNew('2026-11-12')
-    const checkbox = screen.getByRole('checkbox', { name: '먹음' })
-    expect(checkbox).not.toBeChecked()
-    expect(checkbox).toBeDisabled()
+    const group = screen.getByRole('radiogroup', { name: '식사 상태' })
+    expect(within(group).getAllByRole('radio')).toHaveLength(1)
+    expect(within(group).getByRole('radio', { name: '예정' })).toBeChecked()
     await selectFood()
     await userEvent.click(saveButton())
     await closed()
@@ -179,7 +182,7 @@ describe('식단 입력·검증·화면 이동 (T-43)', () => {
     await selectFood()
     await selectFood('보리')
     await userEvent.type(screen.getByLabelText('메모'), '반 공기')
-    await userEvent.click(screen.getByRole('radio', { name: '보통' }))
+    await userEvent.click(screen.getByRole('radio', { name: '잘 먹음' }))
     await userEvent.click(saveButton())
     await closed()
     expect(saveMealEntry).toHaveBeenCalledWith(
@@ -187,7 +190,7 @@ describe('식단 입력·검증·화면 이동 (T-43)', () => {
         date: '2026-11-11',
         type: 'lunch',
         eaten: true,
-        intake: 'normal',
+        intake: 'good',
         memo: '반 공기',
         foods: [
           { id: 'f1', name: '쌀' },
@@ -348,7 +351,7 @@ describe('식단 수정·삭제·주소 진입', () => {
     expect(screen.getByLabelText('메모')).toHaveValue('원래 메모')
     expect(screen.getByRole('button', { name: '채소죽 빼기' })).toBeInTheDocument()
     await userEvent.clear(screen.getByLabelText('메모'))
-    await userEvent.click(screen.getByRole('radio', { name: '선택 안 함' }))
+    await userEvent.click(screen.getByRole('radio', { name: '예정' }))
     await userEvent.click(saveButton())
     await closed()
     expect(saveMealEntry).toHaveBeenCalledWith(
@@ -424,7 +427,7 @@ describe('주의 경고·첫 시도 알림·표 먹음 체크 (T-44)', () => {
       foods[0].status = 'caution'
       await openNew()
       await selectFood()
-      if (!eaten) await userEvent.click(screen.getByRole('checkbox', { name: '먹음' }))
+      if (!eaten) await userEvent.click(screen.getByRole('radio', { name: '예정' }))
       expect(within(dialog()).getByRole('status')).toHaveTextContent(
         '주의가 필요한 음식이 있어요: 쌀',
       )
@@ -433,7 +436,7 @@ describe('주의 경고·첫 시도 알림·표 먹음 체크 (T-44)', () => {
       expect(confirmation).toHaveTextContent('주의가 필요한 음식이 있어요: 쌀')
       expect(saveMealEntry).not.toHaveBeenCalled()
       await userEvent.click(within(confirmation).getByRole('button', { name: '취소' }))
-      expect(screen.getByRole('checkbox', { name: '먹음' })).toHaveAttribute(
+      expect(screen.getByRole('radio', { name: '먹음' })).toHaveAttribute(
         'aria-checked',
         String(eaten),
       )
@@ -473,111 +476,114 @@ describe('주의 경고·첫 시도 알림·표 먹음 체크 (T-44)', () => {
     expect(notifySaved).not.toHaveBeenCalled()
   })
 
-  it('표에서 체크를 켜고 꺼도 시트를 열지 않고 전용 RPC·식단/음식 갱신을 실행한다', async () => {
+  it('표에서 상태만 변경하면 전용 RPC로 식단과 음식을 갱신한다', async () => {
     entries = [makeEntry({ eaten: false })]
     const { router } = renderApp('/meals/week', auth)
-    const check = await screen.findByRole('checkbox', { name: '2026. 11. 11. (수) 점심 먹음' })
-    await waitFor(() => expect(check).toBeEnabled())
-    await userEvent.click(check)
-    await waitFor(() => expect(check).toBeChecked())
-    expect(setMealEaten).toHaveBeenLastCalledWith('m1', true)
+    const check = await screen.findByRole('combobox', { name: '2026. 11. 11. (수) 점심 식사 상태' })
+    await waitFor(() => expect(within(check).getByRole('option', { name: '먹음' })).toBeEnabled())
+    await userEvent.selectOptions(check, 'eaten')
+    await waitFor(() => expect(check).toHaveValue('eaten'))
+    expect(setMealStatus).toHaveBeenLastCalledWith('m1', 'eaten')
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
     expect(router.state.location.search).toBe('')
-    await userEvent.click(check)
-    await waitFor(() => expect(check).not.toBeChecked())
-    expect(setMealEaten).toHaveBeenLastCalledWith('m1', false)
+    await userEvent.selectOptions(check, 'planned')
+    await waitFor(() => expect(check).toHaveValue('planned'))
+    expect(setMealStatus).toHaveBeenLastCalledWith('m1', 'planned')
     expect(fetchFoods).toHaveBeenCalledTimes(3)
     expect(saveMealEntry).not.toHaveBeenCalled()
   })
 
-  it('미래 계획의 체크를 막고 주의 계획에는 체크 전 확인을 받는다', async () => {
+  it('미래는 예정만 표시하고 주의 음식의 섭취 기록 전 확인을 받는다', async () => {
     entries = [
       makeEntry({ eaten: false }),
       makeEntry({ id: 'future', date: '2026-11-12', eaten: false }),
     ]
     foods[0].status = 'caution'
     renderApp('/meals/week', auth)
-    const check = await screen.findByRole('checkbox', { name: '2026. 11. 11. (수) 점심 먹음' })
-    expect(screen.getByRole('checkbox', { name: '2026. 11. 12. (목) 점심 먹음' })).toBeDisabled()
-    await waitFor(() => expect(check).toBeEnabled())
+    const check = await screen.findByRole('combobox', { name: '2026. 11. 11. (수) 점심 식사 상태' })
+    expect(
+      screen.queryByRole('combobox', { name: '2026. 11. 12. (목) 점심 식사 상태' }),
+    ).not.toBeInTheDocument()
+    await waitFor(() => expect(within(check).getByRole('option', { name: '먹음' })).toBeEnabled())
     const day = screen.getByRole('region', { name: formatDateLabel('2026-11-11') })
     expect(within(day).getByText('주의')).toBeInTheDocument()
-    await userEvent.click(check)
-    expect(setMealEaten).not.toHaveBeenCalled()
+    await userEvent.selectOptions(check, 'eaten')
+    expect(setMealStatus).not.toHaveBeenCalled()
     await userEvent.click(
       within(await screen.findByRole('alertdialog')).getByRole('button', { name: '취소' }),
     )
-    expect(check).not.toBeChecked()
-    await userEvent.click(check)
+    expect(check).toHaveValue('planned')
+    await userEvent.selectOptions(check, 'eaten')
     await userEvent.click(
       within(await screen.findByRole('alertdialog')).getByRole('button', { name: '그래도 저장' }),
     )
-    await waitFor(() => expect(check).toBeChecked())
+    await waitFor(() => expect(check).toHaveValue('eaten'))
   })
 
-  it('체크 실패 시 원래 상태를 유지하고 다시 시도하면 첫 시도 알림을 표시한다', async () => {
+  it('상태 변경 실패 시 원래 상태를 유지하고 다시 시도하면 첫 시도 알림을 표시한다', async () => {
     entries = [makeEntry({ eaten: false })]
-    vi.mocked(setMealEaten).mockRejectedValueOnce(new MealSaveError('network'))
+    vi.mocked(setMealStatus).mockRejectedValueOnce(new MealSaveError('network'))
     renderApp('/meals/week', auth)
-    const check = await screen.findByRole('checkbox', { name: '2026. 11. 11. (수) 점심 먹음' })
-    await waitFor(() => expect(check).toBeEnabled())
-    await userEvent.click(check)
+    const check = await screen.findByRole('combobox', { name: '2026. 11. 11. (수) 점심 식사 상태' })
+    await waitFor(() => expect(within(check).getByRole('option', { name: '먹음' })).toBeEnabled())
+    await userEvent.selectOptions(check, 'eaten')
     expect(await screen.findByRole('alert')).toHaveTextContent('저장하지 못했어요')
-    expect(check).not.toBeChecked()
-    vi.mocked(setMealEaten).mockImplementationOnce(async (id, eaten) => {
-      entries = entries.map((entry) => ({ ...entry, eaten }))
+    expect(check).toHaveValue('planned')
+    vi.mocked(setMealStatus).mockImplementationOnce(async (id, status) => {
+      entries = entries.map((entry) => ({ ...entry, ...mealStatusFields(status) }))
       return { id, firstTriedFoods: [{ id: 'f1', name: '쌀' }] }
     })
     await userEvent.click(screen.getByRole('button', { name: '다시 시도' }))
-    await waitFor(() => expect(check).toBeChecked())
+    await waitFor(() => expect(check).toHaveValue('eaten'))
     expect(notifyDone).toHaveBeenCalledExactlyOnceWith('쌀을 처음 먹었어요. 타임라인에 남겼어요')
   })
 
-  it('주의 정보를 못 읽으면 체크 켜기와 저장을 막고 다시 불러올 수 있다', async () => {
+  it('주의 정보를 못 읽으면 섭취 선택을 막고 다시 불러올 수 있다', async () => {
     entries = [makeEntry({ eaten: false })]
     vi.mocked(fetchFoods).mockRejectedValueOnce(new Error('network'))
     renderApp('/meals/week', auth)
-    const check = await screen.findByRole('checkbox', { name: '2026. 11. 11. (수) 점심 먹음' })
+    const check = await screen.findByRole('combobox', { name: '2026. 11. 11. (수) 점심 식사 상태' })
     expect(await screen.findByRole('alert')).toHaveTextContent('주의 음식 정보를 불러오지 못했어요')
-    expect(check).toBeDisabled()
+    const eatenOption = within(check).getByRole('option', { name: '먹음' })
+    expect(eatenOption).toBeDisabled()
     await userEvent.click(screen.getByRole('button', { name: '다시 시도' }))
-    await waitFor(() => expect(check).toBeEnabled())
+    await waitFor(() => expect(eatenOption).toBeEnabled())
   })
 })
 
-describe('먹음 체크 경합과 재시도', () => {
-  it('저장 중에는 체크와 칸 편집을 막고 완료 후 다시 사용할 수 있다', async () => {
+describe('식사 상태 변경 경합과 재시도', () => {
+  it('저장 중에는 상태 변경과 칸 편집을 막고 완료 후 다시 사용할 수 있다', async () => {
     entries = [makeEntry({ eaten: false })]
     let resolve!: () => void
-    vi.mocked(setMealEaten).mockImplementationOnce(
-      (id, eaten) =>
+    vi.mocked(setMealStatus).mockImplementationOnce(
+      (id, status) =>
         new Promise((done) => {
           resolve = () => {
-            entries = entries.map((entry) => ({ ...entry, eaten }))
+            entries = entries.map((entry) => ({ ...entry, ...mealStatusFields(status) }))
             done({ id, firstTriedFoods: [] })
           }
         }),
     )
     renderApp('/meals/week', auth)
-    const check = await screen.findByRole('checkbox', { name: '2026. 11. 11. (수) 점심 먹음' })
-    await waitFor(() => expect(check).toBeEnabled())
-    await userEvent.click(check)
+    const check = await screen.findByRole('combobox', { name: '2026. 11. 11. (수) 점심 식사 상태' })
+    await waitFor(() => expect(within(check).getByRole('option', { name: '먹음' })).toBeEnabled())
+    await userEvent.selectOptions(check, 'eaten')
     expect(check).toBeDisabled()
     expect(screen.getByRole('button', { name: /^점심 식단 수정/ })).toBeDisabled()
-    await userEvent.click(check)
-    expect(setMealEaten).toHaveBeenCalledTimes(1)
+    await userEvent.selectOptions(check, 'planned')
+    expect(setMealStatus).toHaveBeenCalledTimes(1)
     await act(async () => resolve())
     await waitFor(() => expect(check).toBeEnabled())
-    expect(check).toBeChecked()
+    expect(check).toHaveValue('eaten')
   })
 
   it('실패 후 다시 시도할 때 새로 지정된 주의 음식도 확인한다', async () => {
     entries = [makeEntry({ eaten: false })]
-    vi.mocked(setMealEaten).mockRejectedValueOnce(new MealSaveError('network'))
+    vi.mocked(setMealStatus).mockRejectedValueOnce(new MealSaveError('network'))
     const { queryClient } = renderApp('/meals/week', auth)
-    const check = await screen.findByRole('checkbox', { name: '2026. 11. 11. (수) 점심 먹음' })
-    await waitFor(() => expect(check).toBeEnabled())
-    await userEvent.click(check)
+    const check = await screen.findByRole('combobox', { name: '2026. 11. 11. (수) 점심 식사 상태' })
+    await waitFor(() => expect(within(check).getByRole('option', { name: '먹음' })).toBeEnabled())
+    await userEvent.selectOptions(check, 'eaten')
     await screen.findByRole('alert')
     foods[0].status = 'caution'
     await act(async () => {
@@ -587,11 +593,11 @@ describe('먹음 체크 경합과 재시도', () => {
     expect(await screen.findByRole('alertdialog')).toHaveTextContent(
       '주의가 필요한 음식이 있어요: 쌀',
     )
-    expect(setMealEaten).toHaveBeenCalledTimes(1)
+    expect(setMealStatus).toHaveBeenCalledTimes(1)
     await userEvent.click(
       within(screen.getByRole('alertdialog')).getByRole('button', { name: '그래도 저장' }),
     )
-    await waitFor(() => expect(check).toBeChecked())
+    await waitFor(() => expect(check).toHaveValue('eaten'))
   })
 })
 
@@ -650,13 +656,13 @@ describe('실제 레시피·재료 연동 (T-51)', () => {
     vi.mocked(fetchRecipes).mockResolvedValue([recipe()])
     entries = [makeEntry({ foods: [], recipes: [{ id: 'r1', name: '주의 쌀죽' }], eaten: false })]
     renderApp('/meals/week', auth)
-    const check = await screen.findByRole('checkbox', { name: '2026. 11. 11. (수) 점심 먹음' })
-    await waitFor(() => expect(check).toBeEnabled())
-    await userEvent.click(check)
+    const check = await screen.findByRole('combobox', { name: '2026. 11. 11. (수) 점심 식사 상태' })
+    await waitFor(() => expect(within(check).getByRole('option', { name: '먹음' })).toBeEnabled())
+    await userEvent.selectOptions(check, 'eaten')
     expect(await screen.findByRole('alertdialog')).toHaveTextContent(
       '주의가 필요한 음식이 있어요: 쌀',
     )
-    expect(setMealEaten).not.toHaveBeenCalled()
+    expect(setMealStatus).not.toHaveBeenCalled()
     await userEvent.click(
       within(screen.getByRole('alertdialog')).getByRole('button', { name: '취소' }),
     )

@@ -8,10 +8,9 @@ import { ErrorBanner } from '@/components/ErrorBanner'
 import { FieldError } from '@/components/form/Field'
 import { TextField } from '@/components/form/TextField'
 import { Button } from '@/components/ui/button'
-import { Checkbox } from '@/components/ui/checkbox'
 import { formatDateLabel, todayString } from '@/domain/date'
 import { MealSaveError, type MealEntry } from '@/lib/mealApi'
-import { MEAL_INTAKES, mealTypeLabel, type MealType } from '@/lib/mealTypes'
+import { MEAL_STATUSES, getMealStatus, mealTypeLabel, type MealType } from '@/lib/mealTypes'
 import { NETWORK_ERROR_MESSAGES } from '@/lib/messages'
 import { mealCautionFoods, mealCautionMessage } from '@/lib/mealCaution'
 import { notifyMealSaved } from '@/lib/mealNotify'
@@ -48,6 +47,7 @@ export function MealForm({
   const remove = useDeleteMeal()
   const [failed, setFailed] = useState<'save' | 'delete' | null>(null)
   const [creatingItem, setCreatingItem] = useState(false)
+  const future = date > todayString()
   const invalidateRecipes = useInvalidateRecipes()
   const {
     control,
@@ -62,15 +62,13 @@ export function MealForm({
       date,
       foods: initial?.foods ?? [],
       recipes: initial?.recipes ?? [],
-      eaten: initial?.eaten ?? date <= todayString(),
-      intake: initial?.intake ?? '',
+      status: future ? 'planned' : initial ? getMealStatus(initial) : 'eaten',
       memo: initial?.memo ?? '',
     },
   })
   const foods = useWatch({ control, name: 'foods' })
   const recipes = useWatch({ control, name: 'recipes' })
-  const eaten = useController({ control, name: 'eaten' })
-  const intake = useController({ control, name: 'intake' })
+  const status = useController({ control, name: 'status' })
   const cautionFoods = mealCautionFoods(foods, recipes, catalog.data ?? [], recipeOptions)
   const warningsReady =
     catalog.isSuccess && !catalog.isFetching && recipeCatalog.isSuccess && !recipeCatalog.isFetching
@@ -92,7 +90,6 @@ export function MealForm({
       onItemPending(false)
     }
   }
-  const future = date > todayString()
   const onError = (error: unknown, action: 'save' | 'delete') => {
     if (!(error instanceof MealSaveError) || error.reason === 'network') {
       setFailed(action)
@@ -100,7 +97,7 @@ export function MealForm({
     }
     const reason = error.reason
     if (reason === 'beforeBirth') setError('date', { message: MEAL_MESSAGES.beforeBirth })
-    else if (reason === 'futureDate') setError('eaten', { message: MEAL_MESSAGES.futureEaten })
+    else if (reason === 'futureDate') setError('status', { message: MEAL_MESSAGES.futureEaten })
     else if (reason === 'memoLength') setError('memo', { message: '500자까지 입력할 수 있어요' })
     else if (reason === 'selection' || reason === 'staleItem')
       setError('foods', { message: MEAL_MESSAGES[reason] })
@@ -178,39 +175,19 @@ export function MealForm({
             clearErrors('foods')
           }}
         />
-        <div className="flex flex-col gap-2">
-          <label className="flex min-h-12 items-center gap-3 rounded-button border px-3 text-sm font-bold">
-            <Checkbox
-              checked={eaten.field.value}
-              onCheckedChange={(checked) => eaten.field.onChange(checked === true)}
-              disabled={future || busy}
-              aria-invalid={!!errors.eaten}
-              aria-describedby={
-                errors.eaten ? 'meal-eaten-error' : future ? 'meal-future-help' : undefined
-              }
-            />
-            먹음
-          </label>
-          {future && (
-            <p id="meal-future-help" className="text-[13px] text-muted-foreground">
-              내일 이후의 식단은 계획으로 저장돼요
-            </p>
-          )}
-          {errors.eaten?.message && (
-            <FieldError id="meal-eaten-error">{errors.eaten.message}</FieldError>
-          )}
-        </div>
-        <div className="flex flex-col gap-2">
-          <span className="text-sm font-bold">
-            먹은 정도 <span className="font-normal text-muted-foreground">(선택)</span>
-          </span>
+        <fieldset disabled={busy} className="flex flex-col gap-2">
+          <legend className="mb-2 text-sm font-bold">식사 상태</legend>
           <ChoiceChips
-            label="먹은 정도"
-            options={[{ value: '', label: '선택 안 함' }, ...MEAL_INTAKES]}
-            value={intake.field.value}
-            onChange={intake.field.onChange}
+            label="식사 상태"
+            options={future ? [MEAL_STATUSES[0]] : [...MEAL_STATUSES]}
+            value={status.field.value}
+            onChange={status.field.onChange}
           />
-        </div>
+          {future && (
+            <p className="text-[13px] text-muted-foreground">내일 이후 식단은 예정으로 저장돼요</p>
+          )}
+          {errors.status?.message && <FieldError>{errors.status.message}</FieldError>}
+        </fieldset>
         <TextField
           control={control}
           name="memo"

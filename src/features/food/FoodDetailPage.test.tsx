@@ -133,7 +133,7 @@ describe('음식 상세 (T-46)', () => {
     const links = within(screen.getByRole('list', { name: '먹은 식단' })).getAllByRole('link')
     expect(links[0]).toHaveTextContent('2026. 11. 11. (수) · 점심잘 먹음')
     expect(links[0]).toHaveAttribute('href', '/meals/week?week=2026-11-11&record=m2')
-    expect(links[1]).toHaveTextContent('먹은 정도 미입력')
+    expect(links[1]).toHaveTextContent('먹음')
     expect(screen.getByText('상태 변경 이력이 없어요')).toBeInTheDocument()
   })
   it('반응을 바로 선택·해제하고 식단 섭취량과 다른 정보는 바꾸지 않는다', async () => {

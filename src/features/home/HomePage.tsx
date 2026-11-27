@@ -8,7 +8,7 @@ import { ErrorBanner } from '@/components/ErrorBanner'
 import { ListLoading } from '@/components/ListLoading'
 import { MobileSettingsLink } from '@/components/MobileSettingsLink'
 import { Page } from '@/components/Page'
-import { Badge } from '@/components/ui/badge'
+import { MealStatusBadge } from '@/components/MealStatusBadge'
 import { Button } from '@/components/ui/button'
 import { Sheet, SheetContent, SheetDescription, SheetTitle } from '@/components/ui/sheet'
 import { ageLabel } from '@/domain/age'
@@ -25,7 +25,7 @@ import { useBodyMeasures } from '@/lib/useBodyMeasures'
 import { useChild } from '@/lib/useChild'
 import { useMilestones } from '@/lib/useMilestones'
 import { useMealDay } from '@/lib/useMeals'
-import { MEAL_TYPES } from '@/lib/mealTypes'
+import { MEAL_TYPES, getMealStatus } from '@/lib/mealTypes'
 import type { MealEntry } from '@/lib/mealApi'
 import { useSleepLogs } from '@/lib/useSleepLogs'
 import { ShoppingCard } from './ShoppingCard'
@@ -423,11 +423,7 @@ function MealCard({ query, today }: { query: UseQueryResult<MealEntry[]>; today:
                           <span className="min-w-0 flex-1 break-words">
                             {[...entry.foods, ...entry.recipes].map((item) => item.name).join(', ')}
                           </span>
-                          {entry.eaten ? (
-                            <Badge variant="tried">먹음</Badge>
-                          ) : (
-                            <Badge variant="soft">예정</Badge>
-                          )}
+                          <MealStatusBadge status={getMealStatus(entry)} />
                         </Link>
                       </li>,
                     ]
