@@ -96,7 +96,14 @@ beforeEach(() => {
     )
       throw new MealSaveError('duplicate')
     entries = entries.map((entry) =>
-      entry.id === id ? { ...entry, ...target, eaten: uncheck ? false : entry.eaten } : entry,
+      entry.id === id
+        ? {
+            ...entry,
+            ...target,
+            eaten: uncheck ? false : entry.eaten,
+            intake: uncheck ? null : entry.intake,
+          }
+        : entry,
     )
     return { id, firstTriedFoods: [] }
   })
@@ -183,14 +190,14 @@ describe('식단 이동 화면 (T-45)', () => {
     const submit = () => within(screen.getByRole('dialog')).getByRole('button', { name: '이동' })
     await userEvent.click(submit())
     const confirmation = await screen.findByRole('alertdialog')
-    expect(confirmation).toHaveTextContent('먹음 체크를 해제하고 옮길까요?')
+    expect(confirmation).toHaveTextContent('예정으로 바꾸고 옮길까요?')
     expect(moveMealEntry).not.toHaveBeenCalled()
     await userEvent.click(within(confirmation).getByRole('button', { name: '취소' }))
     expect(screen.getByLabelText('옮길 날짜')).toHaveValue('2026-11-12')
     await userEvent.click(submit())
     await userEvent.click(
       within(await screen.findByRole('alertdialog')).getByRole('button', {
-        name: '체크 해제하고 이동',
+        name: '예정으로 바꾸고 이동',
       }),
     )
     await closed()
@@ -315,7 +322,7 @@ describe('식단 복사 (T-53)', () => {
     const before = { ...entries[0] }
     await openCopy()
     expect(screen.getByLabelText('복사할 날짜')).toHaveValue('2026-11-12')
-    expect(screen.getByRole('dialog')).toHaveTextContent('먹음 체크와 먹은 정도는 비워요')
+    expect(screen.getByRole('dialog')).toHaveTextContent('상태는 예정으로 저장해요')
     await userEvent.click(screen.getByRole('radio', { name: '아침' }))
     await userEvent.click(within(screen.getByRole('dialog')).getByRole('button', { name: '복사' }))
     await closed()

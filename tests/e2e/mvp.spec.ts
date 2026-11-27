@@ -227,13 +227,25 @@ test('식단 계획·먹음·첫 음식 타임라인, 복사·이동·충돌·�
   const sheet = await meal(page, day())
   await selectFood(page)
   await sheet.getByLabel('메모', { exact: true }).fill('복사할 메모')
-  await sheet.getByRole('checkbox', { name: '먹음', exact: true }).click()
+  await sheet.getByRole('radio', { name: '예정', exact: true }).click()
   await save(page)
   await closed(page)
   expect((await state(data, id))?.status).toBe('not_tried')
-  const eaten = page.getByRole('checkbox', { name: `${labelDate(day())} 아침 먹음`, exact: true })
-  await eaten.click()
-  await expect(eaten).toBeChecked()
+  const status = page.getByRole('combobox', {
+    name: `${labelDate(day())} 아침 식사 상태`,
+    exact: true,
+  })
+  await status.selectOption('refused')
+  await expect(status).toHaveValue('refused')
+  const refusal = (await exported(data)).data.meal_entries[0]
+  expect(refusal).toMatchObject({ eaten: false, intake: 'refuse' })
+  expect((await state(data, id))?.first_tried_date).toBeNull()
+  await page.goto('/growth/timeline?types=food')
+  await expect(page.getByText('아직 기록이 없어요', { exact: true })).toBeVisible()
+  await expect(page.getByRole('link', { name: /검증 쌀/ })).toHaveCount(0)
+  await page.goto('/meals/week')
+  await status.selectOption('good')
+  await expect(status).toHaveValue('good')
   await expect.poll(async () => (await state(data, id))?.first_tried_date).toBe(day())
   await page.goto('/')
   await expect(page.getByRole('region', { name: '오늘의 식단' })).toContainText('검증 쌀')
@@ -261,8 +273,10 @@ test('식단 계획·먹음·첫 음식 타임라인, 복사·이동·충돌·�
   })
   await page.goto(`/meals/week?date=${day(1)}`)
   await expect(
-    page.getByRole('checkbox', { name: `${labelDate(day(1))} 아침 먹음`, exact: true }),
-  ).toBeDisabled()
+    page
+      .getByRole('region', { name: labelDate(day(1)), exact: true })
+      .getByText('예정', { exact: true }),
+  ).toBeVisible()
   await page
     .getByRole('region', { name: labelDate(day(1)), exact: true })
     .getByRole('button', { name: '아침 식단 이동', exact: true })
@@ -296,8 +310,8 @@ test('식단 계획·먹음·첫 음식 타임라인, 복사·이동·충돌·�
       )
       .toBe('dinner')
   }
-  await eaten.click()
-  await expect(eaten).not.toBeChecked()
+  await status.selectOption('planned')
+  await expect(status).toHaveValue('planned')
   await expect.poll(async () => (await state(data, id))?.first_tried_date).toBeNull()
   await page.goto('/growth/timeline?types=food')
   await expect(page.getByRole('link', { name: /검증 쌀/ })).toHaveCount(0)
@@ -319,7 +333,7 @@ test('주의 음식 계획·먹음·복사·태그 해제, 음식 삭제 뒤 식
   if (recipe.error) throw new Error('가명 재료 연결 준비 실패')
   const sheet = await meal(page, day())
   await selectFood(page, '검증 주의쌀')
-  await sheet.getByRole('checkbox', { name: '먹음', exact: true }).click()
+  await sheet.getByRole('radio', { name: '예정', exact: true }).click()
   await save(page)
   await expect(page.getByRole('alertdialog')).toContainText('검증 주의쌀')
   await page.getByRole('alertdialog').getByRole('button', { name: '취소', exact: true }).click()
@@ -345,13 +359,16 @@ test('주의 음식 계획·먹음·복사·태그 해제, 음식 삭제 뒤 식
     .click()
   await closed(page)
   await page.goto('/meals/week')
-  const check = page.getByRole('checkbox', { name: `${labelDate(day())} 아침 먹음`, exact: true })
-  await check.click()
+  const status = page.getByRole('combobox', {
+    name: `${labelDate(day())} 아침 식사 상태`,
+    exact: true,
+  })
+  await status.selectOption('eaten')
   await page
     .getByRole('alertdialog')
     .getByRole('button', { name: '그래도 저장', exact: true })
     .click()
-  await expect(check).toBeChecked()
+  await expect(status).toHaveValue('eaten')
   await expect.poll(async () => (await state(data, id))?.caution_tag).toBe(true)
   expect((await state(data, id))?.status).toBe('tried')
   await page.goto(`/meals/foods/${id}`)

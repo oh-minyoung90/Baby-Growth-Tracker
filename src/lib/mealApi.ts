@@ -1,7 +1,13 @@
 import type { PostgrestError, QueryData } from '@supabase/supabase-js'
 import { supabase } from './supabase'
 import type { Json } from './database.types'
-import { isMealIntake, isMealType, type MealIntake, type MealType } from './mealTypes'
+import {
+  isMealIntake,
+  isMealType,
+  type MealIntake,
+  type MealStatus,
+  type MealType,
+} from './mealTypes'
 
 export const MEALS_QUERY_KEY = ['meals'] as const
 
@@ -138,9 +144,9 @@ export async function deleteMealEntry(id: string): Promise<void> {
   if (error) throw toSaveError(error)
 }
 
-/** 먹음 체크와 음식 상태 재계산은 한 번의 RPC로 처리한다. */
-export async function setMealEaten(id: string, eaten: boolean): Promise<MealSaveResult> {
-  const { data, error } = await supabase.rpc('set_meal_eaten', { id, eaten })
+/** 식사 상태만 바꾸고 음식 상태를 함께 재계산한다. */
+export async function setMealStatus(id: string, status: MealStatus): Promise<MealSaveResult> {
+  const { data, error } = await supabase.rpc('set_meal_status', { id, status })
   if (error) throw toSaveError(error)
   return parseMealResult(data)
 }

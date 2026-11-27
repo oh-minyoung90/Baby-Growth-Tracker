@@ -816,6 +816,7 @@ export type Database = {
         }
       }
       set_meal_eaten: { Args: { eaten: boolean; id: string }; Returns: Json }
+      set_meal_status: { Args: { id: string; status: string }; Returns: Json }
       update_food: {
         Args: {
           already_tried?: boolean

@@ -12,7 +12,7 @@ import { Sheet, SheetContent, SheetTitle } from '@/components/ui/sheet'
 import { format, addDays } from 'date-fns'
 import { formatDateLabel, todayString, parseDate } from '@/domain/date'
 import { MealSaveError, type MealEntry, type MealMoveTarget } from '@/lib/mealApi'
-import { MEAL_TYPES, mealTypeLabel } from '@/lib/mealTypes'
+import { getMealStatus, MEAL_TYPES, mealTypeLabel } from '@/lib/mealTypes'
 import { recordDate } from '@/lib/validation'
 import { mealCautionMessage } from '@/lib/mealCaution'
 import { MealCautionNotice } from './MealCautionNotice'
@@ -68,7 +68,8 @@ export function MealMoveSheet({
     if (pending || (mode === 'copy' && !warningsReady)) return
     setFailure(null)
     if (mode === 'copy' && cautionFoods.length > 0) setConfirmation(target)
-    else if (mode === 'move' && entry.eaten && target.date > todayString()) setConfirmation(target)
+    else if (mode === 'move' && getMealStatus(entry) !== 'planned' && target.date > todayString())
+      setConfirmation(target)
     else await persist(target, false)
   })
   return (
@@ -96,8 +97,7 @@ export function MealMoveSheet({
         {mode === 'copy' && (
           <>
             <p className="rounded-button bg-soft p-3 text-sm text-soft-text">
-              음식·레시피·메모를 새 계획으로 복사해요. 원래 식단은 그대로 두고 먹음 체크와 먹은
-              정도는 비워요.
+              음식·레시피·메모를 새 식단으로 복사하고 상태는 예정으로 저장해요.
             </p>
             <MealCautionNotice foods={cautionFoods} />
             {!warningsReady &&
@@ -174,7 +174,7 @@ export function MealMoveSheet({
                 ? futureMoveDescription(confirmation)
                 : undefined
           }
-          confirmLabel={mode === 'copy' ? '그래도 복사' : '체크 해제하고 이동'}
+          confirmLabel={mode === 'copy' ? '그래도 복사' : '예정으로 바꾸고 이동'}
           onConfirm={() => {
             if (confirmation) void persist(confirmation, mode === 'move')
           }}

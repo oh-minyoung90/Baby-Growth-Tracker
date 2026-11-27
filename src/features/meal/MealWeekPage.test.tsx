@@ -71,9 +71,8 @@ describe('주간 식단 화면 (T-42)', () => {
     store = [entry({ eaten: false, recipes: [{ id: null, name: '채소죽' }] })]
     renderApp('/meals/week', auth)
     expect(await screen.findByText('쌀미음, 채소죽')).toBeInTheDocument()
-    expect(screen.getByText('잘 먹음')).toBeInTheDocument()
     expect(screen.getByLabelText('메모 있음')).toBeInTheDocument()
-    expect(screen.getByText('예정')).toBeInTheDocument()
+    expect(screen.getByRole('combobox', { name: /식사 상태/ })).toHaveValue('planned')
     expect(
       screen.getByRole('button', { name: '2026. 11. 11. (수) · 기록 있음' }),
     ).toBeInTheDocument()

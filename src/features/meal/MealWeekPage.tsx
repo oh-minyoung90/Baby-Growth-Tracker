@@ -15,12 +15,19 @@ import { notifyDone } from '@/lib/notify'
 import { notifyMealSaved } from '@/lib/mealNotify'
 import { useMealRecipes } from '@/lib/useMealRecipes'
 import { useFoods } from '@/lib/useFoods'
-import { isMealType, mealTypeLabel } from '@/lib/mealTypes'
+import {
+  getMealStatus,
+  isMealType,
+  mealStatusFields,
+  mealStatusLabel,
+  mealTypeLabel,
+  type MealStatus,
+} from '@/lib/mealTypes'
 import { useChild } from '@/lib/useChild'
 import {
   useMealEntry,
   useMealWeek,
-  useSetMealEaten,
+  useSetMealStatus,
   useMoveMeal,
   useCopyMeal,
 } from '@/lib/useMeals'
@@ -37,7 +44,7 @@ export function MealWeekPage() {
   const child = useChild()
   const foods = useFoods()
   const recipes = useMealRecipes()
-  const setEaten = useSetMealEaten()
+  const setStatus = useSetMealStatus()
   const move = useMoveMeal()
   const copy = useCopyMeal()
   const [copying, setCopying] = useState<MealEntry | null>(null)
@@ -51,20 +58,28 @@ export function MealWeekPage() {
     error: unknown
   } | null>(null)
   const [focusDate, setFocusDate] = useState<string>()
-  const [confirmation, setConfirmation] = useState<MealEntry | null>(null)
-  const [failedCheck, setFailedCheck] = useState<{
+  const [confirmation, setConfirmation] = useState<{ entry: MealEntry; status: MealStatus } | null>(
+    null,
+  )
+  const [failedStatus, setFailedStatus] = useState<{
     entry: MealEntry
-    eaten: boolean
+    status: MealStatus
     message: string
     retryable: boolean
   } | null>(null)
   const warningsReady =
     foods.isSuccess && !foods.isFetching && recipes.isSuccess && !recipes.isFetching
-  const changeEaten = async (entry: MealEntry, eaten: boolean) => {
-    if (copy.isPending || move.isPending || setEaten.isPending || (eaten && !warningsReady)) return
-    setFailedCheck(null)
+  const changeStatus = async (entry: MealEntry, status: MealStatus) => {
+    if (
+      copy.isPending ||
+      move.isPending ||
+      setStatus.isPending ||
+      (mealStatusFields(status).eaten && !warningsReady)
+    )
+      return
+    setFailedStatus(null)
     try {
-      const result = await setEaten.mutateAsync({ id: entry.id, eaten })
+      const result = await setStatus.mutateAsync({ id: entry.id, status })
       notifyMealSaved(result)
     } catch (error) {
       const message =
@@ -73,9 +88,9 @@ export function MealWeekPage() {
           : error instanceof MealSaveError && error.reason === 'notFound'
             ? MEAL_MESSAGES.notFound
             : NETWORK_ERROR_MESSAGES.save
-      setFailedCheck({
+      setFailedStatus({
         entry,
-        eaten,
+        status,
         message,
         retryable: !(error instanceof MealSaveError) || error.reason === 'network',
       })
@@ -89,15 +104,22 @@ export function MealWeekPage() {
   const newType = isMealType(typeParam) ? typeParam : null
   const week = weekFromParam(params.get('week') ?? single.data?.date ?? params.get('date'), today)
   const meals = useMealWeek(week.start, week.end)
-  const requestEatenChange = (entry: MealEntry, eaten: boolean) => {
-    if (copy.isPending || move.isPending || setEaten.isPending || (eaten && !warningsReady)) return
-    const current = meals.data?.find((item) => item.id === entry.id) ?? entry
+  const requestStatusChange = (entry: MealEntry, status: MealStatus) => {
     if (
-      eaten &&
+      copy.isPending ||
+      move.isPending ||
+      setStatus.isPending ||
+      (mealStatusFields(status).eaten && !warningsReady)
+    )
+      return
+    const current = meals.data?.find((item) => item.id === entry.id) ?? entry
+    if (getMealStatus(current) === status) return
+    if (
+      mealStatusFields(status).eaten &&
       mealCautionFoods(current.foods, current.recipes, foods.data ?? [], recipes.options).length > 0
     )
-      setConfirmation(current)
-    else void changeEaten(current, eaten)
+      setConfirmation({ entry: current, status })
+    else void changeStatus(current, status)
   }
   const editor = useMemo<MealEditor | null>(() => {
     if (sheet.value === 'new')
@@ -116,7 +138,7 @@ export function MealWeekPage() {
     setView((value) => value + 1)
   }
   const performCopy = async (entry: MealEntry, target: MealMoveTarget) => {
-    if (copy.isPending || move.isPending || setEaten.isPending || !warningsReady) return
+    if (copy.isPending || move.isPending || setStatus.isPending || !warningsReady) return
     await copy.mutateAsync({ id: entry.id, target })
     setCopying(null)
     showTarget(target)
@@ -125,7 +147,7 @@ export function MealWeekPage() {
     )
   }
   const performMove = async (entry: MealEntry, target: MealMoveTarget, uncheck: boolean) => {
-    if (copy.isPending || move.isPending || setEaten.isPending) return
+    if (copy.isPending || move.isPending || setStatus.isPending) return
     await move.mutateAsync({ id: entry.id, target, uncheck })
     setMoving(null)
     setFailedMove(null)
@@ -133,13 +155,14 @@ export function MealWeekPage() {
     notifyDone(`${formatDateLabel(target.date)} ${mealTypeLabel(target.type)}으로 식단을 옮겼어요`)
   }
   const dropMove = (entry: MealEntry, target: MealMoveTarget) => {
-    if (copy.isPending || move.isPending || setEaten.isPending) return
+    if (copy.isPending || move.isPending || setStatus.isPending) return
     if (child.data?.birthDate && target.date < child.data.birthDate) {
       setFailedMove({ entry, target, error: new MealSaveError('beforeBirth') })
       return
     }
     setFailedMove(null)
-    if (entry.eaten && target.date > todayString()) setFutureDrop({ entry, target })
+    if (getMealStatus(entry) !== 'planned' && target.date > todayString())
+      setFutureDrop({ entry, target })
     else
       void performMove(entry, target, false).catch((error) =>
         setFailedMove({ entry, target, error }),
@@ -210,15 +233,17 @@ export function MealWeekPage() {
           retrying={recipes.isFetching}
         />
       )}
-      {failedCheck && (
+      {failedStatus && (
         <ErrorBanner
-          message={failedCheck.message}
+          message={failedStatus.message}
           onRetry={
-            failedCheck.retryable
-              ? () => requestEatenChange(failedCheck.entry, failedCheck.eaten)
+            failedStatus.retryable
+              ? () => requestStatusChange(failedStatus.entry, failedStatus.status)
               : undefined
           }
-          retrying={setEaten.isPending || (failedCheck.eaten && !warningsReady)}
+          retrying={
+            setStatus.isPending || (mealStatusFields(failedStatus.status).eaten && !warningsReady)
+          }
         />
       )}
       {meals.isPending ? (
@@ -248,8 +273,8 @@ export function MealWeekPage() {
                 ? copy.variables.id
                 : move.isPending
                   ? move.variables.id
-                  : setEaten.isPending
-                    ? setEaten.variables.id
+                  : setStatus.isPending
+                    ? setStatus.variables.id
                     : undefined
             }
             focusDate={focusDate}
@@ -274,7 +299,7 @@ export function MealWeekPage() {
                   .map((entry) => entry.id),
               )
             }
-            onEatenChange={requestEatenChange}
+            onStatusChange={requestStatusChange}
             onSelect={(date, type, entry) =>
               sheet.open(entry?.id ?? 'new', entry ? {} : { params: { date, meal: type } })
             }
@@ -289,17 +314,21 @@ export function MealWeekPage() {
         title={mealCautionMessage(
           confirmation
             ? mealCautionFoods(
-                confirmation.foods,
-                confirmation.recipes,
+                confirmation.entry.foods,
+                confirmation.entry.recipes,
                 foods.data ?? [],
                 recipes.options,
               )
             : [],
         )}
-        description="음식을 확인한 후 먹음으로 저장해 주세요."
+        description={
+          confirmation
+            ? `음식을 확인한 후 ${mealStatusLabel(confirmation.status)}으로 저장해 주세요.`
+            : undefined
+        }
         confirmLabel="그래도 저장"
         onConfirm={() => {
-          if (confirmation) void changeEaten(confirmation, true)
+          if (confirmation) void changeStatus(confirmation.entry, confirmation.status)
         }}
       />
       <ConfirmDialog
@@ -309,7 +338,7 @@ export function MealWeekPage() {
         }}
         title={FUTURE_MOVE_TITLE}
         description={futureDrop ? futureMoveDescription(futureDrop.target) : undefined}
-        confirmLabel="체크 해제하고 이동"
+        confirmLabel="예정으로 바꾸고 이동"
         onConfirm={() => {
           if (futureDrop)
             void performMove(futureDrop.entry, futureDrop.target, true).catch((error) =>

@@ -5,13 +5,14 @@ import {
   fetchMealEntry,
   fetchMealWeek,
   saveMealEntry,
-  setMealEaten,
+  setMealStatus,
   moveMealEntry,
   copyMealEntry,
   type MealMoveTarget,
   MealSaveError,
   type MealInput,
 } from './mealApi'
+import type { MealStatus } from './mealTypes'
 import { RECIPES_QUERY_KEY } from './useRecipes'
 import { FOODS_QUERY_KEY } from './useFoods'
 
@@ -71,10 +72,10 @@ export function useDeleteMeal() {
   })
 }
 
-export function useSetMealEaten() {
+export function useSetMealStatus() {
   const client = useQueryClient()
   return useMutation({
-    mutationFn: ({ id, eaten }: { id: string; eaten: boolean }) => setMealEaten(id, eaten),
+    mutationFn: ({ id, status }: { id: string; status: MealStatus }) => setMealStatus(id, status),
     onSuccess: () =>
       Promise.all([
         client.invalidateQueries({ queryKey: MEALS_QUERY_KEY }),
